@@ -1,6 +1,5 @@
 
-MillersWerewolves/.vs/
+**/.vs/
 
-MillersWerewolves/CLI/obj/
-
-MillersWerewolves/Core/obj/
+**/obj/
+**/bin/
