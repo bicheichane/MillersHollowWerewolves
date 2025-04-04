@@ -10,35 +10,42 @@
 ## Setup
 
 1.  Select a non-playing Game Moderator.
-2.  Deal one Character Card face-down to each player.
+2.  Players draw their Character Card face-down (e.g., from a shuffled deck or bag). The Moderator does *not* initially know player roles unless revealed by game actions.
 3.  Players secretly look at their card.
-4.  (If applicable) Perform specific role setup steps (e.g., Thief cards, Actor cards, Prejudiced Manipulator groups, Sheriff Election).
-5.  (If using New Moon Events) Shuffle the Event Card deck and place it face down.
+4.  (If applicable) Perform specific physical role setup steps (e.g., dealing extra cards for Thief setup, dividing groups for Prejudiced Manipulator).
+5.  The Moderator informs the helper app which roles are included in the game deck.
+6.  The Moderator starts the game session in the helper app, providing player names.
+7.  (If applicable) The app may prompt the Moderator for initial known information (e.g., Sheriff election, initial role reveals like Thief/Cupid during Night 1).
+8.  (If using New Moon Events) Shuffle the physical Event Card deck and place it face down.
 
 ## Game Flow
 
-The game alternates between Night and Day phases.
+The game alternates between Night and Day phases. The helper app guides the Moderator through the phases and prompts for input when information needs to be recorded.
 
 ### Night Phase
 
 1.  **Village Sleeps:** Moderator instructs all players to close their eyes.
-2.  **Character Actions:** Moderator calls characters/groups one by one in the specified order (see Turn Order Summary). Special effects from active Event Cards might modify this phase.
-3.  Called players open their eyes, silently perform their action (often pointing), and close their eyes again.
+2.  **Character Actions:** Moderator calls characters/groups one by one in the specified order (see Turn Order Summary), guided by the helper app.
+3.  **Role Identification:** For roles called on Night 1 (Thief, Cupid, Seer, etc.), the app will prompt the Moderator to identify which player performed the action, thereby recording that player's role in the app.
+4.  Called players open their eyes, silently perform their action (often pointing), and close their eyes again. The Moderator inputs the results of actions (targets, choices) into the helper app when prompted.
+5.  Special effects from active Event Cards might modify this phase, and the app will reflect these modifications in its prompts.
 
 ### Day Phase
 
-1.  **Village Wakes:** Moderator instructs all players to open their eyes.
-2.  **(If using New Moon Events, after Day 1)** Draw the top Event Card. The player most recently eliminated (or another designated player) reads it aloud. Its effect takes place as described.
-3.  **Victims Revealed:** Moderator announces player(s) eliminated during the night (if any). Special character effects triggered by victim reveal occur now (e.g., Bear Tamer). Event card effects might alter this step (e.g., Burial, Miracle).
-4.  **Debate:** Players discuss suspicions. Anything can be said (truth or lies). Revealing your card is forbidden. Event card effects might alter this step (e.g., Eclipse, Good Manners, Not Me - Nor Wolf).
-5.  **Vote:**
-    *   Moderator calls for a vote to eliminate a player. Event card effects might replace or modify the standard vote (e.g., Nightmare, Influences, Great Distrust, Enthusiasm, Dissatisfaction, Punishment).
-    *   Standard Vote: All living players simultaneously point at one player they wish to eliminate.
-    *   The player with the most votes is eliminated. (Sheriff's vote counts as 2).
-    *   Ties may trigger specific roles (Scapegoat) or result in no elimination (standard rules).
-    *   The eliminated player reveals their card (unless Executioner is active) and can no longer participate (speak, vote, use abilities).
-    *   Special character effects triggered by elimination occur now (e.g., Hunter, passing Sheriff role).
-6.  **Check Victory Conditions:** If a side has won, the game ends. Otherwise, proceed to the next Night Phase.
+1.  **Village Wakes:** Moderator instructs all players to open their eyes (guided by the app).
+2.  **(If using New Moon Events, after Day 1)** Draw the top physical Event Card. The player most recently eliminated (or another designated player) reads it aloud. The Moderator inputs the drawn event into the app, which then applies its effects and adjusts subsequent prompts.
+3.  **Victims Revealed:** Based on recorded night actions, the app informs the Moderator which player(s) were eliminated. The Moderator announces this to the players.
+4.  **Role Reveal on Death:** When a player is eliminated (night or day), they reveal their physical Character Card. The Moderator inputs the revealed role into the helper app, updating the app's knowledge of the game state.
+5.  Special character effects triggered by victim reveal occur now (e.g., Bear Tamer). The app may prompt for related actions or information. Event card effects might alter this step (e.g., Burial prevents role reveal, Miracle saves victim).
+6.  **Debate:** Players discuss suspicions. The app tracks the phase but doesn't directly participate. Event card effects might alter this step, and the app may remind the Moderator of active rules (e.g., Eclipse, Good Manners, Not Me - Nor Wolf).
+7.  **Vote:**
+    *   Moderator calls for a vote (guided by the app). Event card effects might replace or modify the standard vote; the app will prompt for the appropriate input format (standard votes, accusations, friend votes, etc.).
+    *   Standard Vote: All living players simultaneously point at one player they wish to eliminate. Moderator inputs the vote counts into the app.
+    *   The app calculates the result (considering Sheriff's double vote, ties).
+    *   Ties may trigger specific roles (Scapegoat - app prompts for Scapegoat's decision) or result in no elimination.
+    *   The app indicates the eliminated player. The player reveals their card (unless Executioner is active). Moderator inputs the revealed role into the app.
+    *   Special character effects triggered by elimination occur now (e.g., Hunter's shot - app prompts for target; passing Sheriff role - app prompts for successor).
+8.  **Check Victory Conditions:** Based on the known roles and player statuses, the app checks if a winning condition has been met and informs the Moderator. If not, proceed to the next Night Phase (app prompts accordingly).
 
 ## Character Roles
 
@@ -92,7 +99,7 @@ The game alternates between Night and Day phases.
 *Goal: Achieve their unique objective.*
 
 *   **White Werewolf:** Wakes and eliminates with other Werewolves. Every second night, wakes again alone and may eliminate one Werewolf. Goal: Be the last player alive.
-*   **Angel:** If eliminated up until the 2nd turn (by vote on Day 1 or 2 or killed Night 1 or 2 *before* Day 3 vote), they immediately win the game alone. If they survive the second turn, they become a Simple Villager.
+*   **Angel:** If eliminated up until the 2nd turn (by vote on Day 1 or killed Night 1 or 2 *before* Day 2 vote), they immediately win the game alone. If they survive the second turn, they become a Simple Villager.
 *   **Piper:** Each night, charms two players (cannot charm self). Moderator taps charmed players. Charmed players continue playing normally with powers/goals but are secretly charmed. The Piper wins alone if all *surviving* players are charmed. Charm is not blocked by Defender/Witch. Charm is not passed between Lovers.
 *   **Prejudiced Manipulator:** Before the game, Moderator divides players into two publicly known groups (based on an arbitrary criterion). Goal: Eliminate everyone in the group they *do not* belong to. Has no special night power.
 
@@ -195,3 +202,5 @@ The game alternates between Night and Day phases.
 9.  Angel wins (only if eliminated on 2nd turn).
 10. Possible second vote (if Stuttering Judge used power, or Enthusiasm/Dissatisfaction triggered) and potential call to Devoted Servant.
 11. Check victory conditions.
+
+The app will guide the moderator through this call order, prompting for player identification for roles revealed during Night 1.
