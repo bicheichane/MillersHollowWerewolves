@@ -221,41 +221,42 @@ Furthermore, roles identified during physical pre-game setup, notably the Prejud
         *   **Loners:** Angel, Piper, PrejudicedManipulator
         *   **New Moon Roles:** Gypsy, TownCrier
     *    `ErrorType`: Defines the high-level categories of game errors.
-        *   `Unknown` (Should not happen - indicates an internal error)
-        *   `GameNotFound` (Specified GameSession ID not found)
-        *   `InvalidInput` (Input data format/type/basic validity incorrect)
-        *   `RuleViolation` (Input violates game rules based on current state)
-        *   `InvalidOperation` (Operation not valid in current game phase/state)
-    *   `GameNotFoundCode`: Specific codes for `ErrorType.GameNotFound`.
-        *   `SessionNotFound`
-    *   `InvalidInputCode`: Specific codes for `ErrorType.InvalidInput`.
-        *   `InputTypeMismatch`
-        *   `RequiredDataMissing`
-        *   `PlayerIdNotFound`
-        *   `RoleNameNotFound`
-        *   `OptionNotAvailable`
-        *   `MalformedVoteData`
-        *   `IncorrectVoteSum`
-        *   `IncorrectFriendVoteCount`
-        *   `InvalidFriendVoteTarget`
-        *   `InsufficientVouchers`
-        *   `InvalidPlayerSelectionCount`
-    *   `RuleViolationCode`: Specific codes for `ErrorType.RuleViolation`.
-        *   `TargetIsDead`
-        *   `TargetIsInvalid` (Role-specific invalid targets)
-        *   `TargetIsSelf` (Targeted self when not allowed)
-        *   `TargetIsAlly` (e.g., Werewolf targeting Werewolf)
-        *   `DefenderRepeatTarget`
-        *   `WitchPotionAlreadyUsed`
-        *   `AccursedInfectionAlreadyUsed`
-        *   `PowerLostOrUnavailable` (e.g., Fox, lost Elder powers)
-        *   `LoverVotingAgainstLover`
-        *   `VoterIsInvalid` (e.g., Village Idiot, Muted player)
-        *   `EventRuleConflict` (Action conflicts with active event rules)
-    *   `InvalidOperationCode`: Specific codes for `ErrorType.InvalidOperation`.
-        *   `GameIsOver`
-        *   `ActionNotInCorrectPhase`
-        *   `UnexpectedInput` (Input received when none expected)
+        *   `Unknown`
+        *   `GameNotFound`
+        *   `InvalidInput`
+        *   `RuleViolation`
+        *   `InvalidOperation`
+    *   `GameErrorCode`: Defines specific error codes, grouped by their `ErrorType` using prefixes.
+        *   **Game Not Found:**
+            *   `GameNotFound_SessionNotFound`
+        *   **Invalid Input:**
+            *   `InvalidInput_TypeMismatch`
+            *   `InvalidInput_RequiredDataMissing`
+            *   `InvalidInput_PlayerIdNotFound`
+            *   `InvalidInput_RoleNameNotFound`
+            *   `InvalidInput_OptionNotAvailable`
+            *   `InvalidInput_MalformedVoteData`
+            *   `InvalidInput_IncorrectVoteSum`
+            *   `InvalidInput_IncorrectFriendVoteCount`
+            *   `InvalidInput_InvalidFriendVoteTarget`
+            *   `InvalidInput_InsufficientVouchers`
+            *   `InvalidInput_InvalidPlayerSelectionCount`
+        *   **Rule Violation:**
+            *   `RuleViolation_TargetIsDead`
+            *   `RuleViolation_TargetIsInvalid`
+            *   `RuleViolation_TargetIsSelf`
+            *   `RuleViolation_TargetIsAlly`
+            *   `RuleViolation_DefenderRepeatTarget`
+            *   `RuleViolation_WitchPotionAlreadyUsed`
+            *   `RuleViolation_AccursedInfectionAlreadyUsed`
+            *   `RuleViolation_PowerLostOrUnavailable`
+            *   `RuleViolation_LoverVotingAgainstLover`
+            *   `RuleViolation_VoterIsInvalid`
+            *   `RuleViolation_EventRuleConflict`
+        *   **Invalid Operation:**
+            *   `InvalidOperation_GameIsOver`
+            *   `InvalidOperation_ActionNotInCorrectPhase`
+            *   `InvalidOperation_UnexpectedInput`
 
 ---------------------------------
 

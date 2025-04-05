@@ -288,7 +288,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.DefenderRepeatTarget`.
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_DefenderRepeatTarget`.
         *   `GameSession.PendingModeratorInstruction` remains asking the Defender for a valid target.
         *   Player B's `State.IsProtectedTonight` remains false.
 
@@ -316,7 +316,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.WitchPotionAlreadyUsed`.
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_WitchPotionAlreadyUsed`.
         *   Player B is eliminated by WWs (unless saved by other means).
 
 *   **Test: Witch Attempts to Use Poison Potion Twice**
@@ -325,7 +325,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.WitchPotionAlreadyUsed`.
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_WitchPotionAlreadyUsed`.
         *   Player B is not eliminated by the Witch.
 
 *   **Test: Little Girl Gets Caught Spying**
@@ -366,7 +366,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Setup: Game in Night phase. Player A (Fox) `State.HasLostFoxPower` is true.
     *   //Act: Check if Fox role is prompted for action. If prompted, attempt to process Fox input.
     *   //Assert:
-        *   Fox role is *not* prompted for action OR `ProcessModeratorInput` for Fox returns Failure with `RuleViolationCode.PowerLostOrUnavailable`.
+        *   Fox role is *not* prompted for action OR `ProcessModeratorInput` for Fox returns Failure with `GameErrorCode.RuleViolation_PowerLostOrUnavailable`.
 
 *   **Test: Knight Curse Activates on Werewolf Death**
     *   //Setup: Game in Night phase. Seating: V1, Knight(A), WW1(B), V2. WWs (including B) target Knight (A).
@@ -411,7 +411,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.TargetIsSelf` (or specific Piper rule).
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_TargetIsSelf` (or specific Piper rule).
         *   Player A and B `State.IsCharmed` remain false.
 
 *   **Test: Actor Chooses and Uses Role Power (Seer Example)**
@@ -445,7 +445,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.TargetIsInvalid` (or specific WWWW rule).
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_TargetIsInvalid` (or specific WWWW rule).
         *   Player C is not eliminated by WhiteWW.
 
 
@@ -694,7 +694,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Setup: Game in Day Vote phase. Player A (Stuttering Judge) `State.HasUsedStutteringJudgePower` is true. Judge attempts to signal again.
     *   //Act: Moderator provides input indicating Judge signaled.
     *   //Assert:
-        *   Input is ignored OR `ProcessResult` is Failure with `RuleViolationCode.PowerLostOrUnavailable`.
+        *   Input is ignored OR `ProcessResult` is Failure with `GameErrorCode.RuleViolation_PowerLostOrUnavailable`.
         *   Only one vote occurs (unless triggered by other means like events).
 
 *   **Test: Cascade - Hunter Lover Dies By Vote, Other Lover Dies, Hunter Kills Target**
@@ -1015,7 +1015,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `GameNotFound`.
-        *   `GameError.Code` is `GameNotFoundCode.SessionNotFound`.
+        *   `GameError.Code` is `GameErrorCode.GameNotFound_SessionNotFound`.
 
 *   **Test: Process Input - Invalid Player ID**
     *   //Setup: Active game. Instruction expects single player selection. Input provides a Guid not matching any player in `GameSession.Players`.
@@ -1023,7 +1023,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `InvalidInput`.
-        *   `GameError.Code` is `InvalidInputCode.PlayerIdNotFound`.
+        *   `GameError.Code` is `GameErrorCode.InvalidInput_PlayerIdNotFound`.
 
 *   **Test: Process Input - Incorrect Input Type**
     *   //Setup: Active game. Instruction expects `ExpectedInputType.Confirmation`. Input provides `SelectedPlayerIds`.
@@ -1031,7 +1031,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `InvalidInput`.
-        *   `GameError.Code` is `InvalidInputCode.InputTypeMismatch`.
+        *   `GameError.Code` is `GameErrorCode.InvalidInput_InputTypeMismatch`.
 
 *   **Test: Process Input - Action Out Of Phase**
     *   //Setup: Active game in `Day_Debate` phase. Input represents a night action (e.g., Seer view).
@@ -1039,7 +1039,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `InvalidOperation`.
-        *   `GameError.Code` is `InvalidOperationCode.ActionNotInCorrectPhase`.
+        *   `GameError.Code` is `GameErrorCode.InvalidOperation_ActionNotInCorrectPhase`.
 
 *   **Test: Process Input - Target is Dead**
     *   //Setup: Active game in Night. Player A (WW) prompted. Player B is Dead. Input: WW targets Player B.
@@ -1047,7 +1047,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.TargetIsDead`.
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_TargetIsDead`.
 
 *   **Test: Process Input - Malformed Vote Data**
     *   //Setup: Active game in Day Vote phase. Instruction expects `VoteCounts`. Input provides data in wrong format or non-integer counts.
@@ -1055,7 +1055,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `InvalidInput`.
-        *   `GameError.Code` is `InvalidInputCode.MalformedVoteData`.
+        *   `GameError.Code` is `GameErrorCode.InvalidInput_MalformedVoteData`.
 
 *   **Test: Process Input - Vote Sum Incorrect**
     *   //Setup: Active game with 5 living players. Day Vote phase. Input provides `VoteCounts` dictionary where sum of values is not 5.
@@ -1063,7 +1063,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `InvalidInput`.
-        *   `GameError.Code` is `InvalidInputCode.IncorrectVoteSum`.
+        *   `GameError.Code` is `GameErrorCode.InvalidInput_IncorrectVoteSum`.
 
 *   **Test: Process Input - Lover Voting Against Lover**
     *   //Setup: Active game, Day Vote. Player A and B are Lovers. Input has Player A voting for Player B.
@@ -1071,7 +1071,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
     *   //Assert:
         *   `ProcessResult` is Failure.
         *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `RuleViolationCode.LoverVotingAgainstLover`.
+        *   `GameError.Code` is `GameErrorCode.RuleViolation_LoverVotingAgainstLover`.
 
 *   **Sub-Section: Role & Event Interactions**
     *   **Test: Interaction - Witch Heals Target Already Protected by Defender (Potion Used)**
