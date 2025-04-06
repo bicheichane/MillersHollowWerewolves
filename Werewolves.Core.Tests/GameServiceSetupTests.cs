@@ -7,30 +7,27 @@ using Werewolves.Core.Models.Log;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Werewolves.Core.Resources;
+using Werewolves.Core.Extensions;
+using static Werewolves.Core.Tests.TestHelper;
 
 namespace Werewolves.Core.Tests;
 
-public class GameServicePhase0Tests
+public class GameServiceSetupTests
 {
     private readonly GameService _gameService;
 
-    public GameServicePhase0Tests()
+    public GameServiceSetupTests()
     {
         _gameService = new GameService();
     }
-
-    private List<string> GetDefaultPlayerNames(int count = 3) =>
-        Enumerable.Range(1, count).Select(i => $"Player {i}").ToList();
-
-    private List<RoleType> GetDefaultRoles() =>
-        new() { RoleType.SimpleWerewolf, RoleType.SimpleVillager, RoleType.SimpleVillager };
 
     [Fact]
     public void StartNewGame_ShouldCreateSession_WithCorrectInitialState()
     {
         // Arrange
         var playerNames = GetDefaultPlayerNames(3);
-        var roles = GetDefaultRoles();
+        var roles = GetDefaultRoles4();
 
         // Act
         var gameId = _gameService.StartNewGame(playerNames, roles);
@@ -63,7 +60,7 @@ public class GameServicePhase0Tests
         // Check initial instruction
         instruction.ShouldNotBeNull();
         instruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        instruction.InstructionText.ShouldContain("Setup complete");
+        instruction.InstructionText.ShouldBe(GameStrings.SetupCompletePrompt);
 
         // Check Game Started Log Entry
         session.GameHistoryLog.Count.ShouldBe(1);
@@ -81,7 +78,7 @@ public class GameServicePhase0Tests
     {
         // Arrange
         var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles();
+        var roles = GetDefaultRoles4();
         var gameId = _gameService.StartNewGame(playerNames, roles);
 
         // Act
@@ -90,7 +87,7 @@ public class GameServicePhase0Tests
         // Assert
         instruction.ShouldNotBeNull();
         instruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        instruction.InstructionText.ShouldContain("Setup complete");
+        instruction.InstructionText.ShouldBe(GameStrings.SetupCompletePrompt);
     }
 
     [Fact]
@@ -98,7 +95,7 @@ public class GameServicePhase0Tests
     {
         // Arrange
         var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles();
+        var roles = GetDefaultRoles4();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var confirmationInput = new ModeratorInput
         {
@@ -116,16 +113,16 @@ public class GameServicePhase0Tests
         result.IsSuccess.ShouldBeTrue();
         result.Error.ShouldBeNull();
         result.ModeratorInstruction.ShouldNotBeNull();
-        result.ModeratorInstruction.InstructionText.ShouldContain("Night 1 begins");
+        result.ModeratorInstruction.InstructionText.ShouldBe(GameStrings.NightStartsPrompt);
+        result.ModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
 
         session.ShouldNotBeNull();
         session.GamePhase.ShouldBe(GamePhase.Night);
         session.TurnNumber.ShouldBe(1);
 
         nextInstruction.ShouldNotBeNull();
-        nextInstruction.InstructionText.ShouldContain("Night 1 begins");
-        // ExpectedInputType for Night 1 start is None initially, night logic will set the actual first prompt
-        nextInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.None);
+        nextInstruction.InstructionText.ShouldBe(GameStrings.NightStartsPrompt);
+        nextInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }
 
     [Fact]
@@ -149,7 +146,7 @@ public class GameServicePhase0Tests
         result.Error.ShouldNotBeNull();
         result.Error.Type.ShouldBe(ErrorType.GameNotFound);
         result.Error.Code.ShouldBe(GameErrorCode.GameNotFound_SessionNotFound);
-        result.Error.Message.ShouldContain("Game session not found");
+        result.Error.Message.ShouldBe(GameStrings.GameNotFound);
     }
 
     [Fact]
@@ -157,7 +154,7 @@ public class GameServicePhase0Tests
     {
         // Arrange
         var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles();
+        var roles = GetDefaultRoles4();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var wrongInput = new ModeratorInput
         {
@@ -176,11 +173,55 @@ public class GameServicePhase0Tests
         result.Error.ShouldNotBeNull();
         result.Error.Type.ShouldBe(ErrorType.InvalidInput);
         result.Error.Code.ShouldBe(GameErrorCode.InvalidInput_InputTypeMismatch);
-        result.Error.Message.ShouldContain("input type does not match");
+        result.Error.Message.ShouldBe(GameStrings.InputTypeMismatch);
 
         // Verify game state hasn't changed
         session.ShouldNotBeNull();
         session.GamePhase.ShouldBe(GamePhase.Setup);
         session.TurnNumber.ShouldBe(0);
+    }
+
+    [Fact]
+    public void ProcessNightStartsConfirmation_ShouldPromptForWerewolfIdentification()
+    {
+        // Arrange
+        var playerNames = GetDefaultPlayerNames();
+        var roles = GetDefaultRoles4(); // Includes SimpleWerewolf which needs N1 ID
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        
+
+        // 1. Process Setup Confirmation
+        var setupConfirmInput = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
+        var setupResult = _gameService.ProcessModeratorInput(gameId, setupConfirmInput);
+        setupResult.IsSuccess.ShouldBeTrue();
+        _gameService.GetCurrentInstruction(gameId)?.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation); // Should be NightStartsPrompt
+
+        // 2. Process Night Starts Confirmation
+        var nightStartsConfirmInput = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
+
+        // Act
+        var result = _gameService.ProcessModeratorInput(gameId, nightStartsConfirmInput);
+        var session = _gameService.GetGameStateView(gameId);
+        var nextInstruction = _gameService.GetCurrentInstruction(gameId);
+
+        var werewolfCount = session.GetAliveRoleCount(RoleType.SimpleWerewolf);
+
+		// Assert
+		result.IsSuccess.ShouldBeTrue();
+        result.ModeratorInstruction.ShouldNotBeNull();
+        // Expect WW Identification Prompt
+        result.ModeratorInstruction.InstructionText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));
+        result.ModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple);
+
+        session.ShouldNotBeNull();
+        session.GamePhase.ShouldBe(GamePhase.Night); // Still Night phase
+        session.TurnNumber.ShouldBe(1);
+        session.PendingNight1IdentificationForRole.ShouldBe(RoleType.SimpleWerewolf); // Check pending state
+
+        nextInstruction.ShouldNotBeNull();
+        nextInstruction.InstructionText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));
+        nextInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple);
+        nextInstruction.SelectablePlayerIds.ShouldNotBeNull();
+        nextInstruction.SelectablePlayerIds.Count.ShouldBe(playerNames.Count); // All players selectable for identification
     }
 } 

@@ -27,8 +27,8 @@ Constant string values should be stored in resx files for ease of future localiz
     *   *Test:* Basic instantiation tests for `Player`, `PlayerState`, `GameSession`. Verify default values.
 
 3.  **Implement: Communication & Result Classes**
-    *   Define `ModeratorInstruction` class with `InstructionText`, `ExpectedInputType` enum (add `None`, `PlayerSelectionSingle`, `Confirmation`, `VoteCounts`), and potentially `SelectablePlayerIds`.
-    *   Define `ModeratorInput` class with `InputTypeProvided`, `SelectedPlayerIds`, `Confirmation`, `VoteResults`.
+    *   Define `ModeratorInstruction` class with `InstructionText`, `ExpectedInputType` enum (add `None`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `RoleSelection`, `OptionSelection`, `Confirmation`). Add `SelectablePlayerIds`, `SelectableRoles`, `SelectableOptions`. *Align with architecture's defined fields.*
+    *   Define `ModeratorInput` class with `InputTypeProvided`, `SelectedPlayerIds`, `SelectedRole`, `SelectedOption`, `Confirmation`. *Remove VoteResults. Align with architecture.*
     *   Define GameError class with Type (ErrorType), Code (GameErrorCode), Message, Context
     *   Define `ProcessResult` class with `IsSuccess`, `ModeratorInstruction?`, `GameError?`, and static factory methods (`Success`, `Failure`).
     *   *Test:* Basic instantiation and property access tests for these communication classes. Test `ProcessResult` factory methods.
@@ -70,91 +70,98 @@ Constant string values should be stored in resx files for ease of future localiz
 *Goal: Implement the simplest possible Night -> Day -> Vote cycle with just Werewolves and Villagers.*
 
 1.  **Implement: `IRole` Interface & Simple Roles**
-    *   Define `IRole` interface with initial methods: `RoleType`, `GetNightWakeUpOrder()`. Add `RequiresNight1Identification()` (default false).
-    *   Implement `SimpleVillagerRole` (implements `IRole`, `RoleType`=SimpleVillager, `GetNightWakeUpOrder`=MaxValue).
-    *   Implement `SimpleWerewolfRole` (implements `IRole`, `RoleType`=SimpleWerewolf, `GetNightWakeUpOrder`=e.g., 10). Add `GenerateNightInstructions`, `ProcessNightAction` stubs.
+    *   Define `IRole` interface with initial methods: `RoleType`, `GetNightWakeUpOrder()`. Add `RequiresNight1Identification()`.
+    *   Implement `SimpleVillagerRole` (implements `IRole`, `RoleType`=SimpleVillager, `GetNightWakeUpOrder`=MaxValue, `RequiresNight1Identification`=false).
+    *   Implement `SimpleWerewolfRole` (implements `IRole`, `RoleType`=SimpleWerewolf, `GetNightWakeUpOrder`=e.g., 10, `RequiresNight1Identification`=true). Add `GenerateIdentificationInstructions`, `ProcessIdentificationInput`, `GenerateNightInstructions`, `ProcessNightAction` stubs.
     *   Modify `Player` class to include `Role` (IRole?).
-    *   Modify `GameService.StartNewGame`: When creating Players, initialize `Role` to null. (Role assignment will happen later).
-    *   *Test:* Unit tests for `GetNightWakeUpOrder` on simple roles. Basic instantiation tests.
+    *   Modify `GameService.StartNewGame`: When creating Players, initialize `Role` to null.
+    *   Define `InitialRoleAssignmentLogEntry` inheriting from `GameLogEntryBase` (ensure `GameLogEntryBase` is from Phase 0).
+    *   *Test:* Unit tests for `GetNightWakeUpOrder`, `RequiresNight1Identification` on simple roles. Basic instantiation tests.
 
-2.  **Implement: Night Phase Logic (WW Wakeup & Target)**
-    *   Add `NightActionsLog` (temporary, maybe `List<Tuple<Guid, Guid>>` for ActorID, TargetID) to `GameSession` for tracking choices *during* the night phase.
-    *   Modify `GameService.ProcessModeratorInput`: When transitioning to `Night`:
-        *   Identify players with roles having `GetNightWakeUpOrder < int.MaxValue` (initially just WWs).
-        *   Sort them by wake-up order.
-        *   Generate instruction for the first role (Werewolves): Prompt for victim selection (`ExpectedInputType.PlayerSelectionSingle`, provide list of living non-WW players).
-    *   Implement `SimpleWerewolfRole.GenerateNightInstructions`: Return instruction asking for victim.
-    *   Implement `SimpleWerewolfRole.ProcessNightAction`: Takes input, validates target (is alive, not WW - basic checks), adds (actorId, targetId) to `GameSession.NightActionsLog`. Generates instruction indicating choice logged, transitioning phase if last night action. Returns error (e.g., `GameErrorCode.RuleViolation_TargetIsAlly`, `GameErrorCode.RuleViolation_TargetIsSelf`, `GameErrorCode.RuleViolation_TargetIsDead`) if invalid.
-    *   Modify `GameService.ProcessModeratorInput` to handle `PlayerSelectionSingle` for the WW action: Call `role.ProcessNightAction`, clear `NightActionsLog` (if transitioning), transition `GamePhase` to `Day_ResolveNight`, generate placeholder "Resolve Night" instruction.
-    *   Define `PlayerEliminatedLogEntry` and `WerewolfVictimChoiceLogEntry`.
+2.  **Implement: Night Phase Logic (WW Identification & Target)**
+    *   *Remove concept of temporary NightActionsLog.* Actions are logged directly to `GameHistoryLog`.
+    *   Modify `GameService.ProcessModeratorInput`:
+        *   **Setup -> Night Transition:** When processing the `SetupCompletePrompt` confirmation: Transition `GamePhase` to `Night`, set `TurnNumber = 1`. Generate the *initial* Night 1 instruction: `GameStrings.NightStartsPrompt` (`ExpectedInputType.Confirmation`).
+        *   **Handle Night Starts Confirmation:** When processing the `NightStartsPrompt` confirmation: Proceed to determine the first night role (Werewolves).
+        *   **Handle Night 1 Identification:** Since `SimpleWerewolfRole.RequiresNight1Identification` is true and it's Turn 1: Call `SimpleWerewolfRole.GenerateIdentificationInstructions`. This should prompt the moderator to select the player(s) who are Werewolves (`ExpectedInputType.PlayerSelectionMultiple`).
+        *   **Process Identification Input:** When receiving the Werewolf identification input: Call `SimpleWerewolfRole.ProcessIdentificationInput`. This validates the input, assigns the `SimpleWerewolfRole` instance to the selected `Player.Role`, sets `IsRoleRevealed = true`, and logs an `InitialRoleAssignmentLogEntry` to `GameHistoryLog`. On success, *immediately* generate the instruction for the Werewolf *action*.
+        *   **Generate Action Prompt:** Call `SimpleWerewolfRole.GenerateNightInstructions`. This should prompt for victim selection (`ExpectedInputType.PlayerSelectionSingle`, provide list of living non-WW players based on the *just assigned* roles).
+        *   **Process Action Input:** When receiving the victim selection input: Call `SimpleWerewolfRole.ProcessNightAction`. This validates the target (is alive, not WW ally - using assigned roles), creates a specific `NightActionLogEntry` (or similar derived type like `WerewolfVictimChoiceLogEntry`) and adds it to `GameSession.GameHistoryLog`. Return `ProcessResult` indicating success/failure (e.g., `GameErrorCode.RuleViolation_TargetIsAlly`). On success, transition `GamePhase` to `Day_ResolveNight` (as WWs are the only acting role in Phase 1) and generate the appropriate instruction (e.g., announcing eliminations).
+    *   Define `PlayerEliminatedLogEntry` and `NightActionLogEntry` (or specific like `WerewolfVictimChoiceLogEntry`) inheriting from `GameLogEntryBase`.
     *   *Test:*
-        *   Integration Test: Start game with 1 WW, 2 V. Assign roles manually for testing. Verify Night phase prompts for WW victim.
-        *   Integration Test: Process WW input targeting a `Villager`. Verify `NightActionsLog` updated. Verify phase transitions to `Day_ResolveNight`. Verify `WerewolfVictimChoiceLogEntry` added to `GameHistoryLog`.
-        *   Integration Test: Process WW input targeting self or another WW fails (`GameErrorCode.RuleViolation_TargetIsAlly` or `GameErrorCode.RuleViolation_TargetIsSelf`).
-        *   Integration Test: Process WW input targeting dead player fails (`GameErrorCode.RuleViolation_TargetIsDead`).
+        *   Integration Test: Start game with 1 WW, 2 V. Process Setup confirm. Verify next instruction is `NightStartsPrompt`. Process Night Starts confirm. Verify next instruction is WW *Identification* prompt (`PlayerSelectionMultiple`).
+        *   Integration Test: Process WW Identification input. Verify `Player.Role` assigned, `IsRoleRevealed` set, `InitialRoleAssignmentLogEntry` added. Verify *next* instruction is WW *Victim Selection* prompt (`PlayerSelectionSingle`), listing only Villagers.
+        *   Integration Test: Process WW victim input targeting a `Villager`. Verify the correct log entry added to `GameHistoryLog`. Verify phase transitions to `Day_ResolveNight`. Verify next instruction is elimination announcement.
+        *   Integration Test: Process WW victim input targeting self or another WW (using assigned roles) fails (`GameErrorCode.RuleViolation_TargetIsAlly` or `GameErrorCode.RuleViolation_TargetIsSelf`).
+        *   Integration Test: Process WW victim input targeting dead player fails (`GameErrorCode.RuleViolation_TargetIsDead`).
 
 3.  **Implement: Night Resolution Logic (WW Kill)**
     *   Modify `GameService.ProcessModeratorInput`: Add logic block for `GamePhase.Day_ResolveNight`:
-        *   Iterate through `NightActionsLog` (just the WW action for now).
-        *   Identify the victim.
+        *   Process the confirmation input corresponding to the elimination announcement.
+        *   Determine the Werewolf victim by examining the relevant `NightActionLogEntry` (or similar) in `GameSession.GameHistoryLog` for Turn 1.
+        *   Identify the victim based on the logged action.
         *   Update victim `Player.Status` to `Dead`.
         *   Add `PlayerEliminatedLogEntry` (Reason: `WerewolfAttack`) to `GameHistoryLog`.
-        *   Clear `NightActionsLog`.
-        *   Generate instruction: "Player [VictimName] was eliminated. Reveal role?" (`ExpectedInputType.RoleSelection` or `Confirmation` for now).
+        *   Generate instruction: "Player [VictimName] was eliminated. Reveal role?" (`ExpectedInputType.RoleSelection` or `Confirmation` for 'Unknown'). *Adjust prompt based on reveal mechanics.*
         *   Transition `GamePhase` to `Day_Event`.
-    *   Define `RoleRevealedLogEntry`. Add `RoleSelection` to `ExpectedInputType` enum. Add `SelectedRoleName` to `ModeratorInput`.
+    *   Define `RoleRevealedLogEntry` inheriting from `GameLogEntryBase`. Add `RoleSelection` to `ExpectedInputType` enum. Add `SelectedRole` to `ModeratorInput`.
     *   *Test:*
-        *   Integration Test: Following previous test, trigger Night Resolution. Verify victim `Status` is `Dead`. Verify `PlayerEliminatedLogEntry` added. Verify instruction asks for role reveal. Verify phase is `Day_Event`.
-        *   Integration Test: Process WW input targeting a Villager. Verify NightActionsLog updated. Verify phase transitions to Day_ResolveNight. Verify specific WerewolfVictimChoiceLogEntry added to GameHistoryLog.
+        *   Integration Test: Following previous test, trigger Night Resolution. Verify victim `Status` is `Dead`. Verify `PlayerEliminatedLogEntry` added to `GameHistoryLog`. Verify instruction asks for role reveal. Verify phase is `Day_Event`.
+        *   Integration Test: Process WW input targeting a Villager. Verify NightActionLogEntry added to GameHistoryLog. Trigger Night Resolution. Verify correct player eliminated.
 
 4.  **Implement: Role Reveal on Death (Basic)**
     *   Modify `GameService.ProcessModeratorInput`: Add logic for `GamePhase.Day_Event`:
         *   Handle `RoleSelection` input (or Confirmation acting as reveal).
         *   Find the player corresponding to the last elimination.
-        *   Instantiate the correct `IRole` based on the input `SelectedRoleName`.
+        *   Instantiate the correct `IRole` based on the input `SelectedRole`.
         *   Set `player.Role` and `player.IsRoleRevealed = true`.
         *   Add `RoleRevealedLogEntry` to `GameHistoryLog`.
         *   Generate instruction: "Proceed to Vote?" (`ExpectedInputType.Confirmation`).
-        *   Transition `GamePhase` to `Day_Vote`.
+        *   Transition `GamePhase` to `Day_Debate`. *Transition to Debate before Vote.*
     *   *Test:*
-        *   Integration Test: Following previous test, process role reveal input (e.g., "SimpleVillager"). Verify Player `Role` is set and `IsRoleRevealed` is true. Verify `RoleRevealedLogEntry`. Verify instruction asks to proceed to vote. Verify phase is `Day_Vote`.
+        *   Integration Test: Following previous test, process role reveal input (e.g., "SimpleVillager"). Verify Player `Role` is set and `IsRoleRevealed` is true. Verify `RoleRevealedLogEntry` in `GameHistoryLog`. Verify instruction asks to proceed to vote. Verify phase is `Day_Debate`. *Update expected phase.*
 
 5.  **Implement: Basic Day Vote & Resolution**
-    *   Add `VoteResultsCache` (Dictionary<Guid, int>?) to `GameSession`.
+    *   *Remove VoteResultsCache from GameSession if added.* Add `PendingVoteOutcome` (Guid?) to `GameSession`.
     *   Modify `GameService.ProcessModeratorInput`:
-        *   Handle `Confirmation` input in `Day_Event` to transition to `Day_Vote`. Generate instruction: "Collect votes. Input counts." (`ExpectedInputType.VoteCounts`). Provide list of living players.
-        *   Handle `VoteCounts` input in `Day_Vote`:
-            *   Basic validation: Check if `VoteResults` provided. Check if sum matches living players (add `GameErrorCode.InvalidInput_IncorrectVoteSum` error code). Store in `GameSession.VoteResultsCache`.
+        *   Add logic for `GamePhase.Day_Debate`: Handle `Confirmation` input to transition to `Day_Vote`. Generate instruction: "Voting phase. Determine outcome and report." (`ExpectedInputType` likely `PlayerSelectionSingle` for eliminated player - allow empty for Tie). Provide list of living players as context/selectable.
+        *   Handle expected input type (e.g., `PlayerSelectionSingle`) in `Day_Vote`:
+            *   Basic validation: Check if `SelectedPlayerIds` contains zero or one ID. Check if ID is valid/alive. Return `InvalidInput_PlayerIdNotFound` or `InvalidInput_InvalidPlayerSelectionCount` error if invalid.
+            *   Add `VoteOutcomeReportedLogEntry` to `GameHistoryLog`, recording the raw moderator input (e.g., the single ID or `Guid.Empty` for tie).
+            *   Store the reported outcome ID (or `Guid.Empty`) in `GameSession.PendingVoteOutcome`.
             *   Transition `GamePhase` to `Day_ResolveVote`. Generate placeholder "Resolve Vote" instruction.
     *   Add logic block for `GamePhase.Day_ResolveVote`:
-        *   Retrieve `VoteResultsCache`. Find player(s) with max votes.
-        *   Handle tie (for now: no elimination). Handle single max voter:
-            *   Update voter `Player.Status` to `Dead`.
-            *   Add `PlayerEliminatedLogEntry` (Reason: `DayVote`).
-            *   Clear `VoteResultsCache`.
-            *   Generate instruction: "Player [VoterName] eliminated. Reveal role?" (`ExpectedInputType.RoleSelection`). Transition back to `Day_Event` (for reveal).
-        *   If no elimination (tie): Generate instruction: "Tie vote. Proceed to Night?". Transition to `Night`. Increment `TurnNumber`.
-    *   Define `VoteCountsReportedLogEntry`, `VoteResolvedLogEntry`.
+        *   Retrieve the reported outcome from `session.PendingVoteOutcome`.
+        *   Add `VoteResolvedLogEntry` to `GameHistoryLog`, indicating the final result (player ID or tie).
+        *   If a player ID was reported (`PendingVoteOutcome` is not `Guid.Empty`):
+            *   Update that player's `Player.Status` to `Dead`.
+            *   Add `PlayerEliminatedLogEntry` (Reason: `DayVote`) to `GameHistoryLog`.
+            *   Clear `session.PendingVoteOutcome`.
+            *   Generate instruction: "Player [VoterName] eliminated. Reveal role?" (`ExpectedInputType.RoleSelection` or `Confirmation`). Transition back to `Day_Event` (for reveal).
+        *   If 'Tie' was reported (`PendingVoteOutcome` is `Guid.Empty`): Generate instruction: "Tie vote reported. Proceed to Night?". Transition to `Night`. Increment `TurnNumber`. Clear `session.PendingVoteOutcome`.
+    *   Define `VoteOutcomeReportedLogEntry` and `VoteResolvedLogEntry` inheriting from `GameLogEntryBase`.
     *   *Test:*
-        *   Integration Test: Process confirmation to start vote. Verify instruction asks for vote counts.
-        *   Integration Test: Process valid `VoteCounts` input. Verify cache updated, phase transitions. Verify `VoteCountsReportedLogEntry`.
-        *   Integration Test: Process invalid `VoteCounts` (wrong sum). Verify `GameErrorCode.InvalidInput_IncorrectVoteSum` error.
-        *   Integration Test: Trigger vote resolution with single max voter. Verify player status updated, log entry added, instruction asks for role reveal, phase is `Day_Event`. Verify `VoteResolvedLogEntry`.
-        *   Integration Test: Trigger vote resolution with a tie. Verify no elimination, instruction asks to proceed to night, phase is `Night`, `TurnNumber` incremented. Verify `VoteResolvedLogEntry`.
+        *   Integration Test: Process confirmation from Debate to start vote. Verify instruction asks for vote *outcome*.
+        *   Integration Test: Process valid outcome input (Player X eliminated). Verify `PendingVoteOutcome` set, phase transitions. Verify `VoteOutcomeReportedLogEntry` in `GameHistoryLog`.
+        *   Integration Test: Process invalid outcome input (invalid ID, multiple IDs). Verify relevant `InvalidInput` error.
+        *   Integration Test: Trigger vote resolution with reported elimination. Verify player status updated, `PlayerEliminatedLogEntry` added, instruction asks for role reveal, phase is `Day_Event`. Verify `VoteResolvedLogEntry` in `GameHistoryLog`.
+        *   Integration Test: Trigger vote resolution with reported tie. Verify no elimination, instruction asks to proceed to night, phase is `Night`, `TurnNumber` incremented. Verify `VoteResolvedLogEntry` in `GameHistoryLog`.
 
 6.  **Implement: Basic Victory Condition Checks**
     *   Add internal helper method in `GameService`: `CheckVictoryConditions(GameSession session)`.
         *   *Initial Logic:*
-            *   Count living WWs (based on revealed roles or initial `RolesInPlay` count minus revealed non-WWs - needs careful thought based *only* on known info).
-            *   Count living non-WWs.
+            *   Count living WWs (based on assigned/revealed roles only).
+            *   Count living non-WWs (based on assigned/revealed roles and status).
             *   If WW count >= non-WW count -> WW Win.
             *   If WW count == 0 -> Villager Win.
-    *   Modify `GameService.ProcessModeratorInput`: Call `CheckVictoryConditions` after Night Resolution (`Day_ResolveNight`), after role reveal (`Day_Event`), and after Vote Resolution (`Day_ResolveVote`).
-    *   If victory met: Transition `GamePhase` to `GameOver`. Generate instruction: "[Team] wins!". Add `VictoryConditionMetLogEntry`.
-    *   Define `VictoryConditionMetLogEntry`.
+    *   Modify `GameService.ProcessModeratorInput`: Call `CheckVictoryConditions` after Night Resolution (`Day_ResolveNight`), after role reveal (`Day_Event`), and after Vote Resolution (`Day_ResolveVote`). Relies *only* on moderator-knowable state (assigned/revealed roles, status).
+    *   If victory met: Transition `GamePhase` to `GameOver`. Generate instruction: "[Team] wins!". Add `VictoryConditionMetLogEntry` to `GameHistoryLog`.
+    *   Define `VictoryConditionMetLogEntry` inheriting from `GameLogEntryBase`.
     *   *Test:*
-        *   Integration Test: Scenario leading to WW parity (1 WW, 1 V left). Verify WW win detected, phase is GameOver, correct instruction/log.
-        *   Integration Test: Scenario leading to Villager win (last WW eliminated). Verify Villager win detected, phase is GameOver, correct instruction/log.
+        *   Integration Test: Scenario leading to WW parity (1 WW, 1 V left). Verify WW win detected, phase is GameOver, correct instruction/log in `GameHistoryLog`.
+        *   Integration Test: Scenario leading to Villager win (last WW eliminated). Verify Villager win detected, phase is GameOver, correct instruction/log in `GameHistoryLog`.
+
+*(Note: Ensure all log entries defined in this phase - `PlayerEliminatedLogEntry`, `NightActionLogEntry`, `RoleRevealedLogEntry`, `VoteOutcomeReportedLogEntry`, `VoteResolvedLogEntry`, `VictoryConditionMetLogEntry` - inherit from the `GameLogEntryBase` abstract class as defined in Phase 0).*
 
 ---
 

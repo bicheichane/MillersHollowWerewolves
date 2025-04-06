@@ -37,7 +37,7 @@ This will form the bulk of the testing effort.
     2.  **Act:** Call `GameService.ProcessModeratorInput` repeatedly, simulating the moderator's actions for the scenario.
     3.  **Assert:** After each significant `ProcessModeratorInput` call or phase transition:
         *   Check the returned `ProcessResult` (IsSuccess, Error details if applicable).
-        *   Check the `ModeratorInstruction` (InstructionText, ExpectedInputType, SelectablePlayerIds, etc.). Use `GetCurrentInstruction` if needed.
+        *   Check the `ModeratorInstruction` (InstructionText, ExpectedInputType, SelectablePlayerIds, SelectableRoles, SelectableOptions).
         *   Query the `GameSession` state (via `GetGameStateView` or potentially internal access for testing): Verify `GamePhase`, `TurnNumber`, `Player.Status`, `Player.Role` (if revealed), `Player.State` properties (`IsSheriff`, `IsInLove`, `LoverId`, `VoteMultiplier`, `PotionsUsed`, `TimesAttackedByWerewolves`, etc.), `SheriffPlayerId`, `Lovers`, `PendingEliminations`, `ActiveEvents`, `DiscardPile`, `GameHistoryLog` count and latest entries.
         *   Verify specific outcomes (e.g., player eliminated, correct history log entry added, event turns remaining decremented).
 *   **Helper Methods:** Develop helper methods within the test project to streamline setup and assertions (e.g., `CreateSessionWithRoles(params RoleType[] roles)`, `SimulateNightAction(gameId, actorId, targetId)`, `AssertPlayerState(gameId, playerId, stateChecker)`, `AssertInstructionAsksForPlayerSelection(instruction, expectedPlayers)`).
@@ -748,12 +748,12 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
 
 *   **Test: [EventName] Effect on Day Vote** (For events like Nightmare, Influences, Great Distrust, Enthusiasm, Dissatisfaction)
     *   //Setup: Game state with [EventName] active. Enter Day phase, proceed towards vote.
-    *   //Act: Attempt to initiate standard vote OR follow event-specific vote instructions. Process event-specific vote input. Resolve vote.
+    *   //Act: Attempt to initiate standard vote OR follow event-specific vote instructions. Process event-specific vote *outcome* input. Resolve vote.
     *   //Assert:
         *   `GameService` logic correctly calls `ModifyDayVoteProcess`.
-        *   `PendingModeratorInstruction` requests the correct type of input (Accusations, Friend Votes, Sequential Choice).
-        *   Input validation matches the event requirements (e.g., correct accusation format, friend vote count).
-        *   Vote resolution logic uses the event's rules (e.g., most accusations, zero friend votes).
+        *   `PendingModeratorInstruction` requests the correct type of input (`PlayerSelectionMultiple` for Great Distrust outcome, `PlayerSelectionSingle`/`Confirmation` for Nightmare outcome, etc.).
+        *   Input validation matches the event requirements (e.g., valid player selection for elimination, confirmation for tie).
+        *   Vote resolution logic uses the event's rules based on the reported outcome.
         *   Enthusiasm/Dissatisfaction trigger second vote correctly based on outcome.
 
 *   **Test: [EventName] Effect on Debate** (For events like Eclipse, Good Manners, Not Me)
@@ -775,8 +775,8 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
             *   Miracle: WW victim revived, becomes Simple Villager, state updated, log entry.
             *   LittleRascal: Player state `IsTemporarilyRemoved`, returns next day, `VoteMultiplier` becomes 3, logs updated.
             *   Burial: Role not revealed on WW night death.
-            *   Punishment: Voucher input requested, elimination based on voucher count.
-            *   Spiritualism: Gypsy action prompts Medium choice, Day phase prompts Medium to ask question, Log records Q&A.
+            *   Punishment: Outcome input requested (Confirmation or PlayerSelectionSingle?), elimination based on outcome.
+            *   Spiritualism: Gypsy action prompts Medium choice, Day phase prompts Medium to ask question (OptionSelection), Moderator inputs answer (OptionSelection?), Log records Q&A.
 
 *   **Test: [EventName] Expiration** (For temporary events)
     *   //Setup: Game state with temporary [EventName] active (`TurnsRemaining` > 0).
@@ -788,8 +788,8 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
 
 *   **Sub-Section: Sheriff Mechanics**
     *   **Test: Sheriff Election Process and State Update**
-        *   //Setup: Game state suitable for Sheriff election (e.g., Day 1 before vote, or explicit instruction). 5 Players A, B, C, D, E.
-        *   //Act: Generate instruction for Sheriff election vote. Moderator input provides votes: A=2, B=1, C=1, D=1.
+        *   //Setup: Game state suitable for Sheriff election. 5 Players A, B, C, D, E.
+        *   //Act: Generate instruction for Sheriff election vote. Moderator inputs the *outcome*: Player A is elected Sheriff (e.g., via `PlayerSelectionSingle`).
         *   //Assert:
             *   `ProcessResult` is successful.
             *   Player A's `State.IsSheriff` becomes true.
@@ -798,12 +798,12 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
             *   Game proceeds to next appropriate step.
 
     *   **Test: Sheriff Vote Correctly Counts Double During Resolution**
-        *   //Setup: Game in `Day_Vote`. Player A (Sheriff), Player B (Villager), Player C (Villager). Votes: A -> C, B -> C.
-        *   //Act: Process vote input: { C: 2 (from A) + 1 (from B) = 3 }. Resolve vote.
+        *   //Setup: Game in `Day_Vote`. Player A (Sheriff), Player B (Villager), Player C (Villager). Vote results in a tie between B and C reported by moderator.
+        *   //Act: Process vote outcome input (e.g., `Confirmation`=true for tie, or specific 'Tie' `OptionSelection`). Resolve vote.
         *   //Assert:
-            *   `GameService` calculates C received 3 votes total.
+            *   `GameService` identifies the tie and applies Sheriff tie-breaking logic (Sheriff A's vote breaks tie, C is eliminated).
             *   Player C `Status` becomes `Dead` (reason `DayVote`).
-            *   `GameHistoryLog` contains "Vote Counts Reported" and "Vote Resolved (Outcome)" reflecting the double vote.
+            *   `GameHistoryLog` contains "Vote Resolved (Outcome)" reflecting the Sheriff breaking the tie.
 
     *   **Test: Sheriff Successfully Passes Role to Successor on Night Death**
         *   //Setup: Player A (Sheriff) killed overnight. Player B (Villager) is alive. Game in `Day_Event` after revealing A's death.
@@ -1049,29 +1049,11 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
         *   `GameError.Type` is `RuleViolation`.
         *   `GameError.Code` is `GameErrorCode.RuleViolation_TargetIsDead`.
 
-*   **Test: Process Input - Malformed Vote Data**
-    *   //Setup: Active game in Day Vote phase. Instruction expects `VoteCounts`. Input provides data in wrong format or non-integer counts.
-    *   //Act: Call `ProcessModeratorInput`.
-    *   //Assert:
-        *   `ProcessResult` is Failure.
-        *   `GameError.Type` is `InvalidInput`.
-        *   `GameError.Code` is `GameErrorCode.InvalidInput_MalformedVoteData`.
+*   **Test: Process Input - Malformed Vote Data** - *REMOVED as vote data is no longer input*
 
-*   **Test: Process Input - Vote Sum Incorrect**
-    *   //Setup: Active game with 5 living players. Day Vote phase. Input provides `VoteCounts` dictionary where sum of values is not 5.
-    *   //Act: Call `ProcessModeratorInput`.
-    *   //Assert:
-        *   `ProcessResult` is Failure.
-        *   `GameError.Type` is `InvalidInput`.
-        *   `GameError.Code` is `GameErrorCode.InvalidInput_IncorrectVoteSum`.
+*   **Test: Process Input - Vote Sum Incorrect** - *REMOVED as vote counts are no longer input*
 
-*   **Test: Process Input - Lover Voting Against Lover**
-    *   //Setup: Active game, Day Vote. Player A and B are Lovers. Input has Player A voting for Player B.
-    *   //Act: Call `ProcessModeratorInput` with vote counts including A->B vote.
-    *   //Assert:
-        *   `ProcessResult` is Failure.
-        *   `GameError.Type` is `RuleViolation`.
-        *   `GameError.Code` is `GameErrorCode.RuleViolation_LoverVotingAgainstLover`.
+*   **Test: Process Input - Lover Voting Against Lover** - *REMOVED as individual votes are not tracked*
 
 *   **Sub-Section: Role & Event Interactions**
     *   **Test: Interaction - Witch Heals Target Already Protected by Defender (Potion Used)**

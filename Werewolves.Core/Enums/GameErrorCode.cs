@@ -15,11 +15,6 @@ public enum GameErrorCode
     InvalidInput_PlayerIdNotFound,
     InvalidInput_RoleNameNotFound,
     InvalidInput_OptionNotAvailable,
-    InvalidInput_MalformedVoteData,
-    InvalidInput_IncorrectVoteSum,
-    InvalidInput_IncorrectFriendVoteCount, // For Great Distrust Event
-    InvalidInput_InvalidFriendVoteTarget, // For Great Distrust Event
-    InvalidInput_InsufficientVouchers, // For Punishment Event
     InvalidInput_InvalidPlayerSelectionCount,
 
     // --- RuleViolation ---

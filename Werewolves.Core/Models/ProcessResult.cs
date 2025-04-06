@@ -35,4 +35,4 @@ public class ProcessResult
         ArgumentNullException.ThrowIfNull(error);
         return new ProcessResult(false, null, error);
     }
-} 
+}

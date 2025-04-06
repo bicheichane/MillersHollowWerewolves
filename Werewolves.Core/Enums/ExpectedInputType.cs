@@ -11,10 +11,5 @@ public enum ExpectedInputType
     PlayerSelectionMultiple,
     RoleSelection,
     OptionSelection,
-    VoteCounts,
-    AccusationCounts,
-    FriendVotes,
-    Confirmation,
-    VoucherSelection, // Likely maps to PlayerSelectionMultiple with specific context
-    SuccessorSelection // Likely maps to PlayerSelectionSingle with specific context
+    Confirmation
 } 

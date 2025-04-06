@@ -1,5 +1,5 @@
 using Werewolves.Core.Enums;
-// using Werewolves.Core.Interfaces; // IRole will be added in Phase 1
+using Werewolves.Core.Interfaces;
 
 namespace Werewolves.Core.Models;
 
@@ -14,8 +14,8 @@ public class Player
     public bool IsRoleRevealed { get; set; } = false;
     public PlayerState State { get; } = new PlayerState();
 
-    // Role property to be added in Phase 1
-    // public IRole? Role { get; internal set; } = null;
+    // Role property added in Phase 1
+    public IRole? Role { get; internal set; } = null;
 }
 
 /// <summary>
