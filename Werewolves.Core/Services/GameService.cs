@@ -252,9 +252,7 @@ public class GameService
                 ExpectedInputType = ExpectedInputType.Confirmation
             };
 
-            //session.PendingModeratorInstruction = firstNightInstruction; // Update the pending instruction // OLD
             session.PendingModeratorInstruction = nightStartInstruction; // Set initial night prompt
-            //return ProcessResult.Success(firstNightInstruction); // OLD
             return ProcessResult.Success(nightStartInstruction);
         }
         else // Confirmation == false
@@ -615,7 +613,7 @@ public class GameService
         return null;
     }
 
-    // --- STUBS for Missing Day Phase Handlers ---
+
     private ProcessResult HandleDayResolveNightPhase(GameSession session, ModeratorInput input)
     {
         // Expecting Confirmation input to proceed with resolution announcement

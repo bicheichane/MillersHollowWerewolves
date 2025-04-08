@@ -115,8 +115,13 @@ public static class TestHelper
     }
 
 	public static List<string> GetDefaultPlayerNames(int count = 4) =>
-		Enumerable.Range(1, count).Select(i => $"Player {i}").ToList();
+		Enumerable.Range(1, count).Select(i => $"P {i}").ToList();
 
-	public static List<RoleType> GetDefaultRoles4() =>
-		new() { RoleType.SimpleWerewolf, RoleType.SimpleVillager, RoleType.SimpleVillager, RoleType.SimpleVillager };
+	public static List<RoleType> GetDefaultRoles4() => new() { 
+        RoleType.SimpleWerewolf, 
+        
+        RoleType.SimpleVillager, 
+        RoleType.SimpleVillager, 
+        RoleType.SimpleVillager 
+    };
 } 

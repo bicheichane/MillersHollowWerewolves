@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Werewolves.Core.Resources;
 using static Werewolves.Core.Tests.TestHelper;
+using static Werewolves.Core.Models.ModeratorInput;
 
 namespace Werewolves.Core.Tests;
 
@@ -24,26 +25,42 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        var eliminatedPlayerName = "Bob";
-        var gameId = SetupGameForRoleReveal(playerNames, roles, eliminatedPlayerName, out var eliminatedPlayerId); // Keep old helper for now, refactor later
+
+        var wolfPlayerIndex = 0;
+        var eliminatedPlayerIndex = 1;
+        
+        var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
-        var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.RoleSelection, SelectedRole = RoleType.SimpleVillager };
+
+        var pList = session!.Players.Keys.ToList();
+
+        var wolfId = pList[0];
+        var victimId = pList[1];
+
+        var inputs = new List<ModeratorInput>
+        {
+            Confirm(true), // Confirm game start
+            Confirm(true), // Confirm night phase start (village sleeps)
+            ModeratorInput.SelectPlayers(wolfId), //Identify wolf
+            ModeratorInput.SelectPlayer(victimId), //wolf chooses victim
+        };
+
 
         // Act
-        var result = _gameService.ProcessModeratorInput(gameId, input);
+        var result = TestHelper.ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
         session = _gameService.GetGameStateView(gameId);
         session.ShouldNotBeNull();
 
-        var revealedPlayer = session.Players[eliminatedPlayerId];
+        var revealedPlayer = session.Players[victimId];
         revealedPlayer.IsRoleRevealed.ShouldBeTrue();
         revealedPlayer.Role.ShouldNotBeNull();
         revealedPlayer.Role.RoleType.ShouldBe(RoleType.SimpleVillager);
 
         session.GameHistoryLog.OfType<RoleRevealedLogEntry>()
-            .ShouldContain(rl => rl.PlayerId == eliminatedPlayerId && rl.RevealedRole == RoleType.SimpleVillager);
+            .ShouldContain(rl => rl.PlayerId == victimId && rl.RevealedRole == RoleType.SimpleVillager);
 
         session.GamePhase.ShouldBe(GamePhase.Day_Debate);
         session.PendingModeratorInstruction.ShouldNotBeNull();
@@ -84,7 +101,7 @@ public class DayPhaseTests
         // Arrange
         var playerNames = new List<string> { "Alice", "Bob", "Charlie" }; // WW, V, V
         var roles = new List<RoleType> { RoleType.SimpleWerewolf, RoleType.SimpleVillager, RoleType.SimpleVillager };
-        var gameId = SetupGameForVote(playerNames, roles); // Uses refactored helper now
+        var gameId = _gameService.StartNewGame(playerNames, roles); // Uses refactored helper now
         var session = _gameService.GetGameStateView(gameId);
         var targetPlayerId = session.Players.Values.First(p => p.Name == "Alice").Id; // Target the WW
         var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.PlayerSelectionSingle, SelectedPlayerIds = new List<Guid> { targetPlayerId } };
@@ -112,7 +129,7 @@ public class DayPhaseTests
         // Arrange
         var playerNames = new List<string> { "Alice", "Bob", "Charlie" };
         var roles = new List<RoleType> { RoleType.SimpleWerewolf, RoleType.SimpleVillager, RoleType.SimpleVillager };
-        var gameId = SetupGameForVote(playerNames, roles); // Uses refactored helper now
+        var gameId = _gameService.StartNewGame(playerNames, roles); // Uses refactored helper now
         var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.PlayerSelectionSingle, SelectedPlayerIds = new List<Guid>() }; // Empty list signifies Tie
 
         // Act
@@ -138,7 +155,7 @@ public class DayPhaseTests
         // Arrange
         var playerNames = new List<string> { "Alice", "Bob", "Charlie" }; // WW, V, V
         var roles = new List<RoleType> { RoleType.SimpleWerewolf, RoleType.SimpleVillager, RoleType.SimpleVillager };
-        var gameId = SetupGameForVote(playerNames, roles); // Uses refactored helper now
+        var gameId = _gameService.StartNewGame(playerNames, roles); // Uses refactored helper now
         var session = _gameService.GetGameStateView(gameId);
         var p1Id = session.Players.Values.First(p => p.Name == "Alice").Id;
         var p2Id = session.Players.Values.First(p => p.Name == "Bob").Id;
@@ -168,7 +185,7 @@ public class DayPhaseTests
         // Need to refactor SetupGameForVoteResolution to use simulation
         var sessionSetup = _gameService.GetGameStateView(_gameService.StartNewGame(playerNames, roles));
         var targetPlayerId = sessionSetup.Players.Values.First(p => p.Name == "Alice").Id;
-        var gameId = SetupGameForVoteResolution(playerNames, roles, targetPlayerId); // Uses refactored helper indirectly
+        var gameId = _gameService.StartNewGame(playerNames, roles); // Uses refactored helper indirectly
         var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
 
         // Act
@@ -202,7 +219,7 @@ public class DayPhaseTests
         var playerNames = new List<string> { "Alice", "Bob", "Charlie" }; // WW, V, V
         var roles = new List<RoleType> { RoleType.SimpleWerewolf, RoleType.SimpleVillager, RoleType.SimpleVillager };
         // Need to refactor SetupGameForVoteResolution to use simulation
-        var gameId = SetupGameForVoteResolution(playerNames, roles, Guid.Empty); // Setup with a Tie outcome; uses refactored helper indirectly
+        var gameId = _gameService.StartNewGame(playerNames, roles); // Setup with a Tie outcome; uses refactored helper indirectly
         var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
 
         // Act

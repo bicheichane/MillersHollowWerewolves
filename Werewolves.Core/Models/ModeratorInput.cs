@@ -36,7 +36,13 @@ public partial class ModeratorInput
 		SelectedPlayerIds = new List<Guid> { playerId }
 	};
 
-    public static ModeratorInput SelectPlayers(List<Guid> playerIds) => new ModeratorInput()
+	public static ModeratorInput SelectPlayers(Guid playerId) => new ModeratorInput()
+	{
+		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
+		SelectedPlayerIds = new() { playerId }
+	};
+
+	public static ModeratorInput SelectPlayers(List<Guid> playerIds) => new ModeratorInput()
 	{
 		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
 		SelectedPlayerIds = playerIds
