@@ -76,7 +76,7 @@ public class NightResolutionTests
 
         session.GamePhase.ShouldBe(GamePhase.Day_Event); // Should move to reveal role
         session.PendingModeratorInstruction.ShouldNotBeNull();
-        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.RoleSelection);
+        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.AssignPlayerRoles);
         // Use resource key for the prompt format if available, otherwise check content
         session.PendingModeratorInstruction.InstructionText.ShouldContain(victimName);
         session.PendingModeratorInstruction.InstructionText.ShouldContain(GameStrings.RevealRolePromptSpecify);

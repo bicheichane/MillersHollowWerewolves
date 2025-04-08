@@ -115,7 +115,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
         *   `GameSession.GamePhase` is `Setup` or `Night` (during Night 1 role calls).
 
 *   **Test: Process Thief Role Choice**
-    *   //Setup: Game in Night 1, Thief identification prompted. Moderator input identifying Player A as Thief, offered roles 'Seer' and 'SimpleVillager', and Thief chose 'Seer'.
+    *   //Setup: Game in Night 1, Thief identification prompted (`ExpectedInputType.RoleAssignment`). Moderator input identifying Player A as Thief, offered roles 'Seer' and 'SimpleVillager' in `SelectableRoles`. Input: `ModeratorInput` with `AssignedPlayerRoles` = { PlayerA_ID: RoleType.Seer }.
     *   //Act: Call `ProcessModeratorInput` with the Thief choice details.
     *   //Assert:
         *   `ProcessResult` is successful.
@@ -415,7 +415,7 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
         *   Player A and B `State.IsCharmed` remain false.
 
 *   **Test: Actor Chooses and Uses Role Power (Seer Example)**
-    *   //Setup: Game in Night phase. Player A (Actor). Available roles in pool: Seer, Defender, Hunter. Actor prompted. Input: Actor chooses Seer. Later, Actor (acting as Seer) prompted. Input: Actor targets Player B (WW).
+    *   //Setup: Game in Night phase. Player A (Actor). Available roles in pool: Seer, Defender, Hunter. Actor prompted (`ExpectedInputType.RoleAssignment`). Input: `ModeratorInput` with `AssignedPlayerRoles` = { PlayerA_ID: RoleType.Seer }. Later, Actor (acting as Seer) prompted. Input: Actor targets Player B (WW).
     *   //Act: Process Actor role choice input. Process Actor's "Seer" action input.
     *   //Assert:
         *   Actor choice input successful. `GameHistoryLog` contains "Actor Role Choice" (Seer).
@@ -500,8 +500,8 @@ Okay, here is a comprehensive and exhaustive list of test scenarios for the `Wer
         *   Game phase transitions to `Day_Event`.
 
 *   **Test: Role Reveal on Death (Standard)**
-    *   //Setup: Game in `Day_Event` phase. Player B (Seer) was just announced eliminated. Moderator prompted to reveal role. Input: Role is 'Seer'.
-    *   //Act: Call `ProcessModeratorInput` with revealed role 'Seer'.
+    *   //Setup: Game in `Day_Event` phase. Player B (original role was Seer) was just announced eliminated. Moderator prompted to reveal role (`ExpectedInputType.RoleAssignment`). Input: `ModeratorInput` with `AssignedPlayerRoles` = { PlayerB_ID: RoleType.Seer }.
+    *   //Act: Call `ProcessModeratorInput` with the role assignment input.
     *   //Assert:
         *   `ProcessResult` is successful.
         *   Player B's `Role` is set to `SeerRole` instance.

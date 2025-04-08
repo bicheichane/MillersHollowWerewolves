@@ -679,7 +679,7 @@ public class GameService
             {
                 // Placeholder for GameStrings.RevealRolePrompt incorporated
                 InstructionText = $"{announcement} {string.Format(GameStrings.RevealRolePrompt, playerToReveal.Name)}",
-                ExpectedInputType = ExpectedInputType.RoleSelection, // Or Confirmation if unknown/refused
+                ExpectedInputType = ExpectedInputType.AssignPlayerRoles, // Or Confirmation if unknown/refused
                 AffectedPlayerIds = new List<Guid> { playerToReveal.Id },
                 SelectableRoles = Enum.GetValues<RoleType>().Where(rt => rt > RoleType.Unknown).ToList() // Provide all roles except system ones
             };
@@ -703,57 +703,61 @@ public class GameService
     private ProcessResult HandleDayEventPhase(GameSession session, ModeratorInput input)
     {
         // --- Phase 1: Handle Role Reveal Input --- 
-        if (session.PendingModeratorInstruction?.ExpectedInputType == ExpectedInputType.RoleSelection)
+        if (session.PendingModeratorInstruction?.ExpectedInputType == ExpectedInputType.AssignPlayerRoles)
         {
             // Validate input: Expecting a role to be selected
-            if (input.SelectedRole == null || input.SelectedRole == RoleType.Unassigned)
+            if (input.AssignedPlayerRoles == null || input.AssignedPlayerRoles.Count == 0)
             {
                 // Placeholder for GameStrings.RoleNotSelectedError
                 return ProcessResult.Failure(new GameError(ErrorType.InvalidInput, GameErrorCode.InvalidInput_RequiredDataMissing, GameStrings.RoleNotSelectedError));
             }
 
-            // Find the player whose role needs revealing (using AffectedPlayerIds from instruction)
-            Guid? playerToRevealId = session.PendingModeratorInstruction?.AffectedPlayerIds?.FirstOrDefault();
-            if (playerToRevealId == null || !session.Players.TryGetValue(playerToRevealId.Value, out var playerToReveal))
-            {                 
-                // Should not happen if instruction was generated correctly
-                // Placeholder for GameStrings.RevealTargetNotFoundError
-                return ProcessResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, GameStrings.RevealTargetNotFoundError));
-            }
-
-            // Instantiate the role based on input
-            RoleType revealedRoleType = input.SelectedRole.Value;
-            IRole? revealedRoleInstance = null;
-            if (revealedRoleType != RoleType.Unknown)
-            {                
-                 if (!_roleImplementations.TryGetValue(revealedRoleType, out revealedRoleInstance))
-                 {
-                    // Handle case where selected role has no implementation (shouldn't happen with SelectableRoles)
-                    // Placeholder for GameStrings.RoleImplementationNotFound
-                    return ProcessResult.Failure(new GameError(ErrorType.InvalidInput, GameErrorCode.InvalidInput_RoleNameNotFound, string.Format(GameStrings.RoleImplementationNotFound, revealedRoleType)));
-                 }
-            }
-            // If RoleType.Unknown, instance remains null
-
-            // Update player state
-            playerToReveal.Role = revealedRoleInstance; 
-            playerToReveal.IsRoleRevealed = true; // Mark as revealed
-
-            // Log the reveal
-            session.GameHistoryLog.Add(new RoleRevealedLogEntry
+            foreach (var assignedPlayerRole in input.AssignedPlayerRoles)
             {
-                 PlayerId = playerToReveal.Id,
-                 RevealedRole = revealedRoleType, 
-                 TurnNumber = session.TurnNumber,
-                 Phase = session.GamePhase
-            });
+                // Find the player whose role needs revealing (using AffectedPlayerIds from instruction)
+                Guid playerToRevealId = assignedPlayerRole.Key;
+                if (!session.Players.TryGetValue(playerToRevealId, out var playerToReveal))
+                {
+                    // Should not happen if instruction was generated correctly
+                    // Placeholder for GameStrings.RevealTargetNotFoundError
+                    return ProcessResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, GameStrings.RevealTargetNotFoundError));
+                }
 
-            // Proceed to Debate
-            session.GamePhase = GamePhase.Day_Debate;
+                // Instantiate the role based on input
+                RoleType revealedRoleType = assignedPlayerRole.Value;
+                IRole? revealedRoleInstance = null;
+                if (revealedRoleType != RoleType.Unknown)
+                {
+                    if (!_roleImplementations.TryGetValue(revealedRoleType, out revealedRoleInstance))
+                    {
+                        // Handle case where selected role has no implementation (shouldn't happen with SelectableRoles)
+                        // Placeholder for GameStrings.RoleImplementationNotFound
+                        return ProcessResult.Failure(new GameError(ErrorType.InvalidInput, GameErrorCode.InvalidInput_RoleNameNotFound, string.Format(GameStrings.RoleImplementationNotFound, revealedRoleType)));
+                    }
+                }
+                // If RoleType.Unknown, instance remains null
+
+                // Update player state
+                playerToReveal.Role = revealedRoleInstance;
+                playerToReveal.IsRoleRevealed = true; // Mark as revealed
+
+                // Log the reveal
+                session.GameHistoryLog.Add(new RoleRevealedLogEntry
+                {
+                    PlayerId = playerToReveal.Id,
+                    RevealedRole = revealedRoleType,
+                    TurnNumber = session.TurnNumber,
+                    Phase = session.GamePhase
+                });
+
+			}
+
+
+			// Proceed to Debate
+			session.GamePhase = GamePhase.Day_Debate;
             var nextInstruction = new ModeratorInstruction
             {
-                // Placeholder for GameStrings.RoleRevealedProceedToDebate
-                InstructionText = string.Format(GameStrings.RoleRevealedProceedToDebate, playerToReveal.Name, revealedRoleType),
+                InstructionText = GameStrings.RoleRevealedProceedToDebate,
                 ExpectedInputType = ExpectedInputType.Confirmation
             };
             session.PendingModeratorInstruction = nextInstruction;
@@ -921,7 +925,7 @@ public class GameService
                 {
                     // Placeholder for GameStrings.PlayerEliminatedByVoteRevealRole
                     InstructionText = string.Format(GameStrings.PlayerEliminatedByVoteRevealRole, eliminatedPlayer.Name),
-                    ExpectedInputType = ExpectedInputType.RoleSelection,
+                    ExpectedInputType = ExpectedInputType.AssignPlayerRoles,
                     AffectedPlayerIds = new List<Guid> { eliminatedPlayerId },
                     SelectableRoles = Enum.GetValues<RoleType>().Where(rt => rt > RoleType.Unknown).ToList()
                 };

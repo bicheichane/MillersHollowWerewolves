@@ -188,7 +188,7 @@ The core principle of this application is to accurately track the game state as 
 10. **`ModeratorInput` Class:** Data structure for communication FROM the moderator.
     *   `InputTypeProvided` (enum `ExpectedInputType`): Indicates which optional field below is populated.
     *   `SelectedPlayerIds` (List<Guid>?): IDs of players chosen. **Used for role identification (`PlayerSelectionMultiple`) and vote outcome (`PlayerSelectionSingle`, allowing 0 for tie).**
-    *   `SelectedRole` (enum `RoleType`?): Role chosen (e.g., for role reveal).
+    *   `AssignedPlayerRoles` (Dictionary<Guid, RoleType>?): Player IDs mapped to the role assigned to them. Used during setup/role assignment phases (e.g., Thief, initial role identification).
     *   `SelectedOption` (string?): Specific text option chosen.
     *   `Confirmation` (bool?): Boolean confirmation.
 
@@ -205,7 +205,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
     *   `ExpectedInputType` (ExpectedInputType Enum): Specifies the kind of input expected, and implies which `Selectable*` list might be populated.
     *   `AffectedPlayerIds` (List<Guid>?): Optional: Player(s) this instruction primarily relates to (for context, e.g., player needing role reveal).
     *   `SelectablePlayerIds` (List<Guid>?): Populated if `ExpectedInputType` involves selecting players (e.g., `PlayerSelectionSingle`, `PlayerSelectionMultiple`).
-    *   `SelectableRoles` (List<RoleType>?): Populated if `ExpectedInputType` is `RoleSelection`. Note: Uses the `RoleType` enum directly.
+    *   `SelectableRoles` (List<RoleType>?): Populated if `ExpectedInputType` is `RoleAssignment`. Provides the list of possible roles the moderator can assign via the `AssignedPlayerRoles` field in `ModeratorInput`.
     *   `SelectableOptions` (List<string>?): Populated if `ExpectedInputType` is `OptionSelection`.
 
 --------------------------
@@ -224,7 +224,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
         *   *(Note: This enum defines potential winning states. Determining if one of these states has actually been achieved requires runtime logic within the `GameService`. The `GameService`'s victory condition check compares the current, moderator-known game state (player counts per known faction **based on assigned roles**, revealed roles, specific statuses like Lovers, Charmed, Infected, Angel timing, PM group status) against the requirements for each potential `Team` outcome.)*
     *   `EventTiming`: `Immediate`, `NextNight`, `NextDayVote`, `VictimEffect`, `PermanentAssignment`, `DayAction`.
     *   `EventDuration`: `OneTurn`, `OneNight`, `OneDayCycle`, `Permanent`, `UntilNextVote`.
-    *   `ExpectedInputType`: `None`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `RoleSelection`, `OptionSelection`, `Confirmation`.
+    *   `ExpectedInputType`: `None`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `RoleAssignment`, `OptionSelection`, `Confirmation`. Corresponds to the populated field in `ModeratorInput`. `RoleAssignment` expects input via `ModeratorInput.AssignedPlayerRoles`, which handles both single (e.g., role reveal) and multiple (e.g., initial identification) assignments.
     *   `WitchPotionType`: `Healing`, `Poison`. (Could be flags).
     *   `NightActionType`: `Unknown`, `WerewolfVictimSelection`, `SeerCheck`, `WitchSave`, `WitchKill`, `DefenderProtect`, `PiperCharm`.
     *   `RoleType` (representing the intended values for a RoleType Enum):
@@ -307,7 +307,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
 
 4.  **Day Event Phase (`GamePhase.Day_Event`):**
     *   `GameService` prompts moderator to announce victims (if instruction generated in previous phase).
-    *   If an eliminated player needs role reveal: Prompt Moderator to input revealed role (`ExpectedInputType.RoleSelection`). `ProcessModeratorInput` updates `Player.Role` and `IsRoleRevealed`. Log `RoleRevealedLogEntry`.
+    *   If an eliminated player needs role reveal: Prompt Moderator to input revealed role (`ExpectedInputType.RoleAssignment`). `ProcessModeratorInput` updates `Player.Role` and `IsRoleRevealed`. Log `RoleRevealedLogEntry`.
     *   Handle death triggers based on the now-known role (Hunter's shot - prompt for target; Lovers - automatically mark).
     *   **Check Game Over** based on assigned roles and game state.
     *   Prompt Moderator if Bear Tamer is alive and adjacent to a player with an assigned Werewolf role.
@@ -328,7 +328,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
 7.  **Vote Resolution Phase (`GamePhase.Day_ResolveVote`):**
     *   `GameService` determines elimination based on the reported `PendingVoteOutcome` and tracked modifiers (Sheriff tie-break). Log vote outcome (`VoteResolvedLogEntry`).
     *   Generate Instruction: "[Player] was eliminated / The vote resulted in a tie."
-    *   If eliminated, prompt Moderator to input the revealed role (`ExpectedInputType.RoleSelection`) - transition back to `Day_Event`.
+    *   If eliminated, prompt Moderator to input the revealed role (`ExpectedInputType.RoleAssignment`) - transition back to `Day_Event`.
     *   Update `Player.Status`. Log `PlayerEliminatedLogEntry`.
     *   Handle elimination triggers based on revealed role (Hunter - prompt; Idiot - update; Sheriff - prompt successor). Log these events.
     *   **Check Game Over** based on assigned roles and game state.

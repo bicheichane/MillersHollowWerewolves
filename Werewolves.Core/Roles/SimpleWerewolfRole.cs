@@ -125,7 +125,8 @@ public class SimpleWerewolfRole : IRole
     /// </summary>
     public ProcessResult ProcessIdentificationInput(GameSession session, ModeratorInput input)
     {
-        int expectedWerewolfCount = 2; // Example: Assuming 2 werewolves in setup
+        int expectedWerewolfCount = session.GetRoleCount(RoleType.SimpleWerewolf);
+
         // TODO: Determine expected count dynamically based on game setup/rules
         if (input.SelectedPlayerIds.Count != expectedWerewolfCount)
         {

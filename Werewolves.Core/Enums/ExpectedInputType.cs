@@ -9,7 +9,7 @@ public enum ExpectedInputType
     None,
     PlayerSelectionSingle,
     PlayerSelectionMultiple,
-    RoleSelection,
+    AssignPlayerRoles,
     OptionSelection,
     Confirmation
 } 

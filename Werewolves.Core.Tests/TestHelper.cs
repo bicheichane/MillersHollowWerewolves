@@ -8,83 +8,68 @@ using System.Linq;
 
 namespace Werewolves.Core.Tests;
 
+public class TestModeratorInput : ModeratorInput{
+  /// <summary>
+  /// The expected game phase before the input is processed.
+  /// </summary>
+  public GamePhase ExpectedGamePhase {get; set;}
+
+	/// <summary>
+	/// An alternative to SelectedPlayerIds for when the input type is PlayerSelectionMultiple/Single for testing purposes.
+	/// If this is set, SelectedPlayerIds will be ignored.
+	/// </summary>
+	public List<string>? SelectedPlayerNames { get; set; }
+
+  public static TestModeratorInput Confirm(GamePhase expectedGamePhase, bool confirmation) => new()
+	{
+		InputTypeProvided = ExpectedInputType.Confirmation,
+		Confirmation = confirmation,
+		ExpectedGamePhase = expectedGamePhase
+	};
+
+    public static TestModeratorInput AssignPlayerRoles(GamePhase expectedGamePhase, Dictionary<Guid, RoleType> role) => new()
+	{
+		InputTypeProvided = ExpectedInputType.AssignPlayerRoles,
+		AssignedPlayerRoles = role,
+		ExpectedGamePhase = expectedGamePhase
+	};
+
+    public static TestModeratorInput SelectPlayer(GamePhase expectedGamePhase, Guid playerId) => new()
+	{
+		InputTypeProvided = ExpectedInputType.PlayerSelectionSingle,
+		SelectedPlayerIds = new List<Guid> { playerId },
+		ExpectedGamePhase = expectedGamePhase
+	};
+
+	public static TestModeratorInput SelectPlayers(GamePhase expectedGamePhase, Guid playerId) => new()
+	{
+		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
+		SelectedPlayerIds = new() { playerId },
+		ExpectedGamePhase = expectedGamePhase
+	};
+
+	public static TestModeratorInput SelectPlayers(GamePhase expectedGamePhase, List<Guid> playerIds) => new()
+	{
+		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
+		SelectedPlayerIds = playerIds,
+		ExpectedGamePhase = expectedGamePhase
+	};
+
+    public static TestModeratorInput SelectOption(GamePhase expectedGamePhase, string option) => new()
+	{
+		InputTypeProvided = ExpectedInputType.OptionSelection,
+		SelectedOption = option,
+		ExpectedGamePhase = expectedGamePhase
+	};
+
+	public void SetPlayerIds(List<Guid> playerIds)
+	{
+		SelectedPlayerIds = playerIds;
+	}
+}
+
 public static class TestHelper
 {
-    /// <summary>
-    /// Simulates a game from start until the beginning of the first Day_Debate phase.
-    /// Assumes a simple first night where no players are eliminated.
-    /// Handles the transition through Night -> Day_Event (if applicable) -> Day_Debate.
-    /// </summary>
-    public static Guid SimulateGameUntilDebatePhase(GameService gameService, List<string> playerNames, List<RoleType> roles)
-    {
-        var gameId = gameService.StartNewGame(playerNames, roles);
-        var session = gameService.GetGameStateView(gameId);
-        session.ShouldNotBeNull();
-
-        // --- Simulate Night Phase ---
-        // Assuming the first phase after start is Night.
-        session.GamePhase.ShouldBe(GamePhase.Night);
-        session.TurnNumber.ShouldBe(1);
-
-        // TODO: Add logic here to simulate actual night actions based on roles if needed for specific tests.
-        // For now, we'll assume the moderator confirms to proceed without specific actions causing eliminations.
-        // This might involve multiple ProcessModeratorInput calls depending on the roles present.
-        // Example: Confirming werewolf choice (even if null), confirming seer choice, etc.
-
-        // Assuming a simple confirmation proceeds past Night for basic role setups.
-        // If the first prompt is confirmation to proceed to day:
-        if (session.PendingModeratorInstruction?.ExpectedInputType == ExpectedInputType.Confirmation)
-        {
-             var nightConfirmInput = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
-             var nightResult = gameService.ProcessModeratorInput(gameId, nightConfirmInput);
-             nightResult.IsSuccess.ShouldBeTrue($"Night confirmation failed: {nightResult.Error?.Message}");
-             session = gameService.GetGameStateView(gameId); // Refresh state
-        }
-        else
-        {
-            // Handle more complex night scenarios if necessary, potentially skipping them for Day tests
-            // For now, we might throw or log if the state isn't as expected.
-            // throw new NotImplementedException("Unhandled night phase start state in TestHelper.");
-            // Or, attempt a generic confirmation if that's the pattern
-             var nightConfirmInput = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
-             var nightResult = gameService.ProcessModeratorInput(gameId, nightConfirmInput);
-             // We might not assert success here if we are unsure of the expected state
-             session = gameService.GetGameStateView(gameId); // Refresh state
-        }
-
-
-        // --- Handle Potential Day_Event (Role Reveal from Night Eliminations) ---
-        // If the night resulted in an elimination, the game would go to Day_Event first.
-        if (session.GamePhase == GamePhase.Day_Event)
-        {
-            session.PendingModeratorInstruction.ShouldNotBeNull();
-            session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.RoleSelection);
-            var eliminatedPlayerId = session.PendingModeratorInstruction.AffectedPlayerIds.ShouldHaveSingleItem();
-            var actualRole = session.Players[eliminatedPlayerId].Role?.RoleType ?? RoleType.Unassigned; // Get actual assigned role
-
-            var revealInput = new ModeratorInput
-            {
-                InputTypeProvided = ExpectedInputType.RoleSelection,
-                SelectedRole = actualRole // Moderator must provide the correct role
-            };
-            var revealResult = gameService.ProcessModeratorInput(gameId, revealInput);
-            revealResult.IsSuccess.ShouldBeTrue($"Role reveal failed: {revealResult.Error?.Message}");
-            session = gameService.GetGameStateView(gameId); // Refresh state
-        }
-        // If no elimination, game might go directly from Night confirmation to Day_Debate (or via another intermediate step).
-        // Let's assume for now it proceeds to Debate.
-
-        // --- Verify State is Day_Debate ---
-        // This assertion might fail if the game logic requires more steps between Night and Debate
-        session.GamePhase.ShouldBe(GamePhase.Day_Debate, $"Expected to reach Day_Debate phase, but was {session.GamePhase}");
-        session.TurnNumber.ShouldBe(1); // Still the first day cycle
-        session.PendingModeratorInstruction.ShouldNotBeNull();
-        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation); // Expecting prompt to proceed to vote
-
-        return gameId;
-    }
-
-    // We can add more simulation helpers here later, e.g., SimulateGameUntilVotePhase, SimulateNightElimination, etc.
 
     /// <summary>
     /// Processes a sequence of moderator inputs for a given game.
@@ -94,7 +79,7 @@ public static class TestHelper
     /// <param name="gameId">The ID of the game.</param>
     /// <param name="inputs">The sequence of ModeratorInput objects to process.</param>
     /// <returns>The Result of the last processed input, or the first error encountered.</returns>
-    public static ProcessResult ProcessInputSequence(GameService gameService, Guid gameId, IEnumerable<ModeratorInput> inputs)
+    public static ProcessResult ProcessInputSequence(GameService gameService, Guid gameId, IEnumerable<TestModeratorInput> inputs)
     {
         ProcessResult lastResult = ProcessResult.Failure(
             new GameError(ErrorType.Unknown,
@@ -103,7 +88,29 @@ public static class TestHelper
 
         foreach (var input in inputs)
         {
-            lastResult = gameService.ProcessModeratorInput(gameId, input);
+			// Check if the input's expected game phase matches the current game phase
+			var gameSession = gameService.GetGameStateView(gameId);
+			
+			gameSession.ShouldNotBeNull();
+			gameSession.GamePhase.ShouldBe(input.ExpectedGamePhase);
+
+			if (input.SelectedPlayerNames?.Count > 0)
+			{
+				var playerIds = new List<Guid>();
+
+				foreach (var selectedPlayerName in input.SelectedPlayerNames)
+				{
+					var playerId = gameSession.Players.Values
+						.FirstOrDefault(p => p.Name == selectedPlayerName)?.Id;
+
+					playerId.ShouldNotBeNull();
+					playerIds.Add(playerId.Value);
+				}
+
+				input.SetPlayerIds(playerIds);
+			}
+
+			lastResult = gameService.ProcessModeratorInput(gameId, input);
             if (!lastResult.IsSuccess)
             {
                 // Stop processing on the first error

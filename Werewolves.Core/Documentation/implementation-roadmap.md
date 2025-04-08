@@ -27,8 +27,8 @@ Constant string values should be stored in resx files for ease of future localiz
     *   *Test:* Basic instantiation tests for `Player`, `PlayerState`, `GameSession`. Verify default values.
 
 3.  **Implement: Communication & Result Classes**
-    *   Define `ModeratorInstruction` class with `InstructionText`, `ExpectedInputType` enum (add `None`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `RoleSelection`, `OptionSelection`, `Confirmation`). Add `SelectablePlayerIds`, `SelectableRoles`, `SelectableOptions`. *Align with architecture's defined fields.*
-    *   Define `ModeratorInput` class with `InputTypeProvided`, `SelectedPlayerIds`, `SelectedRole`, `SelectedOption`, `Confirmation`. *Remove VoteResults. Align with architecture.*
+    *   Define `ModeratorInstruction` class with `InstructionText`, `ExpectedInputType` enum (add `None`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `RoleAssignment`, `OptionSelection`, `Confirmation`). Add `SelectablePlayerIds`, `SelectableRoles`, `SelectableOptions`. *Align with architecture's defined fields.*
+    *   Define `ModeratorInput` class with `InputTypeProvided`, `SelectedPlayerIds`, `AssignedPlayerRoles` (Dictionary<Guid, RoleType>?), `SelectedOption`, `Confirmation`. *Align with architecture.*
     *   Define GameError class with Type (ErrorType), Code (GameErrorCode), Message, Context
     *   Define `ProcessResult` class with `IsSuccess`, `ModeratorInstruction?`, `GameError?`, and static factory methods (`Success`, `Failure`).
     *   *Test:* Basic instantiation and property access tests for these communication classes. Test `ProcessResult` factory methods.
@@ -102,24 +102,24 @@ Constant string values should be stored in resx files for ease of future localiz
         *   Identify the victim based on the logged action.
         *   Update victim `Player.Status` to `Dead`.
         *   Add `PlayerEliminatedLogEntry` (Reason: `WerewolfAttack`) to `GameHistoryLog`.
-        *   Generate instruction: "Player [VictimName] was eliminated. Reveal role?" (`ExpectedInputType.RoleSelection` or `Confirmation` for 'Unknown'). *Adjust prompt based on reveal mechanics.*
+        *   Generate instruction: "Player [VictimName] was eliminated. Reveal role?" (`ExpectedInputType.RoleAssignment` or `Confirmation` for 'Unknown'). *Adjust prompt based on reveal mechanics.*
         *   Transition `GamePhase` to `Day_Event`.
-    *   Define `RoleRevealedLogEntry` inheriting from `GameLogEntryBase`. Add `RoleSelection` to `ExpectedInputType` enum. Add `SelectedRole` to `ModeratorInput`.
+    *   Define `RoleRevealedLogEntry` inheriting from `GameLogEntryBase`.
     *   *Test:*
         *   Integration Test: Following previous test, trigger Night Resolution. Verify victim `Status` is `Dead`. Verify `PlayerEliminatedLogEntry` added to `GameHistoryLog`. Verify instruction asks for role reveal. Verify phase is `Day_Event`.
         *   Integration Test: Process WW input targeting a Villager. Verify NightActionLogEntry added to GameHistoryLog. Trigger Night Resolution. Verify correct player eliminated.
 
 4.  **Implement: Role Reveal on Death (Basic)**
     *   Modify `GameService.ProcessModeratorInput`: Add logic for `GamePhase.Day_Event`:
-        *   Handle `RoleSelection` input (or Confirmation acting as reveal).
+        *   Handle `RoleAssignment` input (expecting a single entry in `AssignedPlayerRoles`).
         *   Find the player corresponding to the last elimination.
-        *   Instantiate the correct `IRole` based on the input `SelectedRole`.
+        *   Instantiate the correct `IRole` based on the assigned `RoleType` from `AssignedPlayerRoles`.
         *   Set `player.Role` and `player.IsRoleRevealed = true`.
         *   Add `RoleRevealedLogEntry` to `GameHistoryLog`.
         *   Generate instruction: "Proceed to Vote?" (`ExpectedInputType.Confirmation`).
         *   Transition `GamePhase` to `Day_Debate`. *Transition to Debate before Vote.*
     *   *Test:*
-        *   Integration Test: Following previous test, process role reveal input (e.g., "SimpleVillager"). Verify Player `Role` is set and `IsRoleRevealed` is true. Verify `RoleRevealedLogEntry` in `GameHistoryLog`. Verify instruction asks to proceed to vote. Verify phase is `Day_Debate`. *Update expected phase.*
+        *   Integration Test: Following previous test, process role reveal input (e.g., assigning "SimpleVillager"). Verify Player `Role` is set and `IsRoleRevealed` is true. Verify `RoleRevealedLogEntry` in `GameHistoryLog`. Verify instruction asks to proceed to vote. Verify phase is `Day_Debate`. *Update expected phase.*
 
 5.  **Implement: Basic Day Vote & Resolution**
     *   *Remove VoteResultsCache from GameSession if added.* Add `PendingVoteOutcome` (Guid?) to `GameSession`.
@@ -137,7 +137,7 @@ Constant string values should be stored in resx files for ease of future localiz
             *   Update that player's `Player.Status` to `Dead`.
             *   Add `PlayerEliminatedLogEntry` (Reason: `DayVote`) to `GameHistoryLog`.
             *   Clear `session.PendingVoteOutcome`.
-            *   Generate instruction: "Player [VoterName] eliminated. Reveal role?" (`ExpectedInputType.RoleSelection` or `Confirmation`). Transition back to `Day_Event` (for reveal).
+            *   Generate instruction: "Player [VoterName] eliminated. Reveal role?" (`ExpectedInputType.RoleAssignment` or `Confirmation`). Transition back to `Day_Event` (for reveal).
         *   If 'Tie' was reported (`PendingVoteOutcome` is `Guid.Empty`): Generate instruction: "Tie vote reported. Proceed to Night?". Transition to `Night`. Increment `TurnNumber`. Clear `session.PendingVoteOutcome`.
     *   Define `VoteOutcomeReportedLogEntry` and `VoteResolvedLogEntry` inheriting from `GameLogEntryBase`.
     *   *Test:*
@@ -348,8 +348,8 @@ Constant string values should be stored in resx files for ease of future localiz
 1.  **Implement: Thief Role**
     *   Define `ThiefRole` implementing `IRole`. `RequiresNight1Identification`=true. Night 1 only, very early wake order.
     *   Modify `StartNewGame`: If Thief in `RolesInPlay`, ensure 2 extra Villager roles are conceptualized/tracked.
-    *   Implement `GenerateNightInstructions`: Needs the 2 available roles passed in. Prompt for choice (`ExpectedInputType.RoleSelection`, provide the 2 role names).
-    *   Implement `ProcessNightAction`: Validate choice. Update `player.Role` to the chosen `IRole` instance. Log `ThiefRoleChoiceLogEntry` (Thief ID, chosen role, discarded role). Remove Thief/Discarded role from `RolesInPlay` conceptually, add chosen role.
+    *   Implement `GenerateNightInstructions`: Needs the 2 available roles passed in. Prompt for choice (`ExpectedInputType.RoleAssignment`, expect single entry for Thief player ID, provide the 2 role names as `SelectableRoles`).
+    *   Implement `ProcessNightAction`: Validate choice from `AssignedPlayerRoles`. Update `player.Role` to the chosen `IRole` instance. Log `ThiefRoleChoiceLogEntry` (Thief ID, chosen role, discarded role). Remove Thief/Discarded role from `RolesInPlay` conceptually, add chosen role.
     *   *Test:*
         *   Integration Test: Night 1 Thief action. Verify prompt shows 2 roles. Process choice. Verify Player `Role` updated, log entry created. Verify player acts as new role subsequently.
         *   Integration Test: Thief offered 2 WW roles. Verify must choose one, becomes WW.
@@ -401,8 +401,8 @@ Constant string values should be stored in resx files for ease of future localiz
 5.  **Implement: Actor Role**
     *   Define `ActorRole` implementing `IRole`. `RequiresNight1Identification`=true? (To know who it is). Wakeup order early.
     *   Modify `GameService` Setup: Select 3 non-WW roles for the Actor pool. Store these (e.g., in `GameSession` or `PlayerState`). Log `ActorRolePoolSetLogEntry`.
-    *   Implement `GenerateNightInstructions`: Show available roles from pool. Prompt for choice (`ExpectedInputType.RoleSelection`).
-    *   Implement `ProcessNightAction`: Record chosen role for the night (e.g., in temp state). Log `ActorRoleChoiceLogEntry`.
+    *   Implement `GenerateNightInstructions`: Show available roles from pool. Prompt for choice (`ExpectedInputType.RoleAssignment`, expect single entry for Actor player ID, provide available roles as `SelectableRoles`).
+    *   Implement `ProcessNightAction`: Record chosen role from `AssignedPlayerRoles` for the night (e.g., in temp state). Log `ActorRoleChoiceLogEntry`.
     *   Modify `GameService` Night Logic: After Actor chooses, if the chosen role has a night action (e.g., Seer), call the Actor *again* at the appropriate time, passing the chosen role's logic. Process the action as if the Actor *is* that role. Mark the chosen role as used/removed from the pool for next night.
     *   Define `ActorRolePoolSetLogEntry`, `ActorRoleChoiceLogEntry`.
     *   *Test:*
