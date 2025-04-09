@@ -1,0 +1,310 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="GameNotFound" xml:space="preserve">
+    <value>Game session not found.</value>
+  </data>
+  <data name="InputTypeMismatch" xml:space="preserve">
+    <value>The provided input type does not match the expected input type.</value>
+  </data>
+  <data name="UnexpectedInput" xml:space="preserve">
+    <value>Received input when no instruction was pending.</value>
+  </data>
+  <data name="SetupCompletePrompt" xml:space="preserve">
+    <value>Setup complete. Proceed to Night 1?</value>
+  </data>
+  <data name="NightStartsPrompt" xml:space="preserve">
+    <value>The village goes to sleep.</value>
+  </data>
+  <data name="ActionNotInPhase" xml:space="preserve">
+    <value>Action ({0}) not valid in phase {1}.</value>
+  </data>
+  <data name="InternalError" xml:space="preserve">
+    <value>An unexpected internal error occurred.</value>
+  </data>
+  <data name="SimpleVillagerRoleName" xml:space="preserve">
+    <value>Simple Villager</value>
+  </data>
+  <data name="SimpleVillagerRoleDescription" xml:space="preserve">
+    <value>A standard villager with no special abilities.</value>
+  </data>
+  <data name="SimpleWerewolfRoleName" xml:space="preserve">
+    <value>Simple Werewolf</value>
+  </data>
+  <data name="SimpleWerewolfRoleDescription" xml:space="preserve">
+    <value>A standard werewolf. Wakes with other werewolves to choose a victim.</value>
+  </data>
+  <data name="WerewolvesChooseVictimPrompt" xml:space="preserve">
+    <value>Werewolves, wake up and choose one player to eliminate.</value>
+  </data>
+  <data name="ExactlyOnePlayerMustBeSelected" xml:space="preserve">
+    <value>You must select exactly one player.</value>
+  </data>
+  <data name="PlayerIdNotFound" xml:space="preserve">
+    <value>Player ID {0} not found in this game.</value>
+  </data>
+  <data name="TargetIsDeadError" xml:space="preserve">
+    <value>Cannot target {0} because they are already dead.</value>
+  </data>
+  <data name="TargetIsAllyError" xml:space="preserve">
+    <value>Cannot target {0} because they are an ally (Werewolf).</value>
+  </data>
+  <data name="TargetIsSelfError" xml:space="preserve">
+    <value>You cannot target yourself.</value>
+  </data>
+  <data name="WerewolvesChoiceRecorded" xml:space="preserve">
+    <value>Werewolves chose {0}. Night action recorded.</value>
+  </data>
+  <data name="ResolveNightPrompt" xml:space="preserve">
+    <value>Night phase complete. Proceed to resolve night actions.</value>
+  </data>
+  <data name="VictimEliminatedAnnounce" xml:space="preserve">
+    <value>Player {0} was eliminated during the night.</value>
+  </data>
+  <data name="RevealRolePrompt" xml:space="preserve">
+    <value>Reveal the role of the eliminated player ({0})?</value>
+  </data>
+  <data name="RevealRolePromptSpecify" xml:space="preserve">
+    <value>Specify the roles of the deceased.</value>
+  </data>
+  <data name="RoleRevealedLogMessage" xml:space="preserve">
+    <value>{0} was revealed to be a {1}.</value>
+  </data>
+  <data name="ProceedToVotePrompt" xml:space="preserve">
+    <value>Proceed to the daytime debate and vote?</value>
+  </data>
+  <data name="DebateStartsPrompt" xml:space="preserve">
+    <value>Daytime debate begins. When finished, confirm to proceed to vote.</value>
+  </data>
+  <data name="VoteStartsPrompt" xml:space="preserve">
+    <value>Voting phase. Determine the outcome and report the eliminated player or if it was a tie.</value>
+  </data>
+  <data name="VoteOutcomeSelectionPrompt" xml:space="preserve">
+    <value>Report the outcome of the vote. Select the eliminated player or choose 'Tie'.</value>
+  </data>
+  <data name="VoteOutcomeTie" xml:space="preserve">
+    <value>Tie</value>
+  </data>
+  <data name="InvalidVoteOutcome" xml:space="preserve">
+    <value>Invalid vote outcome reported.</value>
+  </data>
+  <data name="ResolveVotePrompt" xml:space="preserve">
+    <value>Proceed to resolve the vote outcome.</value>
+  </data>
+  <data name="VoteEliminatedAnnounce" xml:space="preserve">
+    <value>Player {0} was eliminated by the vote.</value>
+  </data>
+  <data name="VoteTieAnnounce" xml:space="preserve">
+    <value>The vote resulted in a tie. No one is eliminated.</value>
+  </data>
+  <data name="ProceedToNightPrompt" xml:space="preserve">
+    <value>Proceed to the next night?</value>
+  </data>
+  <data name="VictoryConditionWerewolvesWin" xml:space="preserve">
+    <value>Werewolves Win! (Werewolf count &gt;= Villager count)</value>
+  </data>
+  <data name="VictoryConditionVillagersWin" xml:space="preserve">
+    <value>Villagers Win! (All Werewolves eliminated)</value>
+  </data>
+  <data name="GameOverMessage" xml:space="preserve">
+    <value>Game Over! {0}</value>
+  </data>
+  <data name="IdentifyWerewolvesPrompt" xml:space="preserve">
+    <value>Identify {0} werewolf players</value>
+  </data>
+  <data name="PlayerListCannotBeEmpty" xml:space="preserve">
+    <value>Player list cannot be empty.</value>
+  </data>
+  <data name="RoleListCannotBeEmpty" xml:space="preserve">
+    <value>Role list cannot be empty.</value>
+  </data>
+  <data name="VictoryConditionAllWerewolvesEliminated" xml:space="preserve">
+    <value>All werewolves eliminated.</value>
+  </data>
+  <data name="VictoryConditionWerewolvesOutnumber" xml:space="preserve">
+    <value>Werewolves equal or outnumber villagers.</value>
+  </data>
+  <data name="PhaseLogicNotImplemented" xml:space="preserve">
+    <value>Phase {0} logic is not yet implemented.</value>
+  </data>
+  <data name="WerewolfIdentifyInvalidPlayerCount" xml:space="preserve">
+    <value>Invalid number of players selected for Werewolf identification. Expected {0}, but got {1}.</value>
+  </data>
+  <data name="WerewolfIdentifyPlayerAlreadyHasRole" xml:space="preserve">
+    <value>Player {0} already has a role assigned during Night 1 identification.</value>
+  </data>
+  <data name="WerewolfIdentifySuccess" xml:space="preserve">
+    <value>{0} Werewolf players successfully identified.</value>
+  </data>
+  <data name="SimpleWerewolfNoDayAction" xml:space="preserve">
+    <value>Simple Werewolves cannot perform actions during the day.</value>
+  </data>
+  <data name="SimpleVillagerNoIdentification" xml:space="preserve">
+    <value>Simple Villager role does not require identification.</value>
+  </data>
+  <data name="SimpleVillagerNoNightAction" xml:space="preserve">
+    <value>Simple Villager has no night action.</value>
+  </data>
+  <data name="SimpleVillagerNoDayAction" xml:space="preserve">
+    <value>Simple Villager has no day action.</value>
+  </data>
+  <data name="DefaultLogValue" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="PlayersEliminatedAnnouncement" xml:space="preserve">
+    <value>The following players were eliminated: {0}.</value>
+    <comment>{0} = comma-separated list of player names</comment>
+  </data>
+  <data name="NoOneEliminatedAnnouncement" xml:space="preserve">
+    <value>No one was eliminated during the night.</value>
+  </data>
+  <data name="ProceedToDebatePrompt" xml:space="preserve">
+    <value>Proceed to the day's debate?</value>
+  </data>
+  <data name="RoleNotSelectedError" xml:space="preserve">
+    <value>No role was selected.</value>
+  </data>
+  <data name="RevealTargetNotFoundError" xml:space="preserve">
+    <value>Could not find the player target for role reveal.</value>
+  </data>
+  <data name="RoleImplementationNotFound" xml:space="preserve">
+    <value>Internal error: Role implementation not found for {0}.</value>
+    <comment>{0} = RoleType enum value</comment>
+  </data>
+  <data name="RoleRevealedProceedToDebate" xml:space="preserve">
+    <value>{0}'s role was {1}. Proceed to debate?</value>
+    <comment>{0} = Player Name, {1} = RoleType</comment>
+  </data>
+  <data name="VotePhaseStartPrompt" xml:space="preserve">
+    <value>Day vote phase. Please determine the outcome and report the single player eliminated (or report a tie).</value>
+  </data>
+  <data name="VoteOutcomeInvalidSelection" xml:space="preserve">
+    <value>Please select exactly one player who was eliminated, or select no one to indicate a tie.</value>
+  </data>
+  <data name="VoteOutcomeMissingError" xml:space="preserve">
+    <value>Internal error: Vote outcome was expected but not found.</value>
+  </data>
+  <data name="VoteResultTieProceedToNight" xml:space="preserve">
+    <value>The vote resulted in a tie. Proceed to the next night?</value>
+  </data>
+  <data name="PlayerEliminatedByVoteRevealRole" xml:space="preserve">
+    <value>{0} was eliminated by the vote. Please reveal their role.</value>
+    <comment>{0} = Player Name</comment>
+  </data>
+</root>
