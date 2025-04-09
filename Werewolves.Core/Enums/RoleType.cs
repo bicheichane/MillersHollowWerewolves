@@ -8,7 +8,6 @@ namespace Werewolves.Core.Enums;
 public enum RoleType
 {
     Unassigned, // Player role not yet determined/revealed
-    Unknown, // Role cannot be determined (e.g., Seer looking at Actor?)
     SimpleVillager,
     SimpleWerewolf
     // Add all other roles from Architecture doc RoleType list here in subsequent phases

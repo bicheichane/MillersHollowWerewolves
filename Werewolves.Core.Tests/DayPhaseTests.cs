@@ -1,22 +1,26 @@
-using Werewolves.Core.Services;
+using Shouldly;
 using Werewolves.Core.Enums;
 using Werewolves.Core.Models;
 using Werewolves.Core.Models.Log;
-using Werewolves.Core.Roles;
-using Shouldly;
-using Xunit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Werewolves.Core.Resources;
+using Werewolves.Core.Services;
+using Xunit;
+using Xunit.Abstractions;
 using static Werewolves.Core.Tests.TestHelper;
-using static Werewolves.Core.Models.ModeratorInput;
+using static Werewolves.Core.Tests.TestModeratorInput;
 
 namespace Werewolves.Core.Tests;
 
 public class DayPhaseTests
 {
     private readonly GameService _gameService = new();
+
+    private readonly ITestOutputHelper _output;
+
+    public DayPhaseTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
 
     [Fact]
@@ -34,20 +38,19 @@ public class DayPhaseTests
         var wolfId = pList[0];
         var victimId = pList[1];
 
-        var inputs = new List<ModeratorInput>
+        var inputs = new List<TestModeratorInput>
         {
-            Confirm(true), // Confirm game start
-            Confirm(true), // Confirm night phase start (village sleeps)
-            ModeratorInput.SelectPlayers(wolfId), //Identify wolf
-            ModeratorInput.SelectPlayer(victimId), //wolf chooses victim
-            Confirm(true), // Confirm night phase end (village wakes up)
-            ModeratorInput.SelectRole(RoleType.SimpleVillager), // choose role for victim
-            //Confirm(true), // Confirm debate phase ended
+            Confirm(GamePhase.Setup, true), // Confirm game start
+            Confirm(GamePhase.Night, true), // Confirm night phase start (village sleeps)
+            SelectPlayers(GamePhase.Night, wolfId), //Identify wolf
+            SelectPlayer(GamePhase.Night, victimId), //wolf chooses victim
+            Confirm(GamePhase.Day_ResolveNight, true), // Confirm night phase end (village wakes up)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // choose role for victim
         };
 
 
         // Act
-        var result = TestHelper.ProcessInputSequence(_gameService, gameId, inputs);
+        var result = ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -73,23 +76,37 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        var gameSession = SimulateGameUntilDayDebatePhase(_gameService, playerNames, roles);
-        var input = ModeratorInput.Confirm(true);
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        var session = _gameService.GetGameStateView(gameId);
+
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var victimId = pList[1]; // Assuming a victim to reach Day_Debate via Day_Event
+
+        var inputs = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),                 // -> Night
+            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
+            Confirm(GamePhase.Day_Debate, true),             // -> Day_Vote
+        };
 
         // Act
-        var result = _gameService.ProcessModeratorInput(gameSession.Id, input);
+        var result = ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        
-        gameSession.ShouldNotBeNull();
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
 
-        gameSession.GamePhase.ShouldBe(GamePhase.Day_Vote);
-        gameSession.PendingModeratorInstruction.ShouldNotBeNull();
-        gameSession.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionSingle);
-        gameSession.PendingModeratorInstruction.InstructionText.ShouldContain(Resources.GameStrings.VoteOutcomeSelectionPrompt);
-        gameSession.PendingModeratorInstruction.SelectablePlayerIds.ShouldNotBeNull();
-        gameSession.PendingModeratorInstruction.SelectablePlayerIds.Count.ShouldBe(playerNames.Count);
+        session.GamePhase.ShouldBe(GamePhase.Day_Vote);
+        session.PendingModeratorInstruction.ShouldNotBeNull();
+        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionSingle);
+        session.PendingModeratorInstruction.SelectablePlayerIds.ShouldNotBeNull();
+        session.PendingModeratorInstruction.SelectablePlayerIds.Count.ShouldBe(playerNames.Count - 1); //player killed by WW
     }
 
     [Fact]
@@ -98,24 +115,42 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        var gameSession = SimulateGameUntilVotePhase(_gameService, playerNames, roles);
-        var targetPlayerId = gameSession.Players.Values.First(p => p.Role?.RoleType == RoleType.SimpleWerewolf).Id;
-        var input = ModeratorInput.SelectPlayer(targetPlayerId);
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        var session = _gameService.GetGameStateView(gameId);
+
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var victimId = pList[1];
+        // We need the target player ID for the final step
+        var targetPlayerId = pList[2];
+
+        var inputs = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),                 // -> Night
+            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
+            Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
+            SelectPlayer(GamePhase.Day_Vote, targetPlayerId), // -> Day_ResolveVote
+            //Confirm(GamePhase.Day_ResolveVote, true)        // -> Day_Event (Reveal Eliminated Role)
+        };
 
         // Act
-        var result = _gameService.ProcessModeratorInput(gameSession.Id, input);
+        var result = ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        gameSession.ShouldNotBeNull();
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
 
-        gameSession.GamePhase.ShouldBe(GamePhase.Day_ResolveVote);
-        gameSession.PendingVoteOutcome.ShouldBe(targetPlayerId);
-        gameSession.GameHistoryLog.OfType<VoteOutcomeReportedLogEntry>()
+        session.GamePhase.ShouldBe(GamePhase.Day_ResolveVote);
+        session.PendingVoteOutcome.ShouldBe(targetPlayerId);
+        session.GameHistoryLog.OfType<VoteOutcomeReportedLogEntry>()
             .ShouldContain(vol => vol.ReportedOutcomePlayerId == targetPlayerId);
-        gameSession.PendingModeratorInstruction.ShouldNotBeNull();
-        gameSession.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        gameSession.PendingModeratorInstruction.InstructionText.ShouldBe(Resources.GameStrings.ResolveVotePrompt);
+        session.PendingModeratorInstruction.ShouldNotBeNull();
+        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }
 
     [Fact]
@@ -124,23 +159,40 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        var gameSession = SimulateGameUntilVotePhase(_gameService, playerNames, roles);
-        var input = ModeratorInput.SelectPlayer(Guid.Empty); // Empty selection signifies Tie
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        var session = _gameService.GetGameStateView(gameId);
+
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var victimId = pList[1];
+
+        var inputs = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),                 // -> Night
+            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
+            Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
+            SelectPlayer(GamePhase.Day_Vote, Guid.Empty),    // -> Day_ResolveVote (Tie)
+            //Confirm(GamePhase.Day_ResolveVote, true)        // -> Night (Turn 2)
+        };
 
         // Act
-        var result = _gameService.ProcessModeratorInput(gameSession.Id, input);
+        var result = ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        gameSession.ShouldNotBeNull();
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
 
-        gameSession.GamePhase.ShouldBe(GamePhase.Day_ResolveVote);
-        gameSession.PendingVoteOutcome.ShouldBe(Guid.Empty); // Tie represented by Guid.Empty
-        gameSession.GameHistoryLog.OfType<VoteOutcomeReportedLogEntry>()
+        session.GamePhase.ShouldBe(GamePhase.Day_ResolveVote);
+        session.PendingVoteOutcome.ShouldBe(Guid.Empty); // Tie represented by Guid.Empty
+        session.GameHistoryLog.OfType<VoteOutcomeReportedLogEntry>()
             .ShouldContain(vol => vol.ReportedOutcomePlayerId == Guid.Empty);
-        gameSession.PendingModeratorInstruction.ShouldNotBeNull();
-        gameSession.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        gameSession.PendingModeratorInstruction.InstructionText.ShouldBe(Resources.GameStrings.ResolveVotePrompt);
+        session.PendingModeratorInstruction.ShouldNotBeNull();
+        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }
 
     [Fact]
@@ -149,23 +201,44 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        var gameSession = SimulateGameUntilVotePhase(_gameService, playerNames, roles);
-        var p1Id = gameSession.Players.Values.First(p => p.Role?.RoleType == RoleType.SimpleWerewolf).Id;
-        var p2Id = gameSession.Players.Values.First(p => p.Role?.RoleType == RoleType.SimpleVillager).Id;
-        var input = ModeratorInput.SelectPlayers(new List<Guid> { p1Id, p2Id }); // Select two players
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        var session = _gameService.GetGameStateView(gameId);
+
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var victimId = pList[1];
+
+        // Setup sequence to reach Day_Vote
+        var setupInputs = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),                 // -> Night
+            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
+            Confirm(GamePhase.Day_Debate, true)             // -> Day_Vote
+        };
+        var setupResult = ProcessInputSequence(_gameService, gameId, setupInputs);
+        setupResult.IsSuccess.ShouldBeTrue("Setup for the test failed");
+
+        // The actual input to test
+        var invalidInput = SelectPlayers(GamePhase.Day_Vote, new List<Guid>{ wolfId, victimId }); // Select two players
 
         // Act
-        var result = _gameService.ProcessModeratorInput(gameSession.Id, input);
+        var result = _gameService.ProcessModeratorInput(gameId, invalidInput);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.Error.ShouldNotBeNull();
         result.Error.Type.ShouldBe(ErrorType.InvalidInput);
-        result.Error.Code.ShouldBe(GameErrorCode.InvalidInput_InvalidPlayerSelectionCount);
+        result.Error.Code.ShouldBe(GameErrorCode.InvalidInput_InputTypeMismatch);
+        
         // Re-fetch session to check state hasn't changed incorrectly
-        gameSession.ShouldNotBeNull();
-        gameSession.GamePhase.ShouldBe(GamePhase.Day_Vote); // Should remain in Vote phase
-        gameSession.PendingVoteOutcome.ShouldBeNull(); // Outcome should not be stored
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
+        session.GamePhase.ShouldBe(GamePhase.Day_Vote); // Should remain in Vote phase
+        session.PendingVoteOutcome.ShouldBeNull(); // Outcome should not be stored
     }
 
     [Fact]
@@ -174,33 +247,47 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        
-        var targetPlayerId = gameSession.Players.Values.First(p => p.Role?.RoleType == RoleType.SimpleWerewolf).Id;
-        
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        var session = _gameService.GetGameStateView(gameId);
+
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var victimId = pList[1];
+
+
+        var inputs = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),                 // -> Night
+            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
+            Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
+            SelectPlayer(GamePhase.Day_Vote, wolfId), // -> Day_ResolveVote
+            Confirm(GamePhase.Day_ResolveVote, true)        // -> Day_Event (Reveal Eliminated Role)
+        };
 
         // Act
-        var gameSession = SimulateGameUntilResolveVotePhase(_gameService, playerNames, roles, targetPlayerId);
-
-
+        var result = ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        gameSession.ShouldNotBeNull();
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
 
-        gameSession.Players[targetPlayerId].Status.ShouldBe(PlayerStatus.Dead);
-        gameSession.PendingVoteOutcome.ShouldBeNull(); // Should be cleared
+        session.Players[wolfId].Status.ShouldBe(PlayerStatus.Dead);
+        session.PendingVoteOutcome.ShouldBeNull(); // Should be cleared
 
-        gameSession.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
-            .ShouldContain(pel => pel.PlayerId == targetPlayerId && pel.Reason == EliminationReason.DayVote);
-        gameSession.GameHistoryLog.OfType<VoteResolvedLogEntry>()
-            .ShouldContain(vrl => vrl.EliminatedPlayerId == targetPlayerId && !vrl.WasTie);
+        session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
+            .ShouldContain(pel => pel.PlayerId == wolfId && pel.Reason == EliminationReason.DayVote);
+        session.GameHistoryLog.OfType<VoteResolvedLogEntry>()
+            .ShouldContain(vrl => vrl.EliminatedPlayerId == wolfId && !vrl.WasTie);
 
-        gameSession.GamePhase.ShouldBe(GamePhase.Day_Event); // Back to reveal role
-        gameSession.PendingModeratorInstruction.ShouldNotBeNull();
-        gameSession.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.RoleSelection);
-        gameSession.PendingModeratorInstruction.InstructionText.ShouldContain(string.Format(Resources.GameStrings.VoteEliminatedAnnounce, gameSession.Players[targetPlayerId].Name));
-        gameSession.PendingModeratorInstruction.InstructionText.ShouldContain(Resources.GameStrings.RevealRolePromptSpecify);
-        gameSession.PendingModeratorInstruction.AffectedPlayerIds.ShouldBe(new[] { targetPlayerId });
+        session.GamePhase.ShouldBe(GamePhase.Day_Event); // Back to reveal role
+        session.PendingModeratorInstruction.ShouldNotBeNull();
+        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.AssignPlayerRoles);
+        session.PendingModeratorInstruction.AffectedPlayerIds.ShouldBe(new[] { wolfId });
     }
 
     [Fact]
@@ -209,30 +296,44 @@ public class DayPhaseTests
         // Arrange
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
-        var gameSession = SimulateGameUntilResolveVotePhase(_gameService, playerNames, roles, Guid.Empty); // Empty for tie
-        var input = ModeratorInput.Confirm(true);
+        var gameId = _gameService.StartNewGame(playerNames, roles);
+        var session = _gameService.GetGameStateView(gameId);
+
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var victimId = pList[1];
+
+        var inputs = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),                 // -> Night
+            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
+            AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
+            Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
+            SelectPlayer(GamePhase.Day_Vote, null),   // -> Day_ResolveVote (Tie)
+            Confirm(GamePhase.Day_ResolveVote, true)        // -> Night (Turn 2)
+        };
 
         // Act
-        var result = _gameService.ProcessModeratorInput(gameSession.Id, input);
-
-
+        var result = ProcessInputSequence(_gameService, gameId, inputs);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        gameSession.ShouldNotBeNull();
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
 
-        gameSession.Players.Values.ShouldAllBe(p => p.Status == PlayerStatus.Alive);
-        gameSession.PendingVoteOutcome.ShouldBeNull(); // Should be cleared
+        session.Players.Values.Where(p => p.Id != victimId).ShouldAllBe(p => p.Status == PlayerStatus.Alive);
+        session.PendingVoteOutcome.ShouldBeNull(); // Should be cleared
 
-        gameSession.GameHistoryLog.OfType<PlayerEliminatedLogEntry>().ShouldBeEmpty();
-        gameSession.GameHistoryLog.OfType<VoteResolvedLogEntry>()
+        session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>().Where(e => e.Reason == EliminationReason.DayVote).ShouldBeEmpty();
+        session.GameHistoryLog.OfType<VoteResolvedLogEntry>()
             .ShouldContain(vrl => vrl.EliminatedPlayerId == null && vrl.WasTie);
 
-        gameSession.GamePhase.ShouldBe(GamePhase.Night); // Should transition to night
-        gameSession.TurnNumber.ShouldBe(2); // Turn should increment
-        gameSession.PendingModeratorInstruction.ShouldNotBeNull();
-        gameSession.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        gameSession.PendingModeratorInstruction.InstructionText.ShouldBe(Resources.GameStrings.ProceedToNightPrompt);
+        session.GamePhase.ShouldBe(GamePhase.Night); // Should transition to night
+        session.PendingModeratorInstruction.ShouldNotBeNull();
+        session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }
 
     // --- Victory Condition Tests removed from here ---

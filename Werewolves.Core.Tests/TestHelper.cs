@@ -34,17 +34,17 @@ public class TestModeratorInput : ModeratorInput{
 		ExpectedGamePhase = expectedGamePhase
 	};
 
-    public static TestModeratorInput SelectPlayer(GamePhase expectedGamePhase, Guid playerId) => new()
+    public static TestModeratorInput SelectPlayer(GamePhase expectedGamePhase, Guid? playerId) => new()
 	{
 		InputTypeProvided = ExpectedInputType.PlayerSelectionSingle,
-		SelectedPlayerIds = new List<Guid> { playerId },
+		SelectedPlayerIds = playerId == null ? [] : [playerId.Value],
 		ExpectedGamePhase = expectedGamePhase
 	};
 
-	public static TestModeratorInput SelectPlayers(GamePhase expectedGamePhase, Guid playerId) => new()
+	public static TestModeratorInput SelectPlayers(GamePhase expectedGamePhase, Guid? playerId) => new()
 	{
 		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
-		SelectedPlayerIds = new() { playerId },
+		SelectedPlayerIds = playerId == null ? [] : [playerId.Value],
 		ExpectedGamePhase = expectedGamePhase
 	};
 

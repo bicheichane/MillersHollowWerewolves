@@ -1,38 +1,24 @@
+using Werewolves.Core.Models.Log; // Log namespace might contain ModeratorInstruction
+
 namespace Werewolves.Core.Models;
 
 /// <summary>
-/// Standard return type for operations that can succeed (yielding the next step)
-/// or fail (providing error details).
-/// Based on Roadmap Phase 0 and Architecture doc.
+/// Represents the final outcome of processing moderator input,
+/// containing either the next instruction or an error.
 /// </summary>
-public class ProcessResult
+/// <param name="IsSuccess">Indicates if the overall processing was successful.</param>
+/// <param name="ModeratorInstruction">The instruction for the moderator if successful.</param>
+/// <param name="Error">Error details if IsSuccess is false.</param>
+public record ProcessResult(
+    bool IsSuccess,
+    ModeratorInstruction? ModeratorInstruction,
+    GameError? Error = null
+)
 {
-    public bool IsSuccess { get; } // Use private set and factory methods
-    public ModeratorInstruction? ModeratorInstruction { get; } // Valid if IsSuccess is true
-    public GameError? Error { get; } // Valid if IsSuccess is false
+    // Static factory methods for convenience
+    public static ProcessResult Success(ModeratorInstruction instruction) =>
+        new(true, instruction, null);
 
-    private ProcessResult(bool isSuccess, ModeratorInstruction? instruction, GameError? error)
-    {
-        IsSuccess = isSuccess;
-        ModeratorInstruction = instruction;
-        Error = error;
-    }
-
-    /// <summary>
-    /// Creates a success result with the next moderator instruction.
-    /// </summary>
-    public static ProcessResult Success(ModeratorInstruction instruction)
-    {
-        ArgumentNullException.ThrowIfNull(instruction);
-        return new ProcessResult(true, instruction, null);
-    }
-
-    /// <summary>
-    /// Creates a failure result with error details.
-    /// </summary>
-    public static ProcessResult Failure(GameError error)
-    {
-        ArgumentNullException.ThrowIfNull(error);
-        return new ProcessResult(false, null, error);
-    }
-}
+    public static ProcessResult Failure(GameError error) =>
+        new(false, null, error);
+} 

@@ -15,6 +15,7 @@ public class GameSession
     public required Dictionary<Guid, Player> Players { get; init; }
     public GamePhase GamePhase { get; set; }
     public int TurnNumber { get; set; } = 0;
+    public Team? WinningTeam { get; internal set; }
 
     // Core collections defined in Phase 0 roadmap
     public List<Guid> PlayerSeatingOrder { get; set; } = new();
@@ -74,6 +75,6 @@ public class GameSession
         return totalRoleCount - killedRoleCount;
     }
 
-    
+    public GamePhase PreviousPhase => GameHistoryLog.OfType<PhaseTransitionLogEntry>().LastOrDefault()?.PreviousPhase ?? GamePhase.Setup;
 
 }

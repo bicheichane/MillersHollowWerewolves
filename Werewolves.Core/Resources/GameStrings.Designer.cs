@@ -268,7 +268,7 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Reveal the role of {0}. Select the role or confirm if Unknown..
+        ///   Looks up a localized string similar to Specify the role of {0}..
         /// </summary>
         internal static string RevealRolePromptSpecify {
             get {

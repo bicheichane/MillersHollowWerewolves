@@ -156,11 +156,7 @@ public class GameServiceSetupTests
         var playerNames = GetDefaultPlayerNames();
         var roles = GetDefaultRoles4();
         var gameId = _gameService.StartNewGame(playerNames, roles);
-        var wrongInput = new ModeratorInput
-        {
-            InputTypeProvided = ExpectedInputType.PlayerSelectionSingle, // Expected Confirmation
-            SelectedPlayerIds = new List<Guid> { Guid.NewGuid() }
-        };
+        var wrongInput = TestModeratorInput.SelectPlayer(GamePhase.Setup, Guid.NewGuid());
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, wrongInput);

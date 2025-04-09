@@ -5,6 +5,8 @@ using Shouldly;
 using Xunit;
 using System;
 using System.Collections.Generic;
+using static Werewolves.Core.Tests.TestHelper;
+using static Werewolves.Core.Tests.TestModeratorInput;
 
 namespace Werewolves.Core.Tests;
 
@@ -17,7 +19,7 @@ public class ErrorHandlingTests
     {
         // Arrange
         var nonExistentGameId = Guid.NewGuid();
-        var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
+        var input = Confirm(GamePhase.Setup, true);
 
         // Act
         var result = _gameService.ProcessModeratorInput(nonExistentGameId, input);
@@ -34,11 +36,10 @@ public class ErrorHandlingTests
     public void ProcessModeratorInput_WrongInputType_ShouldReturnInputTypeMismatchError()
     {
         // Arrange
-        var playerNames = new List<string> { "Alice" };
-        var roles = new List<RoleType> { RoleType.SimpleVillager };
+        var playerNames = GetDefaultPlayerNames();
+        var roles = GetDefaultRoles4();
         var gameId = _gameService.StartNewGame(playerNames, roles);
-        // Game expects Confirmation, but we send PlayerSelection
-        var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.PlayerSelectionSingle, SelectedPlayerIds = new List<Guid> { Guid.NewGuid() } };
+        var input = SelectPlayer(GamePhase.Setup, Guid.NewGuid());
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, input);
@@ -48,25 +49,51 @@ public class ErrorHandlingTests
         result.Error.ShouldNotBeNull();
         result.Error.Type.ShouldBe(ErrorType.InvalidInput);
         result.Error.Code.ShouldBe(GameErrorCode.InvalidInput_InputTypeMismatch);
+
+        var session = _gameService.GetGameStateView(gameId);
+        session.GamePhase.ShouldBe(GamePhase.Setup);
+        session.PendingModeratorInstruction?.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }
 
     [Fact]
     public void ProcessModeratorInput_WhenGameIsOver_ShouldReturnError()
     {
-        // Arrange: Get game to GameOver state (simulate manual state change for simplicity)
-        var playerNames = new List<string> { "Alice" };
-        var roles = new List<RoleType> { RoleType.SimpleVillager };
+        // Arrange: Set up a 1v1 game and play until WW victory triggers GameOver
+        var playerNames = new List<string> { "Wolf", "Villager" };
+        var roles = new List<RoleType> { RoleType.SimpleWerewolf, RoleType.SimpleVillager };
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
-        session.GamePhase = GamePhase.GameOver;
-        session.PendingModeratorInstruction = null; // Simulate no pending instruction
+        
+        var pList = session!.Players.Keys.ToList();
+        var wolfId = pList[0];
+        var villagerId = pList[1];
 
-        var input = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
+        var gameEndingSequence = new List<TestModeratorInput>
+        {
+            Confirm(GamePhase.Setup, true),             // -> Night
+            Confirm(GamePhase.Night, true),             // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night, wolfId),     // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night, villagerId),  // -> Day_ResolveNight
+            Confirm(GamePhase.Day_ResolveNight, true)   // -> GameOver (WW win condition met)
+        };
 
-        // Act:
-        var result = _gameService.ProcessModeratorInput(gameId, input);
+        // Act: Play the sequence that should end the game
+        var sequenceResult = ProcessInputSequence(_gameService, gameId, gameEndingSequence);
 
-        // Assert:
+        // Assert: Verify the game ended as expected
+        sequenceResult.IsSuccess.ShouldBeTrue("The game ending sequence failed.");
+        session = _gameService.GetGameStateView(gameId);
+        session.ShouldNotBeNull();
+        session.GamePhase.ShouldBe(GamePhase.GameOver);
+        session.WinningTeam.ShouldBe(Team.Werewolves);
+
+        // Arrange: Prepare an input to send *after* the game is over
+        var inputAfterGameOver = Confirm(GamePhase.GameOver, true); // Input type doesn't matter
+
+        // Act: Attempt to process input now that the game is over
+        var result = _gameService.ProcessModeratorInput(gameId, inputAfterGameOver);
+
+        // Assert: Verify the correct error is returned
         result.IsSuccess.ShouldBeFalse();
         result.Error.ShouldNotBeNull();
         result.Error.Type.ShouldBe(ErrorType.InvalidOperation);

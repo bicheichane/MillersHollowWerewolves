@@ -181,7 +181,7 @@
     <value>Reveal the role of the eliminated player ({0})?</value>
   </data>
   <data name="RevealRolePromptSpecify" xml:space="preserve">
-    <value>Reveal the role of {0}. Select the role or confirm if Unknown.</value>
+    <value>Specify the roles of the deceased.</value>
   </data>
   <data name="RoleRevealedLogMessage" xml:space="preserve">
     <value>{0} was revealed to be a {1}.</value>
