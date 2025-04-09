@@ -6,7 +6,7 @@ namespace Werewolves.Core.Models.Log;
 /// <summary>
 /// Logs the initial assignment of a specific role to a player during setup (Night 1).
 /// </summary>
-public record InitialRoleAssignmentLogEntry : GameLogEntryBase
+public record InitialRoleLogAssignment : GameLogEntryBase
 {
 	/// <summary>
 	/// The ID of the player assigned the role.

@@ -7,7 +7,9 @@ public enum PhaseTransitionReason
 {
     SetupConfirmed,
     NightStartsConfirmed,
-    IdentifiedAndProceedToWwAction, // May need renaming if WW action isn't always next
+    IdentifiedAndProceedToAction, // General ID success
+    RoleActionComplete, // General Role action success
+    AllNightActionsComplete, // All roles finished, move to resolution
     WwActionComplete,
     NightResolutionConfirmedProceedToReveal,
     NightResolutionConfirmedNoVictims,

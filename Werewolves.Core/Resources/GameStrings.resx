@@ -307,4 +307,144 @@
     <value>{0} was eliminated by the vote. Please reveal their role.</value>
     <comment>{0} = Player Name</comment>
   </data>
+  <data name="RoleSeerName" xml:space="preserve">
+    <value>Seer</value>
+  </data>
+  <data name="RoleSeerDescription" xml:space="preserve">
+    <value>Each night, the Seer may discover the true Role of one player.</value>
+  </data>
+  <data name="InstructionIdentifySeer" xml:space="preserve">
+    <value>Moderator, please identify the player who is the Seer.</value>
+  </data>
+  <data name="InstructionSeerChooseTarget" xml:space="preserve">
+    <value>Seer, choose a player to view their role.</value>
+  </data>
+  <data name="InstructionSeerNoTargets" xml:space="preserve">
+    <value>Seer, there are no other living players to target. Confirm to continue.</value>
+  </data>
+  <data name="InfoSeerResult" xml:space="preserve">
+    <value>You saw that {0} is {1}.</value>
+    <comment>{0} = Player Name, {1} = Role Name/Unknown</comment>
+  </data>
+  <data name="InfoSeerSkippedNoTargets" xml:space="preserve">
+    <value>Seer skipped action as no targets were available.</value>
+  </data>
+  <data name="RoleDefenderName" xml:space="preserve">
+    <value>Defender</value>
+  </data>
+  <data name="RoleDefenderDescription" xml:space="preserve">
+    <value>Each night, the Defender may choose a player to protect from the Werewolves. They cannot choose the same player two nights in a row.</value>
+  </data>
+  <data name="InstructionIdentifyDefender" xml:space="preserve">
+    <value>Moderator, please identify the player who is the Defender.</value>
+  </data>
+  <data name="InstructionDefenderChooseTarget" xml:space="preserve">
+    <value>Defender, choose a player to protect tonight (you can choose yourself).</value>
+  </data>
+  <data name="InstructionDefenderCannotRepeat" xml:space="preserve">
+    <value>(You cannot protect {0} again this turn).</value>
+    <comment>{0} = Player Name</comment>
+  </data>
+  <data name="ErrorDefenderCannotRepeat" xml:space="preserve">
+    <value>Rule Violation: The Defender cannot protect the same player ({0}) two nights in a row.</value>
+    <comment>{0} = Player Name</comment>
+  </data>
+  <data name="InfoDefenderProtectionSet" xml:space="preserve">
+    <value>Defender has chosen to protect {0} tonight.</value>
+    <comment>{0} = Player Name</comment>
+  </data>
+  <data name="RoleWitchName" xml:space="preserve">
+    <value>Witch</value>
+  </data>
+  <data name="RoleWitchDescription" xml:space="preserve">
+    <value>The Witch has two potions: one to save a victim, one to eliminate a player. Each can be used once per game.</value>
+  </data>
+  <data name="InstructionIdentifyWitch" xml:space="preserve">
+    <value>Moderator, please identify the player who is the Witch.</value>
+  </data>
+  <data name="InstructionWitchActionBase" xml:space="preserve">
+    <value>Witch, the Werewolves targeted {0}.</value>
+    <comment>{0} = Player Name or "no one"</comment>
+  </data>
+  <data name="InstructionWitchCanHeal" xml:space="preserve">
+    <value>You can use your Healing potion.</value>
+  </data>
+  <data name="InstructionWitchCanPoison" xml:space="preserve">
+    <value>You can use your Poison potion.</value>
+  </data>
+  <data name="InstructionWitchNoActionAvailable" xml:space="preserve">
+    <value>Witch, the Werewolves targeted {0}. You have no potions available for this situation. Confirm to continue.</value>
+  </data>
+  <data name="OptionWitchHeal" xml:space="preserve">
+    <value>Heal Victim</value>
+  </data>
+  <data name="OptionWitchPoison" xml:space="preserve">
+    <value>Use Poison Potion</value>
+  </data>
+  <data name="OptionWitchSkip" xml:space="preserve">
+    <value>Skip Action</value>
+  </data>
+  <data name="ErrorWitchHealUsed" xml:space="preserve">
+    <value>Rule Violation: Healing potion already used.</value>
+  </data>
+  <data name="ErrorWitchPoisonUsed" xml:space="preserve">
+    <value>Rule Violation: Poison potion already used.</value>
+  </data>
+  <data name="ErrorWitchHealNoVictim" xml:space="preserve">
+    <value>Rule Violation: Cannot use Healing potion as there was no victim this night.</value>
+  </data>
+  <data name="ErrorWitchCannotTargetSelfOrVictim" xml:space="preserve">
+    <value>Rule Violation: Witch cannot use poison on themselves or the Werewolves' victim for the night.</value>
+  </data>
+  <data name="InfoWitchSkipped" xml:space="preserve">
+    <value>Witch skipped their action.</value>
+  </data>
+  <data name="InfoWitchHealUsed" xml:space="preserve">
+    <value>Witch used the Healing potion on {0}.</value>
+    <comment>{0} = Player Name</comment>
+  </data>
+  <data name="InfoWitchPoisonUsed" xml:space="preserve">
+    <value>Witch used the Poison potion, targeting {0}.</value>
+    <comment>{0} = Player Name</comment>
+  </data>
+  <data name="RoleUnknownName" xml:space="preserve">
+    <value>Unknown</value>
+    <comment>Used when Seer views player whose role isn't revealed/assigned</comment>
+  </data>
+  <data name="InfoVictimNone" xml:space="preserve">
+    <value>no one</value>
+    <comment>Used in Witch prompt when WWs killed no one</comment>
+  </data>
+  <data name="InstructionWitchPoisonPrompt" xml:space="preserve">
+    <value>Witch, choose a player to poison, or confirm to skip.</value>
+    <comment>Placeholder text</comment>
+  </data>
+  <data name="InstructionWitchHealPrompt" xml:space="preserve">
+    <value>Witch, the Werewolves targeted {0}. Heal them?</value>
+    <comment>Placeholder text. {0} = Victim Name</comment>
+  </data>
+  <data name="OptionYes" xml:space="preserve">
+    <value>Yes</value>
+    <comment>Generic confirmation option</comment>
+  </data>
+  <data name="OptionNo" xml:space="preserve">
+    <value>No</value>
+    <comment>Generic decline option</comment>
+  </data>
+  <data name="OptionSkip" xml:space="preserve">
+    <value>Skip</value>
+    <comment>Generic skip option</comment>
+  </data>
+  <data name="ErrorTargetNotFoundOrDead" xml:space="preserve">
+    <value>Target player not found or is already dead.</value>
+    <comment>Placeholder text</comment>
+  </data>
+  <data name="ErrorWitchCannotTargetSelf" xml:space="preserve">
+    <value>Rule Violation: The Witch cannot target themselves with the poison potion.</value>
+    <comment>Placeholder text</comment>
+  </data>
+  <data name="ErrorWitchCannotTargetVictimWithPoison" xml:space="preserve">
+    <value>Rule Violation: The Witch cannot target the Werewolves' victim with the poison potion.</value>
+    <comment>Placeholder text</comment>
+  </data>
 </root>

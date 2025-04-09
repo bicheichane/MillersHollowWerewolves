@@ -9,7 +9,8 @@ namespace Werewolves.Core.Models.Log;
 /// </summary>
 public abstract record GameLogEntryBase
 {
-    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+    // Properties are automatically inherited by derived records
+    public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
     public required int TurnNumber { get; init; }
     public required GamePhase Phase { get; init; }
 } 

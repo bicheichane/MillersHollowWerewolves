@@ -1,4 +1,5 @@
 using System;
+using Werewolves.Core.Enums;
 
 namespace Werewolves.Core.Models.Log;
 
@@ -7,9 +8,7 @@ namespace Werewolves.Core.Models.Log;
 /// </summary>
 public record VoteOutcomeReportedLogEntry : GameLogEntryBase
 {
+    public required Guid ReportedOutcomePlayerId { get; init; }
     // Guid.Empty represents a reported tie.
     // A specific PlayerId represents the player reported as eliminated.
-    public required Guid ReportedOutcomePlayerId { get; init; }
-
-    // Consider adding VoteType (Standard, Nightmare, etc.) if needed later
 } 

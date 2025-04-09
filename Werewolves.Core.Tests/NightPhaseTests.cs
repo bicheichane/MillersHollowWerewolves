@@ -56,7 +56,7 @@ public class NightPhaseTests
         wwPlayer.IsRoleRevealed.ShouldBeTrue(); // Identification reveals role
 
         // Check Log Entry
-        session.GameHistoryLog.OfType<InitialRoleAssignmentLogEntry>()
+        session.GameHistoryLog.OfType<InitialRoleLogAssignment>()
             .ShouldContain(l => l.PlayerId == werewolfId && l.AssignedRole == RoleType.SimpleWerewolf);
 
         // Check Next Instruction Details
@@ -108,7 +108,7 @@ public class NightPhaseTests
         session.PendingNight1IdentificationForRole.ShouldBe(RoleType.SimpleWerewolf); // Should still be pending
         session.Players[werewolfId].Role.ShouldBeNull(); // Role should not be assigned
         session.Players[werewolfId].IsRoleRevealed.ShouldBeFalse();
-        session.GameHistoryLog.OfType<InitialRoleAssignmentLogEntry>().ShouldBeEmpty(); // No log entry
+        session.GameHistoryLog.OfType<InitialRoleLogAssignment>().ShouldBeEmpty(); // No log entry
         session.PendingModeratorInstruction?.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple); // Should still expect WW ID
     }
 

@@ -29,4 +29,11 @@ public record HandlerResult(
         new(true, nextInstruction, null, false, null);
     public static HandlerResult Failure(GameError error) =>
         new(false, null, null, false, error);
+
+    /// <summary>
+    /// Creates a failure result that includes a specific instruction to reissue to the moderator
+    /// (e.g., re-prompting after invalid input).
+    /// </summary>
+    public static HandlerResult Failure(GameError error, ModeratorInstruction reissueInstruction) =>
+         new(false, reissueInstruction, null, false, error);
 } 

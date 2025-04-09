@@ -88,6 +88,78 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: The Defender cannot protect the same player ({0}) two nights in a row..
+        /// </summary>
+        internal static string ErrorDefenderCannotRepeat {
+            get {
+                return ResourceManager.GetString("ErrorDefenderCannotRepeat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Target player not found or is already dead..
+        /// </summary>
+        internal static string ErrorTargetNotFoundOrDead {
+            get {
+                return ResourceManager.GetString("ErrorTargetNotFoundOrDead", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: The Witch cannot target themselves with the poison potion..
+        /// </summary>
+        internal static string ErrorWitchCannotTargetSelf {
+            get {
+                return ResourceManager.GetString("ErrorWitchCannotTargetSelf", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: Witch cannot use poison on themselves or the Werewolves&apos; victim for the night..
+        /// </summary>
+        internal static string ErrorWitchCannotTargetSelfOrVictim {
+            get {
+                return ResourceManager.GetString("ErrorWitchCannotTargetSelfOrVictim", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: The Witch cannot target the Werewolves&apos; victim with the poison potion..
+        /// </summary>
+        internal static string ErrorWitchCannotTargetVictimWithPoison {
+            get {
+                return ResourceManager.GetString("ErrorWitchCannotTargetVictimWithPoison", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: Cannot use Healing potion as there was no victim this night..
+        /// </summary>
+        internal static string ErrorWitchHealNoVictim {
+            get {
+                return ResourceManager.GetString("ErrorWitchHealNoVictim", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: Healing potion already used..
+        /// </summary>
+        internal static string ErrorWitchHealUsed {
+            get {
+                return ResourceManager.GetString("ErrorWitchHealUsed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rule Violation: Poison potion already used..
+        /// </summary>
+        internal static string ErrorWitchPoisonUsed {
+            get {
+                return ResourceManager.GetString("ErrorWitchPoisonUsed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to You must select exactly one player..
         /// </summary>
         internal static string ExactlyOnePlayerMustBeSelected {
@@ -124,11 +196,191 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Defender has chosen to protect {0} tonight..
+        /// </summary>
+        internal static string InfoDefenderProtectionSet {
+            get {
+                return ResourceManager.GetString("InfoDefenderProtectionSet", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You saw that {0} is {1}..
+        /// </summary>
+        internal static string InfoSeerResult {
+            get {
+                return ResourceManager.GetString("InfoSeerResult", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer skipped action as no targets were available..
+        /// </summary>
+        internal static string InfoSeerSkippedNoTargets {
+            get {
+                return ResourceManager.GetString("InfoSeerSkippedNoTargets", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to no one.
+        /// </summary>
+        internal static string InfoVictimNone {
+            get {
+                return ResourceManager.GetString("InfoVictimNone", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch used the Healing potion on {0}..
+        /// </summary>
+        internal static string InfoWitchHealUsed {
+            get {
+                return ResourceManager.GetString("InfoWitchHealUsed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch used the Poison potion, targeting {0}..
+        /// </summary>
+        internal static string InfoWitchPoisonUsed {
+            get {
+                return ResourceManager.GetString("InfoWitchPoisonUsed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch skipped their action..
+        /// </summary>
+        internal static string InfoWitchSkipped {
+            get {
+                return ResourceManager.GetString("InfoWitchSkipped", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The provided input type does not match the expected input type..
         /// </summary>
         internal static string InputTypeMismatch {
             get {
                 return ResourceManager.GetString("InputTypeMismatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to (You cannot protect {0} again this turn)..
+        /// </summary>
+        internal static string InstructionDefenderCannotRepeat {
+            get {
+                return ResourceManager.GetString("InstructionDefenderCannotRepeat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Defender, choose a player to protect tonight (you can choose yourself)..
+        /// </summary>
+        internal static string InstructionDefenderChooseTarget {
+            get {
+                return ResourceManager.GetString("InstructionDefenderChooseTarget", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moderator, please identify the player who is the Defender..
+        /// </summary>
+        internal static string InstructionIdentifyDefender {
+            get {
+                return ResourceManager.GetString("InstructionIdentifyDefender", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moderator, please identify the player who is the Seer..
+        /// </summary>
+        internal static string InstructionIdentifySeer {
+            get {
+                return ResourceManager.GetString("InstructionIdentifySeer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moderator, please identify the player who is the Witch..
+        /// </summary>
+        internal static string InstructionIdentifyWitch {
+            get {
+                return ResourceManager.GetString("InstructionIdentifyWitch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer, choose a player to view their role..
+        /// </summary>
+        internal static string InstructionSeerChooseTarget {
+            get {
+                return ResourceManager.GetString("InstructionSeerChooseTarget", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer, there are no other living players to target. Confirm to continue..
+        /// </summary>
+        internal static string InstructionSeerNoTargets {
+            get {
+                return ResourceManager.GetString("InstructionSeerNoTargets", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch, the Werewolves targeted {0}..
+        /// </summary>
+        internal static string InstructionWitchActionBase {
+            get {
+                return ResourceManager.GetString("InstructionWitchActionBase", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You can use your Healing potion..
+        /// </summary>
+        internal static string InstructionWitchCanHeal {
+            get {
+                return ResourceManager.GetString("InstructionWitchCanHeal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You can use your Poison potion..
+        /// </summary>
+        internal static string InstructionWitchCanPoison {
+            get {
+                return ResourceManager.GetString("InstructionWitchCanPoison", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch, the Werewolves targeted {0}. Heal them?.
+        /// </summary>
+        internal static string InstructionWitchHealPrompt {
+            get {
+                return ResourceManager.GetString("InstructionWitchHealPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch, the Werewolves targeted {0}. You have no potions available for this situation. Confirm to continue..
+        /// </summary>
+        internal static string InstructionWitchNoActionAvailable {
+            get {
+                return ResourceManager.GetString("InstructionWitchNoActionAvailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch, choose a player to poison, or confirm to skip..
+        /// </summary>
+        internal static string InstructionWitchPoisonPrompt {
+            get {
+                return ResourceManager.GetString("InstructionWitchPoisonPrompt", resourceCulture);
             }
         }
         
@@ -165,6 +417,60 @@ namespace Werewolves.Core.Resources {
         internal static string NoOneEliminatedAnnouncement {
             get {
                 return ResourceManager.GetString("NoOneEliminatedAnnouncement", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No.
+        /// </summary>
+        internal static string OptionNo {
+            get {
+                return ResourceManager.GetString("OptionNo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Skip.
+        /// </summary>
+        internal static string OptionSkip {
+            get {
+                return ResourceManager.GetString("OptionSkip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Heal Victim.
+        /// </summary>
+        internal static string OptionWitchHeal {
+            get {
+                return ResourceManager.GetString("OptionWitchHeal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use Poison Potion.
+        /// </summary>
+        internal static string OptionWitchPoison {
+            get {
+                return ResourceManager.GetString("OptionWitchPoison", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Skip Action.
+        /// </summary>
+        internal static string OptionWitchSkip {
+            get {
+                return ResourceManager.GetString("OptionWitchSkip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Yes.
+        /// </summary>
+        internal static string OptionYes {
+            get {
+                return ResourceManager.GetString("OptionYes", resourceCulture);
             }
         }
         
@@ -268,7 +574,7 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Specify the role of {0}..
+        ///   Looks up a localized string similar to Specify the roles of the deceased..
         /// </summary>
         internal static string RevealRolePromptSpecify {
             get {
@@ -282,6 +588,24 @@ namespace Werewolves.Core.Resources {
         internal static string RevealTargetNotFoundError {
             get {
                 return ResourceManager.GetString("RevealTargetNotFoundError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Each night, the Defender may choose a player to protect from the Werewolves. They cannot choose the same player two nights in a row..
+        /// </summary>
+        internal static string RoleDefenderDescription {
+            get {
+                return ResourceManager.GetString("RoleDefenderDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Defender.
+        /// </summary>
+        internal static string RoleDefenderName {
+            get {
+                return ResourceManager.GetString("RoleDefenderName", resourceCulture);
             }
         }
         
@@ -327,6 +651,51 @@ namespace Werewolves.Core.Resources {
         internal static string RoleRevealedProceedToDebate {
             get {
                 return ResourceManager.GetString("RoleRevealedProceedToDebate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Each night, the Seer may discover the true Role of one player..
+        /// </summary>
+        internal static string RoleSeerDescription {
+            get {
+                return ResourceManager.GetString("RoleSeerDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer.
+        /// </summary>
+        internal static string RoleSeerName {
+            get {
+                return ResourceManager.GetString("RoleSeerName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unknown.
+        /// </summary>
+        internal static string RoleUnknownName {
+            get {
+                return ResourceManager.GetString("RoleUnknownName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The Witch has two potions: one to save a victim, one to eliminate a player. Each can be used once per game..
+        /// </summary>
+        internal static string RoleWitchDescription {
+            get {
+                return ResourceManager.GetString("RoleWitchDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Witch.
+        /// </summary>
+        internal static string RoleWitchName {
+            get {
+                return ResourceManager.GetString("RoleWitchName", resourceCulture);
             }
         }
         

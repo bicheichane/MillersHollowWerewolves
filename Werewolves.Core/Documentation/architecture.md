@@ -297,7 +297,6 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
             *   `RuleViolation_LoverVotingAgainstLover`
             *   `RuleViolation_VoterIsInvalid`
             *   `RuleViolation_EventRuleConflict`
-            *   `RuleViolation_PlayerAlreadyHasRole`
         *   **Invalid Operation:**
             *   `InvalidOperation_GameIsOver`
             *   `InvalidOperation_ActionNotInCorrectPhase`

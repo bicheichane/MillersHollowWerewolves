@@ -11,6 +11,7 @@ public enum GameErrorCode
 
     // --- InvalidInput ---
     InvalidInput_InputTypeMismatch,
+    InvalidInput_TypeMismatch,
     InvalidInput_RequiredDataMissing,
     InvalidInput_PlayerIdNotFound,
     InvalidInput_RoleNameNotFound,
@@ -23,8 +24,14 @@ public enum GameErrorCode
     RuleViolation_TargetIsSelf, // Targeted self when not allowed
     RuleViolation_TargetIsAlly, // e.g., Werewolf targeting Werewolf
     RuleViolation_DefenderRepeatTarget,
+    /// <summary>
+    /// The Witch attempted to use a potion that has already been used.
+    /// </summary>
     RuleViolation_WitchPotionAlreadyUsed,
-    RuleViolation_AccursedInfectionAlreadyUsed, // For AWF role
+    /// <summary>
+    /// The Accursed Wolf-Father attempted to infect after already using the power.
+    /// </summary>
+    RuleViolation_AccursedInfectionAlreadyUsed, // Phase 5+
     RuleViolation_PowerLostOrUnavailable, // e.g., Fox, lost Elder powers, Judge used power
     RuleViolation_LoverVotingAgainstLover,
     RuleViolation_VoterIsInvalid, // e.g., Village Idiot, Muted player

@@ -19,6 +19,12 @@ public record ProcessResult(
     public static ProcessResult Success(ModeratorInstruction instruction) =>
         new(true, instruction, null);
 
+    /// <summary>
+    /// Creates a success result where the next instruction is determined by the game service.
+    /// </summary>
+    public static ProcessResult Success() =>
+        new(true, null, null);
+
     public static ProcessResult Failure(GameError error) =>
         new(false, null, error);
 } 

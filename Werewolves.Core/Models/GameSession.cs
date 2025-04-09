@@ -27,7 +27,7 @@ public class GameSession
     /// Stores the reported outcome of the current day vote phase temporarily.
     /// Null if no vote outcome reported yet, Guid.Empty for a reported tie, PlayerId otherwise.
     /// </summary>
-    public Guid? PendingVoteOutcome { get; set; } = null; // Using null initially, Guid.Empty for tie
+    public Guid? PendingVoteOutcome { get; internal set; }
 
     /// <summary>
     /// Stores the RoleType currently awaiting identification during the *first night*.
@@ -50,11 +50,32 @@ public class GameSession
     // public List<ActiveEventState> ActiveEvents { get; set; } = new();
 
     // Nullable state flags from Phase 0 roadmap / Architecture Doc
-    public Guid? SheriffPlayerId { get; set; } = null;
+    public Guid? SheriffPlayerId { get; internal set; }
+
+    /// <summary>
+    /// ID of the player protected by the Defender this night.
+    /// Cleared during night resolution.
+    /// </summary>
+    public Guid? ProtectedPlayerId { get; internal set; }
+
+    /// <summary>
+    /// ID of the player protected by the Defender on the previous night.
+    /// Updated during night resolution.
+    /// </summary>
+    public Guid? LastProtectedPlayerId { get; internal set; }
+
     public Tuple<Guid, Guid>? Lovers { get; set; } = null;
 
     // Pending instruction for the moderator
     public ModeratorInstruction? PendingModeratorInstruction { get; set; }
+
+    // --- Witch Specific State ---
+    /// <summary>
+    /// Tracks if the Witch is currently being prompted for the poison potion choice.
+    /// Set to true after the heal potion confirmation/skip.
+    /// Reset when the Witch's turn ends or poison is used/skipped.
+    /// </summary>
+    public bool IsAwaitingWitchPoisonTarget { get; set; } = false;
 
     // Other state flags from Architecture doc will be added later
     // e.g.:

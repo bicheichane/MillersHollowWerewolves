@@ -16,6 +16,21 @@ public class Player
 
     // Role property added in Phase 1
     public IRole? Role { get; internal set; } = null;
+
+    /// <summary>
+    /// Assigns a role to the player and marks it as revealed to the application.
+    /// </summary>
+    /// <param name="roleToAssign">The role instance to assign.</param>
+    internal void AssignRole(IRole roleToAssign)
+    {
+        if (Role != null)
+        {
+            // Potentially log a warning or throw if trying to re-assign?
+            // For now, allow overwrite but could be refined.
+        }
+        Role = roleToAssign;
+        // IsRoleRevealed is computed based on Role != null
+    }
 }
 
 /// <summary>
@@ -28,9 +43,12 @@ public class PlayerState
     public bool IsSheriff { get; internal set; } = false;
     public bool IsInLove { get; internal set; } = false;
 
+    // Data-Carrying States
+    public Guid? LoverId { get; internal set; } = null;
+    public WitchPotionType PotionsUsed { get; internal set; } = WitchPotionType.None;
+
     // Other properties will be added in later phases as defined in Architecture doc
     // e.g.:
-    // public Guid? LoverId { get; internal set; } = null;
     // public int VoteMultiplier { get; internal set; } = 1;
     // ... and many more
 } 

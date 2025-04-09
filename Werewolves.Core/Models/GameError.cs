@@ -40,4 +40,32 @@ public class GameError
         Message = message;
         Context = context;
     }
+
+    // --- Static Factory Methods ---
+
+    public static GameError InvalidInput(GameErrorCode code, string message, Dictionary<string, object>? context = null)
+    {
+        return new GameError(ErrorType.InvalidInput, code, message, context);
+    }
+
+    public static GameError RuleViolation(GameErrorCode code, string message, Dictionary<string, object>? context = null)
+    {
+        return new GameError(ErrorType.RuleViolation, code, message, context);
+    }
+
+    public static GameError InvalidOperation(GameErrorCode code, string message, Dictionary<string, object>? context = null)
+    {
+        return new GameError(ErrorType.InvalidOperation, code, message, context);
+    }
+
+    public static GameError NotFound(GameErrorCode code, string message, Dictionary<string, object>? context = null)
+    {
+        return new GameError(ErrorType.GameNotFound, code, message, context);
+    }
+
+    public static GameError InternalError(GameErrorCode code, string message, Dictionary<string, object>? context = null)
+    {
+        // Ensure the code provided is actually an internal error code if necessary
+        return new GameError(ErrorType.Unknown, code, message, context);
+    }
 } 

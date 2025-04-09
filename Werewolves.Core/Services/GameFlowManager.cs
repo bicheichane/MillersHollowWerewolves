@@ -80,7 +80,7 @@ public class GameFlowManager
                     // Need to revisit if this validation logic in GameService.ProcessModeratorInput needs adjustment
                     // based on how HandleNightPhase now returns its reasons.
                     new(GamePhase.Night, PhaseTransitionReason.NightStartsConfirmed, ExpectedInputType.PlayerSelectionMultiple), // -> WW ID (If N1 ID needed)
-                    new(GamePhase.Night, PhaseTransitionReason.IdentifiedAndProceedToWwAction, ExpectedInputType.PlayerSelectionSingle), // -> WW Action (Post ID)
+                    new(GamePhase.Night, PhaseTransitionReason.IdentifiedAndProceedToAction, ExpectedInputType.PlayerSelectionSingle), // -> WW Action (Post ID)
                     new(GamePhase.Day_ResolveNight, PhaseTransitionReason.WwActionComplete, ExpectedInputType.Confirmation) // -> Resolve Night
                     // Note: The exact ExpectedInputOnArrival might depend on what GenerateNextNightInstruction returns.
                     // Confirmation is the final expected input when transitioning out of Night.
