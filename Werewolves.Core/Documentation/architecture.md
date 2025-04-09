@@ -27,6 +27,8 @@ The central `PlayerSeatingOrder` list in `GameSession` provides architectural se
     *   `PendingModeratorInstruction` (ModeratorInstruction?): The current prompt/instruction for the moderator, asking for input or guiding the next step.
     *   `PendingNight1IdentificationForRole` (RoleType?): Stores the `RoleType` currently awaiting identification *during Night 1*. Used by `GameService` to manage the Identify->Act sequence specific to the first night. Null if no Night 1 identification is pending.
     *   `CurrentNightActingRoleIndex` (int): Tracks the index of the role currently acting (or pending identification) within the night wake-up order for the current night. Reset at the start of each Night phase.
+    *   **Helper Methods:**
+        *   `FindLogEntries<TLogEntry>(...)`: Searches the `GameHistoryLog` for entries of a specific type `TLogEntry`, optionally filtering by relative turn number (`turnsAgo`), game phase (`phase`), or a custom predicate (`filter`).
     *   **State Flags & Tracking (Based on Moderator Input):**
         *   `SheriffPlayerId` (Guid?): ID of the current Sheriff (input by Moderator).
         *   `Lovers` (Tuple<Guid, Guid>?): IDs of the two players linked by Cupid (input by Moderator).

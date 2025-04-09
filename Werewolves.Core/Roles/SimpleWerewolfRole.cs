@@ -95,12 +95,22 @@ public class SimpleWerewolfRole : IRole
                 GameErrorCode.RuleViolation_TargetIsDead,
                 string.Format(GameStrings.TargetIsDeadError, targetPlayer.Name)));
         }
-        // Cannot target self or allies (requires knowing who the werewolves are)
-        // We need the GameService to provide the actor context or have the session track actors.
-        // For now, assume validation passed. TODO: Add self/ally checks.
+		// Cannot target allies (requires knowing who the werewolves are)
+			var werewolves = session.Players.Values
+			.Where(p => p.Role?.RoleType == RoleType.SimpleWerewolf)
+			.Select(p => p.Id)
+			.ToHashSet();
 
-        // Log the action directly to the main history log
-        session.GameHistoryLog.Add(new NightActionLogEntry
+        if(werewolves.Contains(targetPlayerId))
+		{
+			return ProcessResult.Failure(new GameError(ErrorType.RuleViolation,
+				GameErrorCode.RuleViolation_TargetIsAlly,
+				string.Format(GameStrings.TargetIsAllyError, targetPlayer.Name)));
+		}
+
+
+		// Log the action directly to the main history log
+		session.GameHistoryLog.Add(new NightActionLogEntry
         {
             ActorId = Guid.Empty, // Represents the collective Werewolf action for now
             TargetId = targetPlayerId,

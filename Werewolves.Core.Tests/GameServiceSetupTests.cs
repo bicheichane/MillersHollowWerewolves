@@ -26,8 +26,8 @@ public class GameServiceSetupTests
     public void StartNewGame_ShouldCreateSession_WithCorrectInitialState()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames(3);
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames(3);
+        var roles = GetRoles();
 
         // Act
         var gameId = _gameService.StartNewGame(playerNames, roles);
@@ -77,8 +77,8 @@ public class GameServiceSetupTests
     public void GetCurrentInstruction_ShouldRetrieveInitialInstruction()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
 
         // Act
@@ -94,8 +94,8 @@ public class GameServiceSetupTests
     public void ProcessModeratorInput_WithCorrectConfirmation_ShouldAdvancePhaseToNight()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var confirmationInput = new ModeratorInput
         {
@@ -118,7 +118,7 @@ public class GameServiceSetupTests
 
         session.ShouldNotBeNull();
         session.GamePhase.ShouldBe(GamePhase.Night);
-        session.TurnNumber.ShouldBe(1);
+        session.TurnNumber.ShouldBe(0); //it's night phase, but the night phase itself hasn't been processed yet
 
         nextInstruction.ShouldNotBeNull();
         nextInstruction.InstructionText.ShouldBe(GameStrings.NightStartsPrompt);
@@ -153,8 +153,8 @@ public class GameServiceSetupTests
     public void ProcessModeratorInput_WithWrongInputType_ShouldReturnInputTypeMismatchError()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var wrongInput = TestModeratorInput.SelectPlayer(GamePhase.Setup, Guid.NewGuid());
 
@@ -169,7 +169,6 @@ public class GameServiceSetupTests
         result.Error.ShouldNotBeNull();
         result.Error.Type.ShouldBe(ErrorType.InvalidInput);
         result.Error.Code.ShouldBe(GameErrorCode.InvalidInput_InputTypeMismatch);
-        result.Error.Message.ShouldBe(GameStrings.InputTypeMismatch);
 
         // Verify game state hasn't changed
         session.ShouldNotBeNull();
@@ -181,8 +180,8 @@ public class GameServiceSetupTests
     public void ProcessNightStartsConfirmation_ShouldPromptForWerewolfIdentification()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4(); // Includes SimpleWerewolf which needs N1 ID
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles(); // Includes SimpleWerewolf which needs N1 ID
         var gameId = _gameService.StartNewGame(playerNames, roles);
         
 

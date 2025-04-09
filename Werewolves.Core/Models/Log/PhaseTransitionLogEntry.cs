@@ -10,5 +10,5 @@ public record PhaseTransitionLogEntry : GameLogEntryBase
 {
     public required GamePhase PreviousPhase { get; init; }
     public required GamePhase CurrentPhase { get; init; }
-    public required string Reason { get; init; }
+    public required PhaseTransitionReason Reason { get; init; }
 } 

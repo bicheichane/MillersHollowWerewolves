@@ -11,7 +11,7 @@ public class Player
     public Guid Id { get; } = Guid.NewGuid();
     public required string Name { get; set; }
     public PlayerStatus Status { get; set; } = PlayerStatus.Alive;
-    public bool IsRoleRevealed { get; set; } = false;
+    public bool IsRoleRevealed => Role != null;
     public PlayerState State { get; } = new PlayerState();
 
     // Role property added in Phase 1

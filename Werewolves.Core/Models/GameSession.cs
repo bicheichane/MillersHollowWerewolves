@@ -77,4 +77,37 @@ public class GameSession
 
     public GamePhase PreviousPhase => GameHistoryLog.OfType<PhaseTransitionLogEntry>().LastOrDefault()?.PreviousPhase ?? GamePhase.Setup;
 
+    /// <summary>
+    /// Searches the game history log for entries of a specific type, with optional filters.
+    /// </summary>
+    /// <typeparam name="TLogEntry">The type of log entry to search for, must derive from GameLogEntryBase.</typeparam>
+    /// <param name="turnsAgo">Optional. Filters logs to a specific turn relative to the current turn. 0 for the current turn, 1 for the previous turn, etc.</param>
+    /// <param name="phase">Optional. Filters logs to a specific game phase.</param>
+    /// <param name="filter">Optional. A lambda function to apply additional filtering logic specific to the TLogEntry type.</param>
+    /// <returns>An enumerable collection of matching log entries.</returns>
+    public IEnumerable<TLogEntry> FindLogEntries<TLogEntry>(int? turnsAgo = null, GamePhase? phase = null, Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase
+    {
+        IEnumerable<TLogEntry> query = GameHistoryLog.OfType<TLogEntry>();
+
+        if (turnsAgo.HasValue)
+        {
+            if (turnsAgo < 0)
+                throw new ArgumentOutOfRangeException(nameof(turnsAgo), "turnsAgo cannot be negative.");
+
+            int targetTurnNumber = this.TurnNumber - turnsAgo.Value;
+            query = query.Where(log => log.TurnNumber == targetTurnNumber);
+        }
+
+        if (phase.HasValue)
+        {
+            query = query.Where(log => log.Phase == phase.Value);
+        }
+
+        if (filter != null)
+        {
+            query = query.Where(filter);
+        }
+
+        return query;
+    }
 }

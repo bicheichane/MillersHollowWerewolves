@@ -121,14 +121,12 @@ public static class TestHelper
         return lastResult;
     }
 
-	public static List<string> GetDefaultPlayerNames(int count = 4) =>
+	public static List<string> GetPlayerNames(int count = 4) =>
 		Enumerable.Range(1, count).Select(i => $"P {i}").ToList();
 
-	public static List<RoleType> GetDefaultRoles4() => new() { 
-        RoleType.SimpleWerewolf, 
-        
-        RoleType.SimpleVillager, 
-        RoleType.SimpleVillager, 
-        RoleType.SimpleVillager 
-    };
+	public static List<RoleType> GetRoles(int villagerCount = 3, int werewolfCount = 1) =>
+		Enumerable.Range(0, villagerCount).Select(_ => RoleType.SimpleVillager)
+			.Concat(
+		Enumerable.Range(0, werewolfCount).Select(_ => RoleType.SimpleWerewolf))
+			.ToList();
 } 

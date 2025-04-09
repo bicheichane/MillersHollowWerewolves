@@ -12,6 +12,6 @@ namespace Werewolves.Core.Models.StateMachine;
 /// <param name="ExpectedInputOnArrival">The input type the TargetPhase should expect immediately following this specific transition.</param>
 public record PhaseTransitionInfo(
     GamePhase TargetPhase,
-    string? ConditionOrReason,
+    PhaseTransitionReason? ConditionOrReason,
     ExpectedInputType ExpectedInputOnArrival
 ); 

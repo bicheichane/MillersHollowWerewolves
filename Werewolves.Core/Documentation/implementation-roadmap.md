@@ -92,7 +92,7 @@ Constant string values should be stored in resx files for ease of future localiz
         *   Integration Test: Start game with 1 WW, 2 V. Process Setup confirm. Verify next instruction is `NightStartsPrompt`. Process Night Starts confirm. Verify next instruction is WW *Identification* prompt (`PlayerSelectionMultiple`).
         *   Integration Test: Process WW Identification input. Verify `Player.Role` assigned, `IsRoleRevealed` set, `InitialRoleAssignmentLogEntry` added. Verify *next* instruction is WW *Victim Selection* prompt (`PlayerSelectionSingle`), listing only Villagers.
         *   Integration Test: Process WW victim input targeting a `Villager`. Verify the correct log entry added to `GameHistoryLog`. Verify phase transitions to `Day_ResolveNight`. Verify next instruction is elimination announcement.
-        *   Integration Test: Process WW victim input targeting self or another WW (using assigned roles) fails (`GameErrorCode.RuleViolation_TargetIsAlly` or `GameErrorCode.RuleViolation_TargetIsSelf`).
+        *   Integration Test: Process WW victim input targeting self or another WW (using assigned roles) fails (`GameErrorCode.RuleViolation_TargetIsAlly`).
         *   Integration Test: Process WW victim input targeting dead player fails (`GameErrorCode.RuleViolation_TargetIsDead`).
 
 3.  **Implement: Night Resolution Logic (WW Kill)**

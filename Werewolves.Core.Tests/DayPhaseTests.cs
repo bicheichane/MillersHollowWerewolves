@@ -27,8 +27,8 @@ public class DayPhaseTests
     public void DayEvent_ProcessRoleReveal_ShouldUpdatePlayerAndProceedToDebate()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
@@ -74,8 +74,8 @@ public class DayPhaseTests
     public void DayDebate_ProcessConfirmation_ShouldProceedToVote()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 
@@ -113,8 +113,8 @@ public class DayPhaseTests
     public void DayVote_ProcessPlayerEliminationOutcome_ShouldProceedToResolveVote()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 
@@ -157,8 +157,8 @@ public class DayPhaseTests
     public void DayVote_ProcessTieOutcome_ShouldProceedToResolveVote()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 
@@ -199,8 +199,8 @@ public class DayPhaseTests
     public void DayVote_ProcessInvalidSelectionCount_ShouldFail()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 
@@ -245,21 +245,22 @@ public class DayPhaseTests
     public void DayResolveVote_ProcessPlayerElimination_ShouldEliminateAndAskForRole()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames(6);
+        var roles = GetRoles(4,2);
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 
         var pList = session!.Players.Keys.ToList();
         var wolfId = pList[0];
         var victimId = pList[1];
+        var wolf2Id = pList[2];
 
 
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
             Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
+            SelectPlayers(GamePhase.Night, [wolfId, wolf2Id]),         // -> Night (WW Action)
             SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
@@ -294,8 +295,8 @@ public class DayPhaseTests
     public void DayResolveVote_ProcessTie_ShouldProceedToNight()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 

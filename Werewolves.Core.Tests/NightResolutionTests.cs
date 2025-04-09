@@ -21,8 +21,8 @@ public class NightResolutionTests
     public void DayResolveNight_ProcessWerewolfKill_ShouldEliminateVictimAndProceedToDayEvent()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var session = _gameService.GetGameStateView(gameId);
 

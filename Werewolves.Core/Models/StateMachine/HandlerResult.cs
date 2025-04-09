@@ -1,5 +1,6 @@
 using Werewolves.Core.Models.Log;
 using System;
+using Werewolves.Core.Enums;
 
 namespace Werewolves.Core.Models.StateMachine;
 
@@ -14,15 +15,15 @@ namespace Werewolves.Core.Models.StateMachine;
 public record HandlerResult(
     bool IsSuccess,
     ModeratorInstruction? NextInstruction,
-    string? TransitionReason,
+    PhaseTransitionReason? TransitionReason,
     bool UseDefaultInstructionForNextPhase = false,
     GameError? Error = null
 )
 {
     // Static factory methods
-    public static HandlerResult SuccessTransition(ModeratorInstruction nextInstruction, string transitionReason) =>
+    public static HandlerResult SuccessTransition(ModeratorInstruction nextInstruction, PhaseTransitionReason transitionReason) =>
         new(true, nextInstruction, transitionReason, false, null);
-    public static HandlerResult SuccessTransitionUseDefault(string transitionReason) =>
+    public static HandlerResult SuccessTransitionUseDefault(PhaseTransitionReason transitionReason) =>
         new(true, null, transitionReason, true, null);
     public static HandlerResult SuccessStayInPhase(ModeratorInstruction nextInstruction) =>
         new(true, nextInstruction, null, false, null);

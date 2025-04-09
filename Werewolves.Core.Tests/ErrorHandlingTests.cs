@@ -36,8 +36,8 @@ public class ErrorHandlingTests
     public void ProcessModeratorInput_WrongInputType_ShouldReturnInputTypeMismatchError()
     {
         // Arrange
-        var playerNames = GetDefaultPlayerNames();
-        var roles = GetDefaultRoles4();
+        var playerNames = GetPlayerNames();
+        var roles = GetRoles();
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var input = SelectPlayer(GamePhase.Setup, Guid.NewGuid());
 
