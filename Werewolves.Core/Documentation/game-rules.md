@@ -65,7 +65,7 @@ The game alternates between Night and Day phases. The helper app guides the Mode
 
 *   **Simple Villager:** No special abilities. Relies on deduction and persuasion.
 *   **Villager-Villager:** A Simple Villager card with identical art on both sides, proving the player's role if revealed (e.g., by the Seer).
-*   **Seer:** Each night, chooses one player and is shown their Character Card by the Moderator. Must be discreet. (Effect modified by Somnambulism event).
+*   **Seer:** Each night, chooses one player and is given thumbs up or down if they are currently part of the group of players that wake with the werewolves, for whatever reason (this includes the white werewolf, any ambiguous roles that are currently werewolf-aligned, or an infected villager, etc. ). Must be discreet. (Effect modified by Somnambulism and Full Moon Rising events).
 *   **Cupid:** On the first night only, chooses two players (can be self) to be the Lovers. If one Lover dies, the other dies immediately of heartbreak. Lovers cannot vote against each other. **Special Goal:** If the Lovers are from opposing sides (Villager/Werewolf), their goal changes to eliminate everyone else.
 *   **Witch:** Has two single-use potions:
     *   **Healing Potion:** Can save the player targeted by the Werewolves that night. Can be used on self.
@@ -121,8 +121,8 @@ The game alternates between Night and Day phases. The helper app guides the Mode
 
 *(Note: These cards are drawn once per day, usually after the first day, and their effects apply as described.)*
 
-*   **Full Moon Rising:** (Temporary Night Effect) For the *next* night only: Werewolves act as Seers (each spies on one player). The Hunter, Witch, and Seer become temporary Werewolves (wake together, eliminate one player). Roles revert the following morning.
-*   **Somnambulism:** (Permanent Effect) From now on, when the Seer uses their power, the Moderator publicly announces the *role* seen, but not *who* was seen.
+*   **Full Moon Rising:** (Temporary Night Effect) For the *next* night only: Werewolves act as Seers (each spies on one player, and is told that player's role if it is known to the moderator at the time). The Hunter, Witch, and Seer become temporary Werewolves (wake together, eliminate one player). Roles revert the following morning.
+*   **Somnambulism:** (Permanent Effect) From now on, when the Seer uses their power, the Moderator publicly announces the *role* seen, but not *who* was seen. This can stack with **Full Moon Rising**
 *   **Enthusiasm:** (Conditional Day Effect) If the *next* player eliminated by the village vote *is* a Werewolf, a second immediate vote occurs without debate.
 *   **Backfire:** (Temporary Night Effect) For the *next* night only: If Werewolves target a Simple Villager, she transforms into a Werewolf instead of being eliminated (Moderator secretly swaps card). If they target anyone else, the victim survives, and the first Werewolf to the victim's left is eliminated. No effect if Werewolves don't agree on a victim.
 *   **Nightmare:** (Replaces Day Vote) Immediately, players awake. Starting player (left of last eliminated) accuses one player. Continues clockwise. Player with most accusations is eliminated. No debate.
@@ -153,10 +153,10 @@ The game alternates between Night and Day phases. The helper app guides the Mode
 
 ### Call Order: 1st Night ONLY
 
-1.  Thief (if in play)
-2.  Actor (if in play)
-3.  Cupid
-4.  Seer
+1.  Thief
+2.  Actor
+3.  Little Girl (identification time)
+4.  Cupid
 5.  Fox
 6.  Lovers (recognize each other)
 7.  Stuttering Judge (shows sign to Moderator)
@@ -168,22 +168,23 @@ The game alternates between Night and Day phases. The helper app guides the Mode
 13. Little Girl (spying time)
 14. Accursed Wolf-Father (infection option)
 15. Big Bad Wolf (second victim option)
-16. Witch (shown victim, uses potions)
-17. Gypsy (can choose medium)
-18. Piper (charms players)
-19. Charmed players (tapped by Moderator)
+16. Seer
+17. Witch (shown victim, uses potions)
+18. Gypsy (can choose medium)
+19. Piper (charms players)
+20. Charmed players (tapped by Moderator)
 
 ### Call Order: Each Subsequent Night (Subject to Event Card modifications, e.g., Full Moon Rising)
 
 1.  Actor
-2.  Seer
-3.  Fox
-4.  Defender
-5.  All Werewolves (including Wolf Hound if WW, Wild Child if turned, infected player, White WW, Accursed WF, Big Bad Wolf, *or* Temp WWs from Full Moon Rising) - Choose victim (potential modification by Backfire, Specter)
-6.  Little Girl (spying time)
-7.  White Werewolf (every *other* night - attacks a Werewolf)
-8.  Accursed Wolf-Father (infection option, if unused)
-9.  Big Bad Wolf (second victim option, if condition met)
+2.  Fox
+3.  Defender
+4.  All Werewolves (including Wolf Hound if WW, Wild Child if turned, infected player, White WW, Accursed WF, Big Bad Wolf, *or* Temp WWs from Full Moon Rising) - Choose victim (potential modification by Backfire, Specter)
+5.  Little Girl (spying time)
+6.  White Werewolf (every *other* night - attacks a Werewolf)
+7.  Accursed Wolf-Father (infection option, if unused)
+8.  Big Bad Wolf (second victim option, if condition met)
+9.  Seer
 10. Witch (shown victim, uses potions if available)
 11. Gypsy (can choose Medium)
 12. Piper (charms players)
@@ -194,13 +195,14 @@ The game alternates between Night and Day phases. The helper app guides the Mode
 1.  Village Wakes
 2.  **(If using New Moon Events, after Day 1)** Draw and resolve Event Card.
 3.  Victims are revealed (unless Burial active, potential modification by Miracle).
-4.  Bear Tamer's grunt (if triggered).
-5.  Medium chosen by Gypsy performs action (if Spiritualism card drawn).
-6.  Town Crier makes announcement (if applicable).
-7.  Debate (subject to Eclipse, Good Manners, Not Me - Nor Wolf).
-8.  Vote (Standard or modified/replaced by Nightmare, Influences, Great Distrust, Enthusiasm, Dissatisfaction, Punishment) and potential call to Devoted Servant.
-9.  Angel wins (only if eliminated on 2nd turn).
-10. Possible second vote (if Stuttering Judge used power, or Enthusiasm/Dissatisfaction triggered) and potential call to Devoted Servant.
-11. Check victory conditions.
+4.  Check victory conditions.
+5.  Bear Tamer's grunt (if triggered).
+6.  Medium chosen by Gypsy performs action (if Spiritualism card drawn).
+7.  Town Crier makes announcement (if applicable).
+8.  Debate (subject to Eclipse, Good Manners, Not Me - Nor Wolf).
+9.  Vote (Standard or modified/replaced by Nightmare, Influences, Great Distrust, Enthusiasm, Dissatisfaction, Punishment) and potential call to Devoted Servant.
+10. Angel wins (only if eliminated on 2nd turn).
+11. Possible second vote (if Stuttering Judge used power, or Enthusiasm/Dissatisfaction triggered) and potential call to Devoted Servant.
+12. Check victory conditions.
 
 The app will guide the moderator through this call order, prompting for player identification for roles revealed during Night 1.

@@ -41,9 +41,9 @@ public class VictoryConditionTests
         var inputsToReachResolveVote = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),
-            Confirm(GamePhase.Night, true),
-            SelectPlayers(GamePhase.Night, aliceId),
-            SelectPlayer(GamePhase.Night, bobId),
+            Confirm(GamePhase.Night_RoleAction, true),
+            SelectPlayers(GamePhase.Night_RoleAction, aliceId),
+            SelectPlayer(GamePhase.Night_RoleAction, bobId),
             Confirm(GamePhase.Day_ResolveNight, true)
         };
 
@@ -79,9 +79,9 @@ public class VictoryConditionTests
         var inputsToReachResolveVote = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),
-            Confirm(GamePhase.Night, true),
-            SelectPlayers(GamePhase.Night, aliceId),
-            SelectPlayer(GamePhase.Night, daveId),
+            Confirm(GamePhase.Night_RoleAction, true),
+            SelectPlayers(GamePhase.Night_RoleAction, aliceId),
+            SelectPlayer(GamePhase.Night_RoleAction, daveId),
             Confirm(GamePhase.Day_ResolveNight, true),
             AssignPlayerRoles(GamePhase.Day_Event, new(){{daveId, RoleType.SimpleVillager}}),
             Confirm(GamePhase.Day_Debate, true),

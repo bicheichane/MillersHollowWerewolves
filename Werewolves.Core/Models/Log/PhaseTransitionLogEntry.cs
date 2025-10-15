@@ -9,6 +9,5 @@ namespace Werewolves.Core.Models.Log;
 public record PhaseTransitionLogEntry : GameLogEntryBase
 {
     public required GamePhase PreviousPhase { get; init; }
-    public required GamePhase CurrentPhase { get; init; }
     public required PhaseTransitionReason Reason { get; init; }
 } 

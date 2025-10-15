@@ -9,7 +9,7 @@ namespace Werewolves.Core.Models.Log;
 /// </summary>
 public abstract record GameLogEntryBase
 {
-    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
     public required int TurnNumber { get; init; }
-    public required GamePhase Phase { get; init; }
+    public required GamePhase CurrentPhase { get; init; }
 } 

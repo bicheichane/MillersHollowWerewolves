@@ -268,7 +268,7 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Specify the role of {0}..
+        ///   Looks up a localized string similar to Specify the roles of the deceased..
         /// </summary>
         internal static string RevealRolePromptSpecify {
             get {
@@ -282,6 +282,15 @@ namespace Werewolves.Core.Resources {
         internal static string RevealTargetNotFoundError {
             get {
                 return ResourceManager.GetString("RevealTargetNotFoundError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Successfully assigned the {1} role to player {0}..
+        /// </summary>
+        internal static string RoleAssignmentSuccess {
+            get {
+                return ResourceManager.GetString("RoleAssignmentSuccess", resourceCulture);
             }
         }
         
@@ -327,6 +336,78 @@ namespace Werewolves.Core.Resources {
         internal static string RoleRevealedProceedToDebate {
             get {
                 return ResourceManager.GetString("RoleRevealedProceedToDebate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer check performed on player {0}. Result provided privately..
+        /// </summary>
+        internal static string SeerCheckCompleteForTarget {
+            get {
+                return ResourceManager.GetString("SeerCheckCompleteForTarget", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Please identify the player who is the Seer..
+        /// </summary>
+        internal static string SeerIdentificationPrompt {
+            get {
+                return ResourceManager.GetString("SeerIdentificationPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer, choose a player whose identity you wish to discover..
+        /// </summary>
+        internal static string SeerNightActionPrompt {
+            get {
+                return ResourceManager.GetString("SeerNightActionPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to There are no valid players remaining for the Seer to check..
+        /// </summary>
+        internal static string SeerNoTargetsAvailable {
+            get {
+                return ResourceManager.GetString("SeerNoTargetsAvailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Target {0} is NOT affiliated with the Werewolves (Thumbs Down)..
+        /// </summary>
+        internal static string SeerResultNotWerewolfTeam {
+            get {
+                return ResourceManager.GetString("SeerResultNotWerewolfTeam", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Target {0} IS affiliated with the Werewolves (Thumbs Up)..
+        /// </summary>
+        internal static string SeerResultWerewolfTeam {
+            get {
+                return ResourceManager.GetString("SeerResultWerewolfTeam", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Each night, the Seer may discover the true identity of one player..
+        /// </summary>
+        internal static string SeerRoleDescription {
+            get {
+                return ResourceManager.GetString("SeerRoleDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Seer.
+        /// </summary>
+        internal static string SeerRoleName {
+            get {
+                return ResourceManager.GetString("SeerRoleName", resourceCulture);
             }
         }
         
@@ -615,6 +696,15 @@ namespace Werewolves.Core.Resources {
         internal static string WerewolvesChooseVictimPrompt {
             get {
                 return ResourceManager.GetString("WerewolvesChooseVictimPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Werewolves go to sleep..
+        /// </summary>
+        internal static string WerewolvesGoToSleep {
+            get {
+                return ResourceManager.GetString("WerewolvesGoToSleep", resourceCulture);
             }
         }
     }

@@ -6,6 +6,7 @@ using Werewolves.Core.Resources;
 using System.Linq;
 using System;
 using System.Collections.Generic;
+using Werewolves.Core.Extensions;
 
 namespace Werewolves.Core.Roles;
 
@@ -17,9 +18,6 @@ public class SimpleWerewolfRole : IRole
     public RoleType RoleType => RoleType.SimpleWerewolf;
     public string Name => GameStrings.SimpleWerewolfRoleName;
     public string Description => GameStrings.SimpleWerewolfRoleDescription;
-
-    // Wakeup order (e.g., 10, relatively early but after potential info roles)
-    public int GetNightWakeUpOrder() => 10;
 
     public bool RequiresNight1Identification() => true; // Need moderator to ID who the WWs are
 
@@ -47,8 +45,7 @@ public class SimpleWerewolfRole : IRole
             .ToList();
 
         // Find werewolves based on their assigned Role
-        var werewolves = livingPlayers
-            .Where(p => p.Role?.RoleType == RoleType.SimpleWerewolf)
+        var werewolves = livingPlayers.WithRole(RoleType.SimpleWerewolf)
             .Select(p => p.Id)
             .ToHashSet();
 
@@ -68,7 +65,6 @@ public class SimpleWerewolfRole : IRole
 
     /// <summary>
     /// Processes the Werewolves' chosen victim.
-    /// Adds the choice to the temporary NightActionsLog.
     /// </summary>
     /// <returns>A ProcessResult indicating success and logging the action, or failure.</returns>
     public ProcessResult ProcessNightAction(GameSession session, ModeratorInput input)
@@ -95,36 +91,36 @@ public class SimpleWerewolfRole : IRole
                 GameErrorCode.RuleViolation_TargetIsDead,
                 string.Format(GameStrings.TargetIsDeadError, targetPlayer.Name)));
         }
-		// Cannot target allies (requires knowing who the werewolves are)
-			var werewolves = session.Players.Values
-			.Where(p => p.Role?.RoleType == RoleType.SimpleWerewolf)
-			.Select(p => p.Id)
-			.ToHashSet();
+        // Cannot target allies (requires knowing who the werewolves are)
+        var werewolves = session.Players.Values
+        .Where(p => p.Role?.RoleType == RoleType.SimpleWerewolf)
+        .Select(p => p.Id)
+        .ToHashSet();
 
         if(werewolves.Contains(targetPlayerId))
-		{
-			return ProcessResult.Failure(new GameError(ErrorType.RuleViolation,
-				GameErrorCode.RuleViolation_TargetIsAlly,
-				string.Format(GameStrings.TargetIsAllyError, targetPlayer.Name)));
-		}
+        {
+            return ProcessResult.Failure(new GameError(ErrorType.RuleViolation,
+              GameErrorCode.RuleViolation_TargetIsAlly,
+              string.Format(GameStrings.TargetIsAllyError, targetPlayer.Name)));
+        }
 
 
-		// Log the action directly to the main history log
-		session.GameHistoryLog.Add(new NightActionLogEntry
+        // Log the action directly to the main history log
+        session.GameHistoryLog.Add(new NightActionLogEntry
         {
             ActorId = Guid.Empty, // Represents the collective Werewolf action for now
             TargetId = targetPlayerId,
             ActionType = NightActionType.WerewolfVictimSelection, // Use Enum
             TurnNumber = session.TurnNumber,
-            Phase = session.GamePhase
+            CurrentPhase = session.GamePhase
         });
 
         // Return success, indicating the action is logged but resolution happens later.
         // Generate a confirmation instruction for the moderator.
         var confirmation = new ModeratorInstruction
         {
-            InstructionText = string.Format(GameStrings.WerewolvesChoiceRecorded, targetPlayer.Name),
-            ExpectedInputType = ExpectedInputType.None // Service will generate next step
+            InstructionText = GameStrings.WerewolvesGoToSleep,
+            ExpectedInputType = ExpectedInputType.Confirmation
         };
         return ProcessResult.Success(confirmation);
     }
@@ -137,10 +133,9 @@ public class SimpleWerewolfRole : IRole
     {
         int expectedWerewolfCount = session.GetRoleCount(RoleType.SimpleWerewolf);
 
-        // TODO: Determine expected count dynamically based on game setup/rules
-        if (input.SelectedPlayerIds.Count != expectedWerewolfCount)
+        if (input.SelectedPlayerIds?.Count != expectedWerewolfCount)
         {
-            string errorMsg = string.Format(GameStrings.WerewolfIdentifyInvalidPlayerCount, expectedWerewolfCount, input.SelectedPlayerIds.Count);
+            string errorMsg = string.Format(GameStrings.WerewolfIdentifyInvalidPlayerCount, expectedWerewolfCount, input.SelectedPlayerIds?.Count ?? 0);
             return ProcessResult.Failure(new GameError(ErrorType.InvalidInput, GameErrorCode.InvalidInput_InvalidPlayerSelectionCount, errorMsg));
         }
 

@@ -70,7 +70,7 @@ Constant string values should be stored in resx files for ease of future localiz
 *Goal: Implement the simplest possible Night -> Day -> Vote cycle with just Werewolves and Villagers.*
 
 1.  **Implement: `IRole` Interface & Simple Roles**
-    *   Define `IRole` interface with initial methods: `RoleType`, `GetNightWakeUpOrder()`. Add `RequiresNight1Identification()`.
+    *   Define `IRole` interface with initial methods: `RoleType`. Add `RequiresNight1Identification()`.
     *   Implement `SimpleVillagerRole` (implements `IRole`, `RoleType`=SimpleVillager, `GetNightWakeUpOrder`=MaxValue, `RequiresNight1Identification`=false).
     *   Implement `SimpleWerewolfRole` (implements `IRole`, `RoleType`=SimpleWerewolf, `GetNightWakeUpOrder`=e.g., 10, `RequiresNight1Identification`=true). Add `GenerateIdentificationInstructions`, `ProcessIdentificationInput`, `GenerateNightInstructions`, `ProcessNightAction` stubs.
     *   Modify `Player` class to include `Role` (IRole?).
@@ -170,15 +170,15 @@ Constant string values should be stored in resx files for ease of future localiz
 *Goal: Add essential Villager roles with night actions.*
 
 1.  **Implement: Seer Role**
-    *   Define `SeerRole` class implementing `IRole`. `RequiresNight1Identification`=true. Wakeup order before WW.
+    *   Define `SeerRole` class implementing `IRole`. `RequiresNight1Identification`=true. Wakeup order after WW.
     *   Implement `GenerateNightInstructions`: Prompt for target player.
-    *   Implement `ProcessNightAction`: Log target (`SeerViewAttemptLogEntry`). Determine target's actual role (if known/revealed *or* potentially deduce based on game start info - simpler for now: report 'Unknown' if Role is null). Generate *private* instruction for Moderator reporting the role. Transition state.
+    *   Implement `ProcessNightAction`: Log target (`SeerViewAttemptLogEntry`). Determine if the selected player currently wakes up with the werewolves to select a victim (this includes the white werewolf, player infected by accursed father, etc.). Generate *private* instruction for Moderator to indicate to the seer thumbs up or thumbs down depending on the answer. Transition state.
     *   Modify `GameService` Night logic to handle Seer call order and private instruction.
     *   Modify `StartNewGame` / Setup logic to prompt for Night 1 Seer identification if Seer is in `RolesInPlay`. Add `InitialRoleAssignmentLogEntry`.
     *   Define `SeerViewAttemptLogEntry`, `InitialRoleAssignmentLogEntry`.
     *   *Test:*
         *   Integration Test: Start game with Seer. Verify Night 1 prompt for Seer ID. Process input. Verify `InitialRoleAssignmentLogEntry`.
-        *   Integration Test: Night phase. Verify Seer called before WW. Verify prompt for target. Process input. Verify log entry. Verify private instruction shows correct role (if known) or 'Unknown'.
+        *   Integration Test: Night phase. Verify Seer called after WW. Verify prompt for target. Process input. Verify log entry. Verify private instruction indicates correctly whether the selected player belonged to the werewolf team or not.
 
 2.  **Implement: Defender Role**
     *   Add `ProtectedPlayerId` (Guid?) and `LastProtectedPlayerId` (Guid?) to `GameSession`.

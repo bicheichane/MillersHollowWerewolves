@@ -41,9 +41,9 @@ public class DayPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true), // Confirm game start
-            Confirm(GamePhase.Night, true), // Confirm night phase start (village sleeps)
-            SelectPlayers(GamePhase.Night, wolfId), //Identify wolf
-            SelectPlayer(GamePhase.Night, victimId), //wolf chooses victim
+            Confirm(GamePhase.Night_RoleAction, true), // Confirm night phase start (village sleeps)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId), //Identify wolf
+            SelectPlayer(GamePhase.Night_RoleAction, victimId), //wolf chooses victim
             Confirm(GamePhase.Day_ResolveNight, true), // Confirm night phase end (village wakes up)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // choose role for victim
         };
@@ -59,8 +59,8 @@ public class DayPhaseTests
 
         var revealedPlayer = session.Players[victimId];
         revealedPlayer.IsRoleRevealed.ShouldBeTrue();
-        revealedPlayer.Role.ShouldNotBeNull();
-        revealedPlayer.Role.RoleType.ShouldBe(RoleType.SimpleVillager);
+        revealedPlayer.RoleType.ShouldNotBeNull();
+        revealedPlayer.RoleType.RoleType.ShouldBe(RoleType.SimpleVillager);
 
         session.GameHistoryLog.OfType<RoleRevealedLogEntry>()
             .ShouldContain(rl => rl.PlayerId == victimId && rl.RevealedRole == RoleType.SimpleVillager);
@@ -86,9 +86,9 @@ public class DayPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
             Confirm(GamePhase.Day_Debate, true),             // -> Day_Vote
@@ -127,9 +127,9 @@ public class DayPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
             Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
@@ -169,9 +169,9 @@ public class DayPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
             Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
@@ -212,9 +212,9 @@ public class DayPhaseTests
         var setupInputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
             Confirm(GamePhase.Day_Debate, true)             // -> Day_Vote
@@ -259,9 +259,9 @@ public class DayPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, [wolfId, wolf2Id]),         // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, [wolfId, wolf2Id]),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
             Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
@@ -307,9 +307,9 @@ public class DayPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),         // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId),        // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId),         // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId),        // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true),      // -> Day_Event (Reveal Victim Role)
             AssignPlayerRoles(GamePhase.Day_Event, new(){{victimId, RoleType.SimpleVillager}}), // -> Day_Debate
             Confirm(GamePhase.Day_Debate, true),            // -> Day_Vote
@@ -332,7 +332,7 @@ public class DayPhaseTests
         session.GameHistoryLog.OfType<VoteResolvedLogEntry>()
             .ShouldContain(vrl => vrl.EliminatedPlayerId == null && vrl.WasTie);
 
-        session.GamePhase.ShouldBe(GamePhase.Night); // Should transition to night
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Should transition to night
         session.PendingModeratorInstruction.ShouldNotBeNull();
         session.PendingModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }

@@ -71,9 +71,9 @@ public class ErrorHandlingTests
         var gameEndingSequence = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),             // -> Night
-            Confirm(GamePhase.Night, true),             // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, wolfId),     // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, villagerId),  // -> Day_ResolveNight
+            Confirm(GamePhase.Night_RoleAction, true),             // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, wolfId),     // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, villagerId),  // -> Day_ResolveNight
             Confirm(GamePhase.Day_ResolveNight, true)   // -> GameOver (WW win condition met)
         };
 

@@ -8,7 +8,8 @@ using System.Linq; // Needed for Any()
 using System;
 using System.Collections.Generic;
 using Werewolves.Core.Resources; // Add this line for resource access
-using System.Diagnostics; // For Debug.Fail
+using System.Diagnostics;
+using System.Text.Json; // For Debug.Fail
 using Werewolves.Core.Models.StateMachine;
 
 namespace Werewolves.Core.Services;
@@ -21,29 +22,15 @@ public class GameService
     // Simple in-memory storage for game sessions. Replaceable with DI.
     private readonly ConcurrentDictionary<Guid, GameSession> _sessions = new();
 
-    // TODO: Replace direct role instantiation with a factory or registry later
-    private static readonly Dictionary<RoleType, IRole> _roleImplementations = new()
-    {
-        { RoleType.SimpleVillager, new SimpleVillagerRole() },
-        { RoleType.SimpleWerewolf, new SimpleWerewolfRole() }
-    };
+	// TODO: Replace direct role instantiation with a factory or registry later
+	public static readonly Dictionary<RoleType, IRole> _roleImplementations = new()
+	{
+		{ RoleType.SimpleVillager, new SimpleVillagerRole() },
+		{ RoleType.SimpleWerewolf, new SimpleWerewolfRole() },
+		{ RoleType.Seer, new SeerRole() }
+	};
 
-    private readonly GameFlowManager _gameFlowManager;
-
-    // REMOVED: Constants for Transition Reasons are now in PhaseTransitionReason enum
-	// private const string ReasonSetupConfirmed = "SetupConfirmed";
-    // private const string ReasonNightStartsConfirmed = "NightStartsConfirmed";
-    // private const string ReasonIdentifiedAndProceedToWwAction = "IdentifiedAndProceedToWwAction";
-    // private const string ReasonWwActionComplete = "WwActionComplete";
-    // private const string ReasonNightResolutionConfirmedProceedToReveal = "NightResolutionConfirmedProceedToReveal";
-    // private const string ReasonNightResolutionConfirmedNoVictims = "NightResolutionConfirmedNoVictims";
-    // private const string ReasonRoleRevealedProceedToDebate = "RoleRevealedProceedToDebate";
-	// private const string ReasonRoleRevealedProceedToNight = "RoleRevealedProceedToNight";
-	// private const string ReasonDebateConfirmedProceedToVote = "DebateConfirmedProceedToVote";
-    // private const string ReasonVoteOutcomeReported = "VoteOutcomeReported";
-    // private const string ReasonVoteResolvedProceedToReveal = "VoteResolvedProceedToReveal";
-    // private const string ReasonVoteResolvedTieProceedToNight = "VoteResolvedTieProceedToNight";
-    // private const string ReasonRepeatInstruction = "RepeatInstruction"; // For re-issuing instructions
+	private readonly GameFlowManager _gameFlowManager;
 
 	public GameService()
     {
@@ -82,15 +69,14 @@ public class GameService
             playerInfos.Add(new PlayerInfo(player.Id, player.Name));
         }
 
-        var session = new GameSession
-        {
-            Players = players,
-            PlayerSeatingOrder = seatingOrder,
-            RolesInPlay = new List<RoleType>(rolesInPlay), // Copy list
-            GamePhase = GamePhase.Setup,
-            TurnNumber = 0
+        var session = new GameSession(
+            players: players,
+            playerSeatingOrder: seatingOrder,
+            rolesInPlay: new List<RoleType>(rolesInPlay), // Copy list
+            gamePhase: GamePhase.Setup, 
+            turnNumber: 0 
             // EventDeck setup would happen here if events were implemented
-        };
+        );
 
         // Initial log entry
         var logEntry = new GameStartedLogEntry
@@ -99,7 +85,7 @@ public class GameService
             InitialPlayers = playerInfos.AsReadOnly(),
             InitialEvents = eventCardIdsInDeck?.AsReadOnly(),
             TurnNumber = session.TurnNumber,
-            Phase = session.GamePhase
+            CurrentPhase = session.GamePhase
         };
         session.GameHistoryLog.Add(logEntry);
 
@@ -267,18 +253,16 @@ public class GameService
             if (victoryCheckResult != null && session.GamePhase != GamePhase.GameOver) // Check if victory wasn't already set
             {
                 // Victory condition met!
-                var oldPhaseForLog = session.GamePhase;
-                session.GamePhase = GamePhase.GameOver;
                 session.WinningTeam = victoryCheckResult.Value.WinningTeam;
 
-				LogPhaseTransition(session, oldPhaseForLog, GamePhase.GameOver, PhaseTransitionReason.VictoryConditionMet);
+				session.TransitionToPhase(GamePhase.GameOver, PhaseTransitionReason.VictoryConditionMet);
 
                 var victoryLog = new VictoryConditionMetLogEntry
                 {
                     WinningTeam = victoryCheckResult.Value.WinningTeam,
                     ConditionDescription = victoryCheckResult.Value.Description,
                     TurnNumber = session.TurnNumber,
-                    Phase = session.GamePhase
+                    CurrentPhase = session.GamePhase
                 };
                 session.GameHistoryLog.Add(victoryLog);
 
@@ -302,116 +286,82 @@ public class GameService
     // They receive the 'this' instance (GameService) as the third parameter.
     public static HandlerResult HandleSetupPhase(GameSession session, ModeratorInput input, GameService service)
     {
-        return service.HandleConfirmationOrReissue(session, input, () =>
+        if (service.ShouldReissueCommand(session, input, out var result))
+            return result!;
+
+        session.TransitionToPhase(GamePhase.Night_Start, PhaseTransitionReason.SetupConfirmed);
+
+        var nightStartInstruction = new ModeratorInstruction
         {
-            var oldPhase = session.GamePhase;
-            session.GamePhase = GamePhase.Night;
+            InstructionText = GameStrings.NightStartsPrompt,
+            ExpectedInputType = ExpectedInputType.Confirmation
+        };
+        // Transition happens, specific instruction provided.
+        return HandlerResult.SuccessTransition(nightStartInstruction, PhaseTransitionReason.SetupConfirmed);
+	}
 
-            service.LogPhaseTransition(session, oldPhase, session.GamePhase, PhaseTransitionReason.SetupConfirmed);
-
-            var nightStartInstruction = new ModeratorInstruction
-            {
-                InstructionText = GameStrings.NightStartsPrompt,
-                ExpectedInputType = ExpectedInputType.Confirmation
-            };
-            // Transition happens, specific instruction provided.
-            return HandlerResult.SuccessTransition(nightStartInstruction, PhaseTransitionReason.SetupConfirmed);
-        });
-    }
-
-    public static HandlerResult HandleNightPhase(GameSession session, ModeratorInput input, GameService service)
+    public static HandlerResult HandleNightLogic(GameSession session, ModeratorInput input, GameService service)
     {
-        var actingRolesOrdered = service.GetNightWakeUpOrder(session);
+	    if (service.ShouldReissueCommand(session, input, out var result))
+	    {
+		    return result!;
+	    }
 
-        // --- 0. Handle Initial Night Start Confirmation ---
-        if (session.PendingModeratorInstruction?.ExpectedInputType == ExpectedInputType.Confirmation &&
-            session.PendingModeratorInstruction.InstructionText == GameStrings.NightStartsPrompt)
-        {
-            // Use helper for the initial confirmation
-            return service.HandleConfirmationOrReissue(session, input, () => 
-            {
-                session.CurrentNightActingRoleIndex = -1;
-                session.TurnNumber++;
-                var firstRoleInstruction = service.GenerateNextNightInstruction(session);
-                // Stay in Night phase, but provide the first role instruction.
-                return HandlerResult.SuccessStayInPhase(firstRoleInstruction);
-            });
-        }
+        session.StartNewTurn();
+        
+	    
+	    // Stay in Night phase, but provide the first role instruction.
+	    return HandlerResult.SuccessTransition(firstRoleInstruction);
+	}
 
-        // --- 1. Handle Pending Night 1 Identification Input ---
-        if (session.PendingNight1IdentificationForRole.HasValue)
-        {
-            var roleTypeToIdentify = session.PendingNight1IdentificationForRole.Value;
-            if (!_roleImplementations.TryGetValue(roleTypeToIdentify, out var roleInstance))
-            {
-                session.PendingNight1IdentificationForRole = null;
-                return HandlerResult.Failure(new GameError(ErrorType.Unknown,
-                                                    GameErrorCode.Unknown_InternalError,
-                                                    $"Role implementation for {roleTypeToIdentify} not found.")); // TODO: GameString
-            }
+    public static HandlerResult HandleNightRoleIdentification(GameSession session, ModeratorInput input, GameService service)
+    {
+	    var currentNightRole = session.CurrentNightRole;
+	    // ProcessIdentificationInput updates session state directly
+	    var identificationResult = currentNightRole.ProcessIdentificationInput(session, input);
 
-            // ProcessIdentificationInput updates session state directly
-            var identificationResult = roleInstance.ProcessIdentificationInput(session, input);
+	    if (identificationResult.IsSuccess)
+	    {
+		    // Log successful identification
+		    if (input.SelectedPlayerIds != null)
+		    {
+			    session.LogInitialAssignments(input.SelectedPlayerIds, currentNightRole.RoleType);
+		    }
 
-            if (identificationResult.IsSuccess)
-            {
-                // Log successful identification
-                if (input.SelectedPlayerIds != null)
-                {
-                    foreach (var playerId in input.SelectedPlayerIds)
-                    {
-                        if (session.Players.TryGetValue(playerId, out var player) && player.Role != null) {
-                            service.LogInitialAssignment(session, player.Id, player.Role.RoleType);
-                        }
-                        else { 
-                          return HandlerResult.Failure(new GameError(ErrorType.Unknown,
-                                                    GameErrorCode.Unknown_InternalError,
-                                                    $"Error logging identification: Player {playerId} not found or role not assigned.")); 
-                        }
-                    }
-                }
+		    // Immediately generate ACTION instruction for the identified role
+		    var actionInstruction = currentNightRole.GenerateNightInstructions(session);
+		    if (actionInstruction == null)
+		    {
+			    // Role might not have an immediate action. Advance index & get next.
+			    var nextInstruction = service.GenerateNextNightInstruction(session);
+			    // Check if GenerateNext moved phase
+			    if (session.GamePhase != GamePhase.Night_RoleAction)
+			    {
+				    return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.RoleActionComplete);
+			    }
+			    else
+			    {
+				    return HandlerResult.SuccessStayInPhase(nextInstruction);
+			    }
+		    }
+		    else
+		    {
+			    // Return action instruction for the identified role. Stay in Night phase.
+			    return HandlerResult.SuccessStayInPhase(actionInstruction);
+		    }
+	    }
+	    else
+	    {
+		    // Identification failed validation. Return failure, stay in phase with same instruction.
+		    return HandlerResult.Failure(identificationResult.Error!); // Use error from ProcessIdentificationInput
+	    }
+	}
 
-                var identifiedRoleTypeLocal = session.PendingNight1IdentificationForRole.Value;
-                session.PendingNight1IdentificationForRole = null; // Clear pending state
+    public static HandlerResult HandleNightActionPhase(GameSession session, ModeratorInput input, GameService service)
+    {
+        var currentNightRole = session.CurrentNightRole;
 
-                // Immediately generate ACTION instruction for the identified role
-                if (_roleImplementations.TryGetValue(identifiedRoleTypeLocal, out var identifiedRoleInstance))
-                {
-                    var actionInstruction = identifiedRoleInstance.GenerateNightInstructions(session);
-                    if (actionInstruction == null)
-                    {
-                        // Role might not have an immediate action. Advance index & get next.
-                        var nextInstruction = service.GenerateNextNightInstruction(session);
-                        // Check if GenerateNext moved phase
-                        if(session.GamePhase != GamePhase.Night)
-                        {
-                            return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.WwActionComplete);
-                        }
-                        else
-                        { 
-                            return HandlerResult.SuccessStayInPhase(nextInstruction);
-                        }
-                    }
-                    else
-                    {
-                        // Return action instruction for the identified role. Stay in Night phase.
-                        return HandlerResult.SuccessStayInPhase(actionInstruction);
-                    }
-                }
-                else
-                {
-                     return HandlerResult.Failure(new GameError(ErrorType.Unknown,
-                                                    GameErrorCode.Unknown_InternalError,
-                                                    $"Error: Role implementation for {identifiedRoleTypeLocal} disappeared after identification."));
-                     
-                }
-            }
-            else
-            {
-                // Identification failed validation. Return failure, stay in phase with same instruction.
-                return HandlerResult.Failure(identificationResult.Error!); // Use error from ProcessIdentificationInput
-            }
-        }
+        
 
         // --- 2. Determine Current Role & Process Action (if no pending ID) ---
         // If index is invalid or out of bounds, try to generate the next instruction
@@ -435,11 +385,10 @@ public class GameService
         var currentRoleType = actingRolesOrdered[session.CurrentNightActingRoleIndex];
         if (!_roleImplementations.TryGetValue(currentRoleType, out var currentRoleInstance))
         {
-             // Skip role, move to next instruction generation
              var nextInstruction = service.GenerateNextNightInstruction(session);
              if (session.GamePhase == GamePhase.Day_ResolveNight)
              {
-                 return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.WwActionComplete);
+                 return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.RoleActionComplete);
              }
              else
              {
@@ -453,15 +402,20 @@ public class GameService
 
         if (actionResult.IsSuccess)
         {
+            if(actionResult.ModeratorInstruction != null)
+            {
+                return HandlerResult.SuccessStayInPhase(actionResult.ModeratorInstruction);
+            }
+
             // Action successful. Generate instruction for the next step.
             var nextInstruction = service.GenerateNextNightInstruction(session);
             // GenerateNextNightInstruction handles incrementing index and phase transition
-            if (session.GamePhase != GamePhase.Night)
+            if (session.GamePhase != GamePhase.Night_RoleAction)
             {
                 
                 // Phase 1 simplification: Assume transition description is ReasonWwActionComplete
                 // Will need to add more logic to handle other transition reasons for when we have more night roles.
-                return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.WwActionComplete);
+                return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.RoleActionComplete);
             }
             else
             {
@@ -478,70 +432,73 @@ public class GameService
 
     public static HandlerResult HandleDayResolveNightPhase(GameSession session, ModeratorInput input, GameService service)
     {
-        return service.HandleConfirmationOrReissue(session, input, () =>
-        {
-            var wwVictimAction = session.GameHistoryLog
-                .OfType<NightActionLogEntry>()
-                .Where(log => log.TurnNumber == session.TurnNumber && log.ActionType == NightActionType.WerewolfVictimSelection)
-                .OrderByDescending(log => log.Timestamp)
-                .FirstOrDefault();
+        if (service.ShouldReissueCommand(session, input, out var result))
+            return result!;
 
-            List<Player> eliminatedPlayers = new List<Player>();
-            Guid? victimId = null;
+		var wwVictimAction = session.GameHistoryLog
+	        .OfType<NightActionLogEntry>()
+	        .Where(log => log.TurnNumber == session.TurnNumber && log.ActionType == NightActionType.WerewolfVictimSelection)
+	        .OrderByDescending(log => log.Timestamp)
+	        .FirstOrDefault();
 
-            if (wwVictimAction?.TargetId != null && session.Players.TryGetValue(wwVictimAction.TargetId.Value, out var victim))
-            {
-                victimId = victim.Id;
-                if (victim.Status == PlayerStatus.Alive)
-                {
-                    victim.Status = PlayerStatus.Dead;
-                    eliminatedPlayers.Add(victim);
-                    service.LogElimination(session, victim.Id, EliminationReason.WerewolfAttack);
-                }
-            }
+		List<Player> eliminatedPlayers = new List<Player>();
+		Guid? victimId = null;
 
-            string announcement;
-            if (eliminatedPlayers.Any()) { 
-              announcement = string.Format(
-                GameStrings.PlayersEliminatedAnnouncement, 
-                string.Join(", ", eliminatedPlayers.Select(p => p.Name))); 
-            }
-            else {
-              announcement = GameStrings.NoOneEliminatedAnnouncement; 
-            }
+		if (wwVictimAction?.TargetId != null && session.Players.TryGetValue(wwVictimAction.TargetId.Value, out var victim))
+		{
+			victimId = victim.Id;
+			if (victim.Status == PlayerStatus.Alive)
+			{
+				victim.Status = PlayerStatus.Dead;
+				eliminatedPlayers.Add(victim);
+				service.LogElimination(session, victim.Id, EliminationReason.WerewolfAttack);
+			}
+		}
 
-            var previousPhase = session.GamePhase;
+		string announcement;
+		if (eliminatedPlayers.Any())
+		{
+			announcement = string.Format(
+			  GameStrings.PlayersEliminatedAnnouncement,
+			  string.Join(", ", eliminatedPlayers.Select(p => p.Name)));
+		}
+		else
+		{
+			announcement = GameStrings.NoOneEliminatedAnnouncement;
+		}
 
-            if (eliminatedPlayers.Any())
-            {
-                var playersWithoutRolesIdList = eliminatedPlayers.Where(p => p.Role == null).Select(p => p.Id).ToList();
+		var previousPhase = session.GamePhase;
 
-                session.GamePhase = GamePhase.Day_Event;
+		if (eliminatedPlayers.Any())
+		{
+			var playersWithoutRolesIdList = eliminatedPlayers.Where(p => p.Role == null).Select(p => p.Id).ToList();
 
-                var nextInstruction = new ModeratorInstruction
-                {
-                    InstructionText = $"{announcement} {GameStrings.RevealRolePromptSpecify}",
-                    ExpectedInputType = ExpectedInputType.AssignPlayerRoles,
-                    AffectedPlayerIds = playersWithoutRolesIdList,
-                    SelectableRoles = Enum.GetValues<RoleType>().Where(rt => rt > RoleType.Unassigned).ToList()
-                };
-                service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.NightResolutionConfirmedProceedToReveal);
-                return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.NightResolutionConfirmedProceedToReveal);
-            }
-            else
-            {
-                session.GamePhase = GamePhase.Day_Debate;
-                var nextInstruction = new ModeratorInstruction
-                {
-                    InstructionText = $"{announcement} {GameStrings.ProceedToDebatePrompt}",
-                    ExpectedInputType = ExpectedInputType.Confirmation
-                };
-                service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.NightResolutionConfirmedNoVictims);
-                // Let the state machine use the Default instruction defined for Day_Debate
-                return HandlerResult.SuccessTransitionUseDefault(PhaseTransitionReason.NightResolutionConfirmedNoVictims);
-            }
-        });
-    }
+			session.GamePhase = GamePhase.Day_Event;
+
+			var nextInstruction = new ModeratorInstruction
+			{
+				InstructionText = $"{announcement} {GameStrings.RevealRolePromptSpecify}",
+				ExpectedInputType = ExpectedInputType.AssignPlayerRoles,
+				AffectedPlayerIds = playersWithoutRolesIdList,
+				SelectableRoles = Enum.GetValues<RoleType>().ToList()
+			};
+			service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.NightResolutionConfirmedProceedToReveal);
+			return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.NightResolutionConfirmedProceedToReveal);
+		}
+		else
+		{
+			session.GamePhase = GamePhase.Day_Debate;
+			var nextInstruction = new ModeratorInstruction
+			{
+				InstructionText = $"{announcement} {GameStrings.ProceedToDebatePrompt}",
+				ExpectedInputType = ExpectedInputType.Confirmation
+			};
+			service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.NightResolutionConfirmedNoVictims);
+			// Let the state machine use the Default instruction defined for Day_Debate
+			return HandlerResult.SuccessTransitionUseDefault(PhaseTransitionReason.NightResolutionConfirmedNoVictims);
+		}
+
+	}
 
     public static HandlerResult HandleDayEventPhase(GameSession session, ModeratorInput input, GameService service)
     {
@@ -564,7 +521,7 @@ public class GameService
             var previousPhase = session.PreviousPhase;
             if(previousPhase == GamePhase.Day_ResolveVote)
             {
-                session.GamePhase = GamePhase.Night;
+                session.GamePhase = GamePhase.Night_RoleAction;
                 service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.RoleRevealedProceedToNight);
                 return HandlerResult.SuccessTransitionUseDefault(PhaseTransitionReason.RoleRevealedProceedToNight);
 			}
@@ -587,28 +544,28 @@ public class GameService
 
     public static HandlerResult HandleDayDebatePhase(GameSession session, ModeratorInput input, GameService service)
     {
-        return service.HandleConfirmationOrReissue(session, input, () =>
+        if (service.ShouldReissueCommand(session, input, out var result))
+            return result!;
+
+        var previousPhase = session.GamePhase;
+        session.GamePhase = GamePhase.Day_Vote;
+        service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.DebateConfirmedProceedToVote);
+
+        var livingPlayers = session.Players.Values
+            .Where(p => p.Status == PlayerStatus.Alive)
+            // TODO: Add CanVote check later
+            .Select(p => p.Id)
+            .ToList();
+
+        var nextInstruction = new ModeratorInstruction
         {
-            var previousPhase = session.GamePhase;
-            session.GamePhase = GamePhase.Day_Vote;
-            service.LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.DebateConfirmedProceedToVote);
-
-            var livingPlayers = session.Players.Values
-                .Where(p => p.Status == PlayerStatus.Alive)
-                // TODO: Add CanVote check later
-                .Select(p => p.Id)
-                .ToList();
-
-            var nextInstruction = new ModeratorInstruction
-            {
-                InstructionText = GameStrings.VotePhaseStartPrompt,
-                ExpectedInputType = ExpectedInputType.PlayerSelectionSingle, // Moderator reports the *outcome*
-                SelectablePlayerIds = livingPlayers // Provide context of who *could* be eliminated
-                // Note: Allow empty selection for tie via validation in HandleDayVotePhase
-            };
-            return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.DebateConfirmedProceedToVote);
-        });
-    }
+            InstructionText = GameStrings.VotePhaseStartPrompt,
+            ExpectedInputType = ExpectedInputType.PlayerSelectionSingle, // Moderator reports the *outcome*
+            SelectablePlayerIds = livingPlayers // Provide context of who *could* be eliminated
+            // Note: Allow empty selection for tie via validation in HandleDayVotePhase
+        };
+        return HandlerResult.SuccessTransition(nextInstruction, PhaseTransitionReason.DebateConfirmedProceedToVote);
+	}
 
     public static HandlerResult HandleDayVotePhase(GameSession session, ModeratorInput input, GameService service)
     {
@@ -656,61 +613,59 @@ public class GameService
 
     public static HandlerResult HandleDayResolveVotePhase(GameSession session, ModeratorInput input, GameService service)
     {
-        return service.HandleConfirmationOrReissue(session, input, () =>
-        {
-            if (!session.PendingVoteOutcome.HasValue)
-            { 
-                return HandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, GameStrings.VoteOutcomeMissingError)); 
-            }
+        if (service.ShouldReissueCommand(session, input, out var result))
+            return result!;
 
-            Guid outcome = session.PendingVoteOutcome.Value;
-            session.PendingVoteOutcome = null; // Clear state
+		if (!session.PendingVoteOutcome.HasValue)
+		{
+			return HandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, GameStrings.VoteOutcomeMissingError));
+		}
 
-            service.LogVoteResolved(session, (outcome == Guid.Empty) ? null : outcome, outcome == Guid.Empty);
+		Guid outcome = session.PendingVoteOutcome.Value;
+		session.PendingVoteOutcome = null; // Clear state
 
-            var previousPhase = session.GamePhase;
-            ModeratorInstruction nextInstruction;
-            PhaseTransitionReason transitionReason;
+		session.LogVoteResolved((outcome == Guid.Empty) ? null : outcome, outcome == Guid.Empty);
 
-            if (outcome == Guid.Empty) // Tie
-            {
-                session.GamePhase = GamePhase.Night;
-                transitionReason = PhaseTransitionReason.VoteResolvedTieProceedToNight;
-                nextInstruction = new ModeratorInstruction
-                { InstructionText = GameStrings.VoteResultTieProceedToNight, ExpectedInputType = ExpectedInputType.Confirmation };
-            }
-            else // Player eliminated
-            {
-                Guid eliminatedPlayerId = outcome;
-                if (session.Players.TryGetValue(eliminatedPlayerId, out var eliminatedPlayer))
-                {
-                     if(eliminatedPlayer.Status == PlayerStatus.Alive)
-                     {
-                        eliminatedPlayer.Status = PlayerStatus.Dead;
-                        service.LogElimination(session, eliminatedPlayerId, EliminationReason.DayVote);
-                     }
+		var previousPhase = session.GamePhase;
+		ModeratorInstruction nextInstruction;
+		PhaseTransitionReason transitionReason;
 
-                    session.GamePhase = GamePhase.Day_Event;
-                    transitionReason = PhaseTransitionReason.VoteResolvedProceedToReveal;
-                    nextInstruction = new ModeratorInstruction
-                    {
-                        // Placeholder for GameStrings.PlayerEliminatedByVoteRevealRole
-                        InstructionText = string.Format(GameStrings.PlayerEliminatedByVoteRevealRole, eliminatedPlayer.Name),
-                        ExpectedInputType = ExpectedInputType.AssignPlayerRoles,
-                        AffectedPlayerIds = new List<Guid> { eliminatedPlayerId },
-                        SelectableRoles = Enum.GetValues<RoleType>().Where(rt => rt > RoleType.Unassigned).ToList()
-                    };
-                }
-                else
-                {
-                    return HandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, string.Format(GameStrings.PlayerIdNotFound, eliminatedPlayerId)));
-                }
-            }
+		if (outcome == Guid.Empty) // Tie
+		{
+			session.TransitionToPhase(GamePhase.Night_RoleAction, PhaseTransitionReason.VoteResolvedTieProceedToNight);
+			nextInstruction = new ModeratorInstruction
+			{ InstructionText = GameStrings.VoteResultTieProceedToNight, ExpectedInputType = ExpectedInputType.Confirmation };
+		}
+		else // Player eliminated
+		{
+			Guid eliminatedPlayerId = outcome;
+			if (session.Players.TryGetValue(eliminatedPlayerId, out var eliminatedPlayer))
+			{
+				if (eliminatedPlayer.Status == PlayerStatus.Alive)
+				{
+					eliminatedPlayer.Status = PlayerStatus.Dead;
+					service.LogElimination(session, eliminatedPlayerId, EliminationReason.DayVote);
+				}
 
-            service.LogPhaseTransition(session, previousPhase, session.GamePhase, transitionReason);
-            return HandlerResult.SuccessTransition(nextInstruction, transitionReason);
-        });
-    }
+				session.GamePhase = GamePhase.Day_Event;
+				transitionReason = PhaseTransitionReason.VoteResolvedProceedToReveal;
+				nextInstruction = new ModeratorInstruction
+				{
+					// Placeholder for GameStrings.PlayerEliminatedByVoteRevealRole
+					InstructionText = string.Format(GameStrings.PlayerEliminatedByVoteRevealRole, eliminatedPlayer.Name),
+					ExpectedInputType = ExpectedInputType.AssignPlayerRoles,
+					AffectedPlayerIds = new List<Guid> { eliminatedPlayerId },
+					SelectableRoles = Enum.GetValues<RoleType>().ToList()
+				};
+			}
+			else
+			{
+				return HandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, string.Format(GameStrings.PlayerIdNotFound, eliminatedPlayerId)));
+			}
+		}
+
+		return HandlerResult.SuccessTransition(nextInstruction, transitionReason);
+	}
 
     public static HandlerResult HandleGameOverPhase(GameSession session, ModeratorInput input, GameService service)
     { 
@@ -721,78 +676,6 @@ public class GameService
 
     // --- Helper Methods ---
 
-    private void LogPhaseTransition(GameSession session, GamePhase previousPhase, GamePhase currentPhase, PhaseTransitionReason reason)
-    {
-        session.GameHistoryLog.Add(new PhaseTransitionLogEntry
-        {
-            Timestamp = DateTime.UtcNow,
-            TurnNumber = session.TurnNumber,
-            Phase = currentPhase, // Log the phase *entered*
-            PreviousPhase = previousPhase,
-            CurrentPhase = currentPhase,
-            Reason = reason
-        });
-    }
-
-    private void LogInitialAssignment(GameSession session, Guid playerId, RoleType roleType)
-    {
-        session.GameHistoryLog.Add(new InitialRoleAssignmentLogEntry
-        { 
-            Timestamp = DateTime.UtcNow, 
-            TurnNumber = session.TurnNumber, 
-            Phase = session.GamePhase, 
-            PlayerId = playerId, 
-            AssignedRole = roleType
-        });
-    }
-
-     private void LogRoleReveal(GameSession session, Guid playerId, RoleType roleType)
-     {
-         session.GameHistoryLog.Add(new RoleRevealedLogEntry
-         { 
-             Timestamp = DateTime.UtcNow, 
-             TurnNumber = session.TurnNumber, 
-             Phase = session.GamePhase, 
-             PlayerId = playerId, 
-             RevealedRole = roleType
-         });
-     }
-
-     private void LogElimination(GameSession session, Guid playerId, EliminationReason reason)
-     {
-         session.GameHistoryLog.Add(new PlayerEliminatedLogEntry
-         {
-             Timestamp = DateTime.UtcNow,
-             TurnNumber = session.TurnNumber,
-             Phase = session.GamePhase,
-             PlayerId = playerId,
-             Reason = reason
-         });
-     }
-
-    private void LogVoteOutcomeReported(GameSession session, Guid reportedOutcomePlayerId)
-    {
-        session.GameHistoryLog.Add(new VoteOutcomeReportedLogEntry
-        {
-            Timestamp = DateTime.UtcNow,
-            TurnNumber = session.TurnNumber,
-            Phase = session.GamePhase,
-            ReportedOutcomePlayerId = reportedOutcomePlayerId // Guid.Empty for tie
-        });
-    }
-
-     private void LogVoteResolved(GameSession session, Guid? eliminatedPlayerId, bool wasTie)
-     {
-         session.GameHistoryLog.Add(new VoteResolvedLogEntry
-         {
-             Timestamp = DateTime.UtcNow,
-             TurnNumber = session.TurnNumber,
-             Phase = session.GamePhase,
-             EliminatedPlayerId = eliminatedPlayerId,
-             WasTie = wasTie
-         });
-     }
-
     /// <summary>
     /// Generates the next instruction during the Night phase.
     /// Handles role ordering, identification, action prompts, and phase transition.
@@ -800,32 +683,22 @@ public class GameService
     /// </summary>
     private ModeratorInstruction GenerateNextNightInstruction(GameSession session)
     {
-        var actingRolesOrdered = GetNightWakeUpOrder(session);
-
-        session.CurrentNightActingRoleIndex++;
-
-        while (session.CurrentNightActingRoleIndex < actingRolesOrdered.Count)
+        while (session.IsCurrentNightComplete == false)
         {
-            var currentRoleType = actingRolesOrdered[session.CurrentNightActingRoleIndex];
-            if (!_roleImplementations.TryGetValue(currentRoleType, out var currentRoleInstance))
-            {
-                 Console.Error.WriteLine($"Error: Role implementation for {currentRoleType} not found during night processing.");
-                 session.CurrentNightActingRoleIndex++;
-                 continue;
-            }
+	        var currentRole = session.CurrentNightRole;
 
             var livingPlayers = session.Players.Values.Where(p => p.Status == PlayerStatus.Alive).ToList();
-            var assignedActors = livingPlayers.Where(p => p.Role?.RoleType == currentRoleType).ToList();
+            var assignedActors = livingPlayers.Where(p => p.Role == currentRole).ToList();
 
             // N1 Identification Trigger
             bool needsN1Identification = session.TurnNumber == 1 &&
-                                         currentRoleInstance.RequiresNight1Identification() &&
+                                         currentRole.RequiresNight1Identification() &&
                                          !assignedActors.Any();
 
             if (needsN1Identification)
             {
-                session.PendingNight1IdentificationForRole = currentRoleType;
-                return currentRoleInstance.GenerateIdentificationInstructions(session)!; // Assume not null if Requires=true
+                session.TransitionToPhase(GamePhase.Night_RoleIdentification, PhaseTransitionReason.IdentifiedRoleAndProceedToAction);
+                return currentRole.GenerateIdentificationInstructions(session)!; // Assume not null if Requires=true
             }
 
             // Action Instruction Generation
@@ -854,23 +727,9 @@ public class GameService
         // This method signals the end by returning the confirmation prompt for the *next* phase.
         var previousPhase = session.GamePhase;
         session.GamePhase = GamePhase.Day_ResolveNight; // Update phase *before* returning instruction for it
-        LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.WwActionComplete);
+        LogPhaseTransition(session, previousPhase, session.GamePhase, PhaseTransitionReason.RoleActionComplete);
 
         return new ModeratorInstruction { InstructionText = GameStrings.ResolveNightPrompt, ExpectedInputType = ExpectedInputType.Confirmation };
-    }
-
-    private List<RoleType> GetNightWakeUpOrder(GameSession session)
-    {
-        // Phase 1: Simple fixed order
-        var order = new List<RoleType>();
-        if (session.RolesInPlay.Contains(RoleType.SimpleWerewolf)) // Example role
-        {
-             order.Add(RoleType.SimpleWerewolf);
-        }
-        // Add other roles here in their correct wake-up order
-        // e.g., Seer, Bodyguard, etc.
-
-        return order;
     }
 
     private (Team WinningTeam, string Description)? CheckVictoryConditions(GameSession session)
@@ -956,29 +815,33 @@ public class GameService
         return null; // Indicate success
     }
 
-    /// <summary>
-    /// Handles phases expecting a confirmation. If confirmed, executes the provided action.
-    /// If not confirmed, re-issues the current instruction.
-    /// </summary>
-    /// <param name="session">The game session.</param>
-    /// <param name="input">The moderator input.</param>
-    /// <param name="onConfirmedAction">The action to execute if input.Confirmation is true.</param>
-    /// <returns>The result of the onConfirmedAction or SuccessStayInPhase.</returns>
-    private HandlerResult HandleConfirmationOrReissue(GameSession session, ModeratorInput input, Func<HandlerResult> onConfirmedAction)
+	/// <summary>
+	/// Handles phases expecting a confirmation. If confirmed, executes the provided action.
+	/// If not confirmed, re-issues the current instruction.
+	/// </summary>
+	/// <param name="session">The game session.</param>
+	/// <param name="input">The moderator input.</param>
+	/// <param name="handlerResult">The handlerResult to return if input.Confirmation is true.</param>
+	/// <returns>The result of the onConfirmedAction or SuccessStayInPhase.</returns>
+	private bool ShouldReissueCommand(GameSession session, ModeratorInput input, out HandlerResult? handlerResult)
     {
-        if (input.Confirmation == true)
-        {
-            return onConfirmedAction();
-        }
-        else
-        {
+        handlerResult = null;
+		if (input.Confirmation != true)
+		{
             // Re-issue the current instruction
             if (session.PendingModeratorInstruction == null)
             {
                 // This case should ideally not happen if called correctly, but handle defensively
-                return HandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, "Internal error: Cannot reissue null instruction.")); // TODO: GameString
+                handlerResult = HandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, "Internal error: Cannot reissue null instruction.")); // TODO: GameString
             }
-            return HandlerResult.SuccessStayInPhase(session.PendingModeratorInstruction);
+            else
+            {
+				handlerResult = HandlerResult.SuccessStayInPhase(session.PendingModeratorInstruction);
+			}
+
+            return true;
         }
+
+        return false;
     }
 }

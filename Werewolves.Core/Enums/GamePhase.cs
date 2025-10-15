@@ -8,8 +8,10 @@ namespace Werewolves.Core.Enums;
 public enum GamePhase
 {
     Setup,
-    Night,
-    Day_ResolveNight,
+    Night_Start,
+    Night_RoleAction,
+    Night_RoleSleep,
+	Day_ResolveNight,
     Day_Event,
     Day_Debate,
     Day_Vote,

@@ -307,4 +307,37 @@
     <value>{0} was eliminated by the vote. Please reveal their role.</value>
     <comment>{0} = Player Name</comment>
   </data>
+  <data name="SeerRoleName" xml:space="preserve">
+    <value>Seer</value>
+  </data>
+  <data name="SeerRoleDescription" xml:space="preserve">
+    <value>Each night, the Seer may discover the true identity of one player.</value>
+  </data>
+  <data name="SeerIdentificationPrompt" xml:space="preserve">
+    <value>Please identify the player who is the Seer.</value>
+  </data>
+  <data name="RoleAssignmentSuccess" xml:space="preserve">
+    <value>Successfully assigned the {1} role to player {0}.</value>
+  </data>
+  <data name="SeerNoTargetsAvailable" xml:space="preserve">
+    <value>There are no valid players remaining for the Seer to check.</value>
+  </data>
+  <data name="SeerNightActionPrompt" xml:space="preserve">
+    <value>Seer, choose a player whose identity you wish to discover.</value>
+  </data>
+  <data name="SeerResultWerewolfTeam" xml:space="preserve">
+    <value>Target {0} IS affiliated with the Werewolves (Thumbs Up).</value>
+  </data>
+  <data name="SeerResultNotWerewolfTeam" xml:space="preserve">
+    <value>Target {0} is NOT affiliated with the Werewolves (Thumbs Down).</value>
+  </data>
+  <data name="SeerCheckCompleteForTarget" xml:space="preserve">
+    <value>Seer check performed on player {0}. Result provided privately.</value>
+  </data>
+  <data name="RoleGoesToSleepSingle" xml:space="preserve">
+    <value>{0} goes to sleep.</value>
+  </data>
+  <data name="RoleGoesToSleepMultiple" xml:space="preserve">
+    <value>{0} go to sleep.</value>
+  </data>
 </root>

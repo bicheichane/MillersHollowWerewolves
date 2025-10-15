@@ -14,12 +14,6 @@ public interface IRole
     string Description { get; }
 
     /// <summary>
-    /// Gets the priority for night actions (lower wakes first).
-    /// Return int.MaxValue if the role has no night action.
-    /// </summary>
-    int GetNightWakeUpOrder();
-
-    /// <summary>
     /// Indicates if this role needs to be identified by the moderator on Night 1.
     /// </summary>
     bool RequiresNight1Identification();

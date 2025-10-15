@@ -29,6 +29,7 @@ public enum GameErrorCode
     RuleViolation_LoverVotingAgainstLover,
     RuleViolation_VoterIsInvalid, // e.g., Village Idiot, Muted player
     RuleViolation_EventRuleConflict, // Action conflicts with active event rules
+    RuleViolation_PlayerAlreadyHasRole,
     // Add more rule violations as needed...
 
     // --- InvalidOperation ---

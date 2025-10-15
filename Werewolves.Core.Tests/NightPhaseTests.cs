@@ -33,8 +33,8 @@ public class NightPhaseTests
 		var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),         // -> Night
-            Confirm(GamePhase.Night, true),         // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, werewolfId) // -> Night (WW Action) - This is the step under test
+            Confirm(GamePhase.Night_RoleAction, true),         // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, werewolfId) // -> Night (WW Action) - This is the step under test
         };
 
         // Act
@@ -46,13 +46,13 @@ public class NightPhaseTests
         session.ShouldNotBeNull();
 
         // Check state after WW Identification input
-        session.GamePhase.ShouldBe(GamePhase.Night); // Still in Night phase, but expecting WW action next
-        session.PendingNight1IdentificationForRole.ShouldBeNull(); // Pending ID should be cleared
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Still in Night phase, but expecting WW action next
+        session.PendingNight1IdentificationForCurrentRole.ShouldBeNull(); // Pending ID should be cleared
 
         // Check Role Assignment
         var wwPlayer = session.Players[werewolfId];
-        wwPlayer.Role.ShouldNotBeNull();
-        wwPlayer.Role.RoleType.ShouldBe(RoleType.SimpleWerewolf);
+        wwPlayer.RoleType.ShouldNotBeNull();
+        wwPlayer.RoleType.RoleType.ShouldBe(RoleType.SimpleWerewolf);
         wwPlayer.IsRoleRevealed.ShouldBeTrue(); // Identification reveals role
 
         // Check Log Entry
@@ -85,13 +85,13 @@ public class NightPhaseTests
         var setupInputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),         // -> Night
-            Confirm(GamePhase.Night, true)          // -> Night (WW ID)
+            Confirm(GamePhase.Night_RoleAction, true)          // -> Night (WW ID)
         };
         var setupResult = ProcessInputSequence(_gameService, gameId, setupInputs);
         setupResult.IsSuccess.ShouldBeTrue("Setup for the test failed");
 
         // The actual invalid input to test (select two players)
-        var invalidInput = SelectPlayers(GamePhase.Night, new List<Guid> { werewolfId, v1Id });
+        var invalidInput = SelectPlayers(GamePhase.Night_RoleAction, new List<Guid> { werewolfId, v1Id });
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, invalidInput); // Use ProcessModeratorInput for single invalid step
@@ -104,9 +104,9 @@ public class NightPhaseTests
 
         session = _gameService.GetGameStateView(gameId); // Re-fetch session
         session.ShouldNotBeNull();
-        session.GamePhase.ShouldBe(GamePhase.Night); // Should remain in Night phase
-        session.PendingNight1IdentificationForRole.ShouldBe(RoleType.SimpleWerewolf); // Should still be pending
-        session.Players[werewolfId].Role.ShouldBeNull(); // Role should not be assigned
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Should remain in Night phase
+        session.PendingNight1IdentificationForCurrentRole.ShouldBe(RoleType.SimpleWerewolf); // Should still be pending
+        session.Players[werewolfId].RoleType.ShouldBeNull(); // Role should not be assigned
         session.Players[werewolfId].IsRoleRevealed.ShouldBeFalse();
         session.GameHistoryLog.OfType<InitialRoleAssignmentLogEntry>().ShouldBeEmpty(); // No log entry
         session.PendingModeratorInstruction?.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple); // Should still expect WW ID
@@ -128,9 +128,9 @@ public class NightPhaseTests
         var inputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),         // -> Night
-            Confirm(GamePhase.Night, true),         // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, actorId), // -> Night (WW Action)
-            SelectPlayer(GamePhase.Night, victimId) // -> Day_ResolveNight - Step under test
+            Confirm(GamePhase.Night_RoleAction, true),         // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, actorId), // -> Night (WW Action)
+            SelectPlayer(GamePhase.Night_RoleAction, victimId) // -> Day_ResolveNight - Step under test
         };
 
         // Act
@@ -171,14 +171,14 @@ public class NightPhaseTests
         var setupInputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),                 // -> Night
-            Confirm(GamePhase.Night, true),                 // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, new List<Guid>{actingWerewolfId, targetAllyId}) // -> Night (WW Action for actingWerewolfId)
+            Confirm(GamePhase.Night_RoleAction, true),                 // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, new List<Guid>{actingWerewolfId, targetAllyId}) // -> Night (WW Action for actingWerewolfId)
         };
         var setupResult = ProcessInputSequence(_gameService, gameId, setupInputs);
         setupResult.IsSuccess.ShouldBeTrue("Setup for the test failed");
 
         // The actual invalid input to test (target ally)
-        var invalidInput = SelectPlayer(GamePhase.Night, targetAllyId);
+        var invalidInput = SelectPlayer(GamePhase.Night_RoleAction, targetAllyId);
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, invalidInput);
@@ -191,7 +191,7 @@ public class NightPhaseTests
 
         session = _gameService.GetGameStateView(gameId); // Re-fetch session
         session.ShouldNotBeNull();
-        session.GamePhase.ShouldBe(GamePhase.Night); // Should remain in Night phase
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Should remain in Night phase
         session.GameHistoryLog.OfType<NightActionLogEntry>().ShouldBeEmpty(); // No action log
         session.PendingModeratorInstruction?.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionSingle); // Still expecting WW Action
     }
@@ -217,14 +217,14 @@ public class NightPhaseTests
         var setupInputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),         // -> Night
-            Confirm(GamePhase.Night, true),         // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, werewolfId) // -> Night (WW Action)
+            Confirm(GamePhase.Night_RoleAction, true),         // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, werewolfId) // -> Night (WW Action)
         };
         var setupResult = ProcessInputSequence(_gameService, gameId, setupInputs);
         setupResult.IsSuccess.ShouldBeTrue("Setup for the test failed");
 
         // The actual invalid input to test (target dead player)
-        var invalidInput = SelectPlayer(GamePhase.Night, deadPlayerId);
+        var invalidInput = SelectPlayer(GamePhase.Night_RoleAction, deadPlayerId);
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, invalidInput);
@@ -237,7 +237,7 @@ public class NightPhaseTests
 
         session = _gameService.GetGameStateView(gameId); // Re-fetch session
         session.ShouldNotBeNull();
-        session.GamePhase.ShouldBe(GamePhase.Night); // Should remain in Night phase
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Should remain in Night phase
         session.GameHistoryLog.OfType<NightActionLogEntry>().ShouldBeEmpty(); // No action log
         session.PendingModeratorInstruction?.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionSingle); // Still expecting WW Action
     }
@@ -260,14 +260,14 @@ public class NightPhaseTests
         var setupInputs = new List<TestModeratorInput>
         {
             Confirm(GamePhase.Setup, true),         // -> Night
-            Confirm(GamePhase.Night, true),         // -> Night (WW ID)
-            SelectPlayers(GamePhase.Night, werewolfId) // -> Night (WW Action)
+            Confirm(GamePhase.Night_RoleAction, true),         // -> Night (WW ID)
+            SelectPlayers(GamePhase.Night_RoleAction, werewolfId) // -> Night (WW Action)
         };
         var setupResult = ProcessInputSequence(_gameService, gameId, setupInputs);
         setupResult.IsSuccess.ShouldBeTrue("Setup for the test failed");
 
         // The actual invalid input to test (select two players for single selection action)
-        var invalidInput = SelectPlayers(GamePhase.Night, new List<Guid> { v1Id, v2Id });
+        var invalidInput = SelectPlayers(GamePhase.Night_RoleAction, new List<Guid> { v1Id, v2Id });
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, invalidInput);
@@ -280,7 +280,7 @@ public class NightPhaseTests
 
 		session = _gameService.GetGameStateView(gameId); // Re-fetch session
         session.ShouldNotBeNull();
-        session.GamePhase.ShouldBe(GamePhase.Night); // Should remain in Night phase
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Should remain in Night phase
         session.GameHistoryLog.OfType<NightActionLogEntry>().ShouldBeEmpty(); // No action log
         session.PendingModeratorInstruction?.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionSingle); // Still expecting WW Action
     }

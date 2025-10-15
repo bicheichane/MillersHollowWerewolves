@@ -14,8 +14,6 @@ public class SimpleVillagerRole : IRole
     public string Name => GameStrings.SimpleVillagerRoleName; // Assuming resource strings exist
     public string Description => GameStrings.SimpleVillagerRoleDescription;
 
-    public int GetNightWakeUpOrder() => int.MaxValue; // No night action
-
     public bool RequiresNight1Identification() => false;
 
     // Villagers don't need identification

@@ -65,7 +65,7 @@ public class GameServiceSetupTests
         // Check Game Started Log Entry
         session.GameHistoryLog.Count.ShouldBe(1);
         var logEntry = session.GameHistoryLog.First().ShouldBeOfType<GameStartedLogEntry>();
-        logEntry.Phase.ShouldBe(GamePhase.Setup);
+        logEntry.CurrentPhase.ShouldBe(GamePhase.Setup);
         logEntry.TurnNumber.ShouldBe(0);
         logEntry.InitialRoles.ShouldBe(roles);
         logEntry.InitialPlayers.Count.ShouldBe(playerNames.Count);
@@ -117,7 +117,7 @@ public class GameServiceSetupTests
         result.ModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
 
         session.ShouldNotBeNull();
-        session.GamePhase.ShouldBe(GamePhase.Night);
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction);
         session.TurnNumber.ShouldBe(0); //it's night phase, but the night phase itself hasn't been processed yet
 
         nextInstruction.ShouldNotBeNull();
@@ -209,9 +209,9 @@ public class GameServiceSetupTests
         result.ModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple);
 
         session.ShouldNotBeNull();
-        session.GamePhase.ShouldBe(GamePhase.Night); // Still Night phase
+        session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Still Night phase
         session.TurnNumber.ShouldBe(1);
-        session.PendingNight1IdentificationForRole.ShouldBe(RoleType.SimpleWerewolf); // Check pending state
+        session.PendingNight1IdentificationForCurrentRole.ShouldBe(RoleType.SimpleWerewolf); // Check pending state
 
         nextInstruction.ShouldNotBeNull();
         nextInstruction.InstructionText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));

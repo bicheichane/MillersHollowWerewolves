@@ -38,40 +38,33 @@ public class GameFlowManager
 
     private Dictionary<GamePhase, PhaseDefinition> BuildPhaseDefinitions()
     {
-		// REMOVED: Define transition reason constants
-		// const string ReasonSetupConfirmed = "SetupConfirmed";
-        // const string ReasonNightStartsConfirmed = "NightStartsConfirmed";
-        // const string ReasonIdentifiedAndProceedToWwAction = "IdentifiedAndProceedToWwAction";
-        // const string ReasonWwActionComplete = "WwActionComplete";
-        // const string ReasonNightResolutionConfirmedProceedToReveal = "NightResolutionConfirmedProceedToReveal";
-        // const string ReasonNightResolutionConfirmedNoVictims = "NightResolutionConfirmedNoVictims";
-        // const string ReasonRoleRevealedProceedToDebate = "RoleRevealedProceedToDebate";
-        // const string ReasonRoleRevealedProceedToNight = "RoleRevealedProceedToNight";
-        // const string ReasonDebateConfirmedProceedToVote = "DebateConfirmedProceedToVote";
-        // const string ReasonVoteOutcomeReported = "VoteOutcomeReported";
-        // const string ReasonVoteResolvedProceedToReveal = "VoteResolvedProceedToReveal";
-        // const string ReasonVoteResolvedTieProceedToNight = "VoteResolvedTieProceedToNight";
-        // const string ReasonVictoryConditionMet = "VictoryConditionMet"; // Implicit transition handled by GameService
-
 		// Note: GameService reference needed for handlers is passed via the Func<> signature.
 
 		return new Dictionary<GamePhase, PhaseDefinition>
         {
-            [GamePhase.Setup] = new PhaseDefinition(
+            [GamePhase.Setup] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleSetupPhase, // Static reference to the method
                 PossibleTransitions: new List<PhaseTransitionInfo>
                 {
-                    new(GamePhase.Night, PhaseTransitionReason.SetupConfirmed, ExpectedInputType.Confirmation) // Use Enum
+                    new(GamePhase.Night_Start, PhaseTransitionReason.SetupConfirmed, ExpectedInputType.Confirmation) // Use Enum
                 }
             ),
 
-            [GamePhase.Night] = new PhaseDefinition(
-                ProcessInputAndUpdatePhase: GameService.HandleNightPhase, // Static reference
+            [GamePhase.Night_Start] = new(
+                ProcessInputAndUpdatePhase: GameService.HandleNightLogic, // Static reference to the method
                 DefaultEntryInstruction: session => new ModeratorInstruction
                 {
                     InstructionText = GameStrings.NightStartsPrompt,
                     ExpectedInputType = ExpectedInputType.Confirmation
-                },
+				},
+                PossibleTransitions: new List<PhaseTransitionInfo>
+                {
+                    new(GamePhase.Night_RoleAction, null, ExpectedInputType.Confirmation) // Use Enum
+                }
+            ),
+
+			[GamePhase.Night_RoleAction] = new(
+                ProcessInputAndUpdatePhase: GameService.HandleNightActionPhase, // Static reference
                 PossibleTransitions: new List<PhaseTransitionInfo>
                 {
                     // These transitions are initiated *inside* HandleNightPhase based on internal logic.
@@ -79,15 +72,30 @@ public class GameFlowManager
                     // We list possible outcomes here for documentation/validation.
                     // Need to revisit if this validation logic in GameService.ProcessModeratorInput needs adjustment
                     // based on how HandleNightPhase now returns its reasons.
-                    new(GamePhase.Night, PhaseTransitionReason.NightStartsConfirmed, ExpectedInputType.PlayerSelectionMultiple), // -> WW ID (If N1 ID needed)
-                    new(GamePhase.Night, PhaseTransitionReason.IdentifiedAndProceedToWwAction, ExpectedInputType.PlayerSelectionSingle), // -> WW Action (Post ID)
-                    new(GamePhase.Day_ResolveNight, PhaseTransitionReason.WwActionComplete, ExpectedInputType.Confirmation) // -> Resolve Night
+                    new(GamePhase.Night_RoleAction, PhaseTransitionReason.IdentifiedRoleAndProceedToAction, ExpectedInputType.PlayerSelectionSingle), // -> Role Action (Post ID)
+                    new(GamePhase.Night_RoleSleep, PhaseTransitionReason.RoleActionComplete, ExpectedInputType.Confirmation), // -> If there's more roles left for the current night
                     // Note: The exact ExpectedInputOnArrival might depend on what GenerateNextNightInstruction returns.
                     // Confirmation is the final expected input when transitioning out of Night.
                 }
             ),
+            
+            [GamePhase.Night_RoleSleep] = new(
+                ProcessInputAndUpdatePhase: GameService.HandleNightSleepPhase, // Static reference
+                DefaultEntryInstruction: session => new ModeratorInstruction
+                {
+                    InstructionText = $"{session.CurrentNightRole} goes to sleep",
+                    ExpectedInputType = ExpectedInputType.Confirmation
+                },
+                PossibleTransitions: new List<PhaseTransitionInfo>
+                {
+                    new(GamePhase.Night_RoleAction, PhaseTransitionReason.RoleSleep, ExpectedInputType.Confirmation), // -> If this was not the last role to be called tonight
+					new(GamePhase.Day_ResolveNight, PhaseTransitionReason.RoleSleep, ExpectedInputType.Confirmation), // -> If this was the last role to be called tonight
+                    
+                    // Confirmation is the final expected input when transitioning out of Night.
+                }
+            ),
 
-            [GamePhase.Day_ResolveNight] = new PhaseDefinition(
+			[GamePhase.Day_ResolveNight] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleDayResolveNightPhase, // Static reference
                 PossibleTransitions: new List<PhaseTransitionInfo>
                 {
@@ -96,16 +104,16 @@ public class GameFlowManager
                 }
             ),
 
-            [GamePhase.Day_Event] = new PhaseDefinition(
+            [GamePhase.Day_Event] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleDayEventPhase, // Static reference
                 PossibleTransitions: new List<PhaseTransitionInfo>
                 {
                     new(GamePhase.Day_Debate, PhaseTransitionReason.RoleRevealedProceedToDebate, ExpectedInputType.Confirmation), // Use Enum
-                    new(GamePhase.Night, PhaseTransitionReason.RoleRevealedProceedToNight, ExpectedInputType.Confirmation) // Use Enum
+                    new(GamePhase.Night_RoleAction, PhaseTransitionReason.RoleRevealedProceedToNight, ExpectedInputType.Confirmation) // Use Enum
                 }
             ),
 
-            [GamePhase.Day_Debate] = new PhaseDefinition(
+            [GamePhase.Day_Debate] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleDayDebatePhase, // Static reference
                 DefaultEntryInstruction: session => new ModeratorInstruction
                 {
@@ -119,7 +127,7 @@ public class GameFlowManager
                 }
             ),
 
-            [GamePhase.Day_Vote] = new PhaseDefinition(
+            [GamePhase.Day_Vote] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleDayVotePhase, // Static reference
                 PossibleTransitions: new List<PhaseTransitionInfo>
                 {
@@ -127,16 +135,16 @@ public class GameFlowManager
                 }
             ),
 
-            [GamePhase.Day_ResolveVote] = new PhaseDefinition(
+            [GamePhase.Day_ResolveVote] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleDayResolveVotePhase, // Static reference
                 PossibleTransitions: new List<PhaseTransitionInfo>
                 {
                     new(GamePhase.Day_Event, PhaseTransitionReason.VoteResolvedProceedToReveal, ExpectedInputType.AssignPlayerRoles), // Use Enum
-                    new(GamePhase.Night, PhaseTransitionReason.VoteResolvedTieProceedToNight, ExpectedInputType.Confirmation) // Use Enum
+                    new(GamePhase.Night_RoleAction, PhaseTransitionReason.VoteResolvedTieProceedToNight, ExpectedInputType.Confirmation) // Use Enum
                 }
             ),
 
-            [GamePhase.GameOver] = new PhaseDefinition(
+            [GamePhase.GameOver] = new(
                 ProcessInputAndUpdatePhase: GameService.HandleGameOverPhase // Static reference
                 // No transitions out of GameOver
             )
