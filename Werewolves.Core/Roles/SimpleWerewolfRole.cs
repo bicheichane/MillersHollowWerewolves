@@ -7,6 +7,7 @@ using System.Linq;
 using System;
 using System.Collections.Generic;
 using Werewolves.Core.Extensions;
+using Werewolves.Core.Models.StateMachine;
 
 namespace Werewolves.Core.Roles;
 
@@ -24,54 +25,102 @@ public class SimpleWerewolfRole : IRole
     /// <summary>
     /// Generates the instruction to identify all players holding the Simple Werewolf role.
     /// </summary>
-    public ModeratorInstruction? GenerateIdentificationInstructions(GameSession session)
+    public ModeratorInstruction GenerateIdentificationInstructions(GameSession session)
     {
         int werewolfCount = session.RolesInPlay.Count(rt => rt == RoleType.SimpleWerewolf);
         return new ModeratorInstruction
         {
-            InstructionText = string.Format(GameStrings.IdentifyWerewolvesPrompt, werewolfCount),
+            PublicText = string.Format(GameStrings.IdentifyWerewolvesPrompt, werewolfCount),
             ExpectedInputType = ExpectedInputType.PlayerSelectionMultiple,
             SelectablePlayerIds = session.Players.Keys.ToList() // Select from all players
         };
     }
 
-    /// <summary>
-    /// Generates the instruction for Werewolves to select a victim.
-    /// </summary>
-    public ModeratorInstruction? GenerateNightInstructions(GameSession session)
-    {
-        var livingPlayers = session.Players.Values
-            .Where(p => p.Status == PlayerStatus.Alive)
-            .ToList();
+	/// <summary>
+	/// Processes the moderator input for identifying Werewolves on Night 1.
+	/// Validates the count and assigns the role.
+	/// </summary>
+	public PhaseHandlerResult ProcessIdentificationInput(GameSession session, ModeratorInput input)
+	{
+		int expectedWerewolfCount = session.GetRoleCount(RoleType.SimpleWerewolf);
 
-        // Find werewolves based on their assigned Role
-        var werewolves = livingPlayers.WithRole(RoleType.SimpleWerewolf)
-            .Select(p => p.Id)
-            .ToHashSet();
+		if (input.SelectedPlayerIds?.Count != expectedWerewolfCount)
+		{
+			string errorMsg = string.Format(GameStrings.WerewolfIdentifyInvalidPlayerCount, expectedWerewolfCount, input.SelectedPlayerIds?.Count ?? 0);
+			return PhaseHandlerResult.Failure(new GameError(ErrorType.InvalidInput, GameErrorCode.InvalidInput_InvalidPlayerSelectionCount, errorMsg));
+		}
 
-        var potentialVictims = livingPlayers
-            .Where(p => !werewolves.Contains(p.Id))
-            .Select(p => p.Id)
-            .ToList();
+		// Assign roles
+		var identifiedPlayers = new List<Player>();
+		foreach (var playerId in input.SelectedPlayerIds)
+		{
+			if (!session.Players.TryGetValue(playerId, out var player))
+			{
+				return PhaseHandlerResult.Failure(new GameError(ErrorType.InvalidInput,
+					GameErrorCode.InvalidInput_PlayerIdNotFound,
+					string.Format(GameStrings.PlayerIdNotFound, playerId)));
+			}
+			if (player.Health != PlayerHealth.Alive)
+			{
+				return PhaseHandlerResult.Failure(new GameError(ErrorType.RuleViolation,
+					GameErrorCode.RuleViolation_TargetIsDead,
+					string.Format(GameStrings.TargetIsDeadError, player.Name)));
+			}
+			if (player.Role != null)
+			{
+				// Already assigned during this ID phase or previously? Indicates unexpected state.
+				return PhaseHandlerResult.Failure(new GameError(ErrorType.InvalidOperation,
+					GameErrorCode.InvalidOperation_UnexpectedInput,
+					string.Format(GameStrings.WerewolfIdentifyPlayerAlreadyHasRole, player.Name)));
+			}
+			player.Role = this;
+			identifiedPlayers.Add(player);
+		}
 
-        return new ModeratorInstruction
-        {
-            InstructionText = GameStrings.WerewolvesChooseVictimPrompt,
-            ExpectedInputType = ExpectedInputType.PlayerSelectionSingle,
-            AffectedPlayerIds = werewolves.ToList(), // Indicate who this applies to
-            SelectablePlayerIds = potentialVictims
-        };
-    }
+		var confirmationInstruction = new ModeratorInstruction
+		{
+			ExpectedInputType = ExpectedInputType.None // No immediate input needed after success
+		};
+		return PhaseHandlerResult.SuccessStayInPhase(confirmationInstruction); // GameService will proceed to generate action instruction
+	}
 
-    /// <summary>
-    /// Processes the Werewolves' chosen victim.
-    /// </summary>
-    /// <returns>A ProcessResult indicating success and logging the action, or failure.</returns>
-    public ProcessResult ProcessNightAction(GameSession session, ModeratorInput input)
+	/// <summary>
+	/// Generates the instruction for Werewolves to select a victim.
+	/// </summary>
+	public ModeratorInstruction GenerateNightInstructions(GameSession session)
+	{
+		var livingPlayers = session.Players.Values
+			.Where(p => p.Health == PlayerHealth.Alive)
+			.ToList();
+
+		// Find werewolves based on their assigned Role
+		var werewolves = livingPlayers.WithRole(RoleType.SimpleWerewolf)
+			.Select(p => p.Id)
+			.ToHashSet();
+
+		var potentialVictims = livingPlayers
+			.Where(p => !werewolves.Contains(p.Id))
+			.Select(p => p.Id)
+			.ToList();
+
+		return new ModeratorInstruction
+		{
+			PublicText = GameStrings.WerewolvesChooseVictimPrompt,
+			ExpectedInputType = ExpectedInputType.PlayerSelectionSingle,
+			AffectedPlayerIds = werewolves.ToList(), // Indicate who this applies to
+			SelectablePlayerIds = potentialVictims
+		};
+	}
+
+	/// <summary>
+	/// Processes the Werewolves' chosen victim.
+	/// </summary>
+	/// <returns>A PhaseHandlerResult indicating success and logging the action, or failure.</returns>
+	public PhaseHandlerResult ProcessNightAction(GameSession session, ModeratorInput input)
     {
         if (input.SelectedPlayerIds == null || input.SelectedPlayerIds.Count != 1)
         {
-            return ProcessResult.Failure(new GameError(ErrorType.InvalidInput,
+            return PhaseHandlerResult.Failure(new GameError(ErrorType.InvalidInput,
                 GameErrorCode.InvalidInput_InvalidPlayerSelectionCount,
                 GameStrings.ExactlyOnePlayerMustBeSelected));
         }
@@ -81,13 +130,13 @@ public class SimpleWerewolfRole : IRole
         // Validate Target (re-use validation logic or call a helper)
         if (!session.Players.TryGetValue(targetPlayerId, out var targetPlayer))
         {
-            return ProcessResult.Failure(new GameError(ErrorType.InvalidInput,
+            return PhaseHandlerResult.Failure(new GameError(ErrorType.InvalidInput,
                 GameErrorCode.InvalidInput_PlayerIdNotFound,
                 string.Format(GameStrings.PlayerIdNotFound, targetPlayerId)));
         }
-        if (targetPlayer.Status == PlayerStatus.Dead)
+        if (targetPlayer.Health == PlayerHealth.Dead)
         {
-            return ProcessResult.Failure(new GameError(ErrorType.RuleViolation,
+            return PhaseHandlerResult.Failure(new GameError(ErrorType.RuleViolation,
                 GameErrorCode.RuleViolation_TargetIsDead,
                 string.Format(GameStrings.TargetIsDeadError, targetPlayer.Name)));
         }
@@ -97,13 +146,12 @@ public class SimpleWerewolfRole : IRole
         .Select(p => p.Id)
         .ToHashSet();
 
-        if(werewolves.Contains(targetPlayerId))
+        if (werewolves.Contains(targetPlayerId))
         {
-            return ProcessResult.Failure(new GameError(ErrorType.RuleViolation,
-              GameErrorCode.RuleViolation_TargetIsAlly,
-              string.Format(GameStrings.TargetIsAllyError, targetPlayer.Name)));
+            return PhaseHandlerResult.Failure(new GameError(ErrorType.RuleViolation,
+                GameErrorCode.RuleViolation_TargetIsAlly,
+                string.Format(GameStrings.TargetIsAllyError, targetPlayer.Name)));
         }
-
 
         // Log the action directly to the main history log
         session.GameHistoryLog.Add(new NightActionLogEntry
@@ -115,72 +163,11 @@ public class SimpleWerewolfRole : IRole
             CurrentPhase = session.GamePhase
         });
 
-        // Return success, indicating the action is logged but resolution happens later.
-        // Generate a confirmation instruction for the moderator.
-        var confirmation = new ModeratorInstruction
-        {
-            InstructionText = GameStrings.WerewolvesGoToSleep,
-            ExpectedInputType = ExpectedInputType.Confirmation
-        };
-        return ProcessResult.Success(confirmation);
+        return PhaseHandlerResult.SuccessTransitionUseDefault(PhaseTransitionReason.RoleActionComplete);
     }
 
-    /// <summary>
-    /// Processes the moderator input for identifying Werewolves on Night 1.
-    /// Validates the count and assigns the role.
-    /// </summary>
-    public ProcessResult ProcessIdentificationInput(GameSession session, ModeratorInput input)
-    {
-        int expectedWerewolfCount = session.GetRoleCount(RoleType.SimpleWerewolf);
+    public ModeratorInstruction GenerateDayInstructions(GameSession session) => throw new NotImplementedException();
 
-        if (input.SelectedPlayerIds?.Count != expectedWerewolfCount)
-        {
-            string errorMsg = string.Format(GameStrings.WerewolfIdentifyInvalidPlayerCount, expectedWerewolfCount, input.SelectedPlayerIds?.Count ?? 0);
-            return ProcessResult.Failure(new GameError(ErrorType.InvalidInput, GameErrorCode.InvalidInput_InvalidPlayerSelectionCount, errorMsg));
-        }
-
-        // Assign roles
-        var identifiedPlayers = new List<Player>();
-        foreach (var playerId in input.SelectedPlayerIds)
-        {
-            if (!session.Players.TryGetValue(playerId, out var player))
-            {
-                return ProcessResult.Failure(new GameError(ErrorType.InvalidInput,
-                    GameErrorCode.InvalidInput_PlayerIdNotFound,
-                    string.Format(GameStrings.PlayerIdNotFound, playerId)));
-            }
-            if (player.Status != PlayerStatus.Alive)
-            {
-                return ProcessResult.Failure(new GameError(ErrorType.RuleViolation,
-                    GameErrorCode.RuleViolation_TargetIsDead,
-                    string.Format(GameStrings.TargetIsDeadError, player.Name)));
-            }
-            if (player.Role != null)
-            {
-                // Already assigned during this ID phase or previously? Indicates unexpected state.
-                return ProcessResult.Failure(new GameError(ErrorType.InvalidOperation,
-                    GameErrorCode.InvalidOperation_UnexpectedInput,
-                    string.Format(GameStrings.WerewolfIdentifyPlayerAlreadyHasRole, player.Name)));
-            }
-            player.Role = this;
-            identifiedPlayers.Add(player);
-        }
-
-        // Identification successful
-        // Note: Logging is handled by GameService after this returns success.
-        // Return a success result with a confirmation instruction (optional)
-        var confirmationInstruction = new ModeratorInstruction
-        {
-            InstructionText = string.Format(GameStrings.WerewolfIdentifySuccess, identifiedPlayers.Count), // Simple confirmation
-            ExpectedInputType = ExpectedInputType.None // No immediate input needed after success
-        };
-        return ProcessResult.Success(confirmationInstruction); // GameService will proceed to generate action instruction
-    }
-
-    public ModeratorInstruction? GenerateDayInstructions(GameSession session) => null;
-
-    public ProcessResult ProcessDayAction(GameSession session, ModeratorInput input)
-    {
-        return ProcessResult.Failure(new GameError(ErrorType.InvalidOperation, GameErrorCode.InvalidOperation_ActionNotInCorrectPhase, GameStrings.SimpleWerewolfNoDayAction));
-    }
+    public PhaseHandlerResult ProcessDayAction(GameSession session, ModeratorInput input) =>
+        throw new NotImplementedException();
 }

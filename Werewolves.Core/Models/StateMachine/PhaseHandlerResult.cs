@@ -12,7 +12,7 @@ namespace Werewolves.Core.Models.StateMachine;
 /// <param name="TransitionReason">The ConditionOrReason key matching the PhaseTransitionInfo for the transition that occurred. Null if no phase transition happened.</param>
 /// <param name="UseDefaultInstructionForNextPhase">If true, signals ProcessModeratorInput to use the target phase's DefaultEntryInstruction instead of NextInstruction.</param>
 /// <param name="Error">Error details if IsSuccess is false.</param>
-public record HandlerResult(
+public record PhaseHandlerResult(
     bool IsSuccess,
     ModeratorInstruction? NextInstruction,
     PhaseTransitionReason? TransitionReason,
@@ -21,12 +21,16 @@ public record HandlerResult(
 )
 {
     // Static factory methods
-    public static HandlerResult SuccessTransition(ModeratorInstruction nextInstruction, PhaseTransitionReason transitionReason) =>
+    public static PhaseHandlerResult SuccessTransition(ModeratorInstruction nextInstruction, PhaseTransitionReason transitionReason) =>
         new(true, nextInstruction, transitionReason, false, null);
-    public static HandlerResult SuccessTransitionUseDefault(PhaseTransitionReason transitionReason) =>
+    public static PhaseHandlerResult SuccessTransitionUseDefault(PhaseTransitionReason transitionReason) =>
         new(true, null, transitionReason, true, null);
-    public static HandlerResult SuccessStayInPhase(ModeratorInstruction nextInstruction) =>
+    public static PhaseHandlerResult SuccessStayInPhase(ModeratorInstruction nextInstruction) =>
         new(true, nextInstruction, null, false, null);
-    public static HandlerResult Failure(GameError error) =>
+
+    public static PhaseHandlerResult SuccessInternalGeneric() => new(true, null, null);
+    public static PhaseHandlerResult Failure(GameError error) =>
         new(false, null, null, false, error);
+
+    public bool ShouldTransitionPhase => IsSuccess && TransitionReason != null;
 } 

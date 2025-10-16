@@ -50,7 +50,7 @@ public class VictoryConditionTests
         var setupResult = ProcessInputSequence(_gameService, gameId, inputsToReachResolveVote);
         setupResult.IsSuccess.ShouldBeTrue("Setup sequence failed");
 
-        session.Players[bobId].Status.ShouldBe(PlayerStatus.Dead);
+        session.Players[bobId].Health.ShouldBe(PlayerHealth.Dead);
         session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
             .ShouldContain(pel => pel.PlayerId == bobId && pel.Reason == EliminationReason.WerewolfAttack);
 
@@ -99,10 +99,10 @@ public class VictoryConditionTests
         session = _gameService.GetGameStateView(gameId);
         session.ShouldNotBeNull();
 
-        session.Players[daveId].Status.ShouldBe(PlayerStatus.Dead);
+        session.Players[daveId].Health.ShouldBe(PlayerHealth.Dead);
         session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
             .ShouldContain(pel => pel.PlayerId == daveId && pel.Reason == EliminationReason.WerewolfAttack);
-        session.Players[aliceId].Status.ShouldBe(PlayerStatus.Dead);
+        session.Players[aliceId].Health.ShouldBe(PlayerHealth.Dead);
         session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
             .ShouldContain(pel => pel.PlayerId == aliceId && pel.Reason == EliminationReason.DayVote);
 

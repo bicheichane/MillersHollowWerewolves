@@ -49,7 +49,7 @@ public class NightResolutionTests
         session.ShouldNotBeNull();
 
         var victimPlayer = session.Players[victimId];
-        victimPlayer.Status.ShouldBe(PlayerStatus.Dead);
+        victimPlayer.Health.ShouldBe(PlayerHealth.Dead);
 
         session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
             .ShouldContain(pel => pel.PlayerId == victimId && pel.Reason == EliminationReason.WerewolfAttack);

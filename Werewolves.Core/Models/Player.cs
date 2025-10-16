@@ -10,7 +10,7 @@ public class Player
 {
     public Guid Id { get; } = Guid.NewGuid();
     public required string Name { get; set; }
-    public PlayerStatus Status { get; set; } = PlayerStatus.Alive;
+    public PlayerHealth Health { get; set; } = PlayerHealth.Alive;
     public bool IsRoleRevealed => Role != null;
     public PlayerState State { get; } = new PlayerState();
 

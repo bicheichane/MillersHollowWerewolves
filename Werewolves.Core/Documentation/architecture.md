@@ -146,68 +146,86 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
 
 The core principle of this application is to accurately track the game state as known by the Moderator. Roles that require Moderator knowledge from the start (e.g., Werewolves, Seer, Cupid, Thief, Wild Child, Wolf Hound, Prejudiced Manipulator) **are identified during Night 1**. The `GameService` manages this process by checking `IRole.RequiresNight1Identification()` for roles acting during the night. If identification is needed and hasn't happened yet, it prompts the moderator using `IRole.GenerateIdentificationInstructions()`. Upon receiving the moderator's input, `IRole.ProcessIdentificationInput()` validates it and updates the `Player.Role` and `Player.IsRoleRevealed` flags. The `GameService` then immediately prompts for that same role's action. This ensures the application state reflects the Moderator's crucial knowledge before the role's first action occurs, synchronizing the tracked state with the information available to the human Moderator.
 
-7.  **`GameService` Class:** Orchestrates the game flow based on moderator input and tracked state. **Uses a declarative state machine (`GameFlowManager`) to manage phase transitions and validate game flow.**
+7.  **`GameFlowManager` Class:** Holds the state machine configuration and provides access to phase definitions. This class implements a comprehensive declarative state machine that manages all game phase transitions, validates transitions, and orchestrates the overall game flow.
+    *   **Core Components:**
+        *   `_phaseDefinitions` (Dictionary<GamePhase, PhaseDefinition>): Stores the complete state machine configuration with all phase definitions, transitions, and handler references.
+        *   `_roleImplementations` (Dictionary<RoleType, IRole>): Dependency-injected role implementations used by handlers for role-specific logic.
+    *   **Primary Methods:**
+        *   `HandleInput(GameService service, GameSession session, ModeratorInput input)` (ProcessResult): **The central state machine orchestrator.** 
+            *   Retrieves the current phase definition and executes the appropriate handler.
+            *   Validates phase transitions against defined `PhaseTransitionInfo` rules.
+            *   Determines the next instruction (either handler-provided or default for target phase).
+            *   Performs comprehensive state machine validation with detailed error reporting.
+            *   Automatically checks victory conditions after resolution phases.
+            *   Returns a `ProcessResult` with the next instruction or error details.
+        *   `CheckVictoryConditions(GameSession session)` ((Team WinningTeam, string Description)?): Evaluates win conditions based on current game state and returns victory information if met.
+    *   **Phase Handler Methods:** Each phase has a dedicated handler method (`HandleSetupPhase`, `HandleNightPhase`, `HandleDayVotePhase`, etc.) that:
+        *   Processes moderator input specific to that phase.
+        *   Updates game state and logs relevant events.
+        *   Returns `PhaseHandlerResult` indicating success/failure, transition information, and next instruction.
+    *   **State Machine Validation:** Comprehensive validation logic ensures:
+        *   All phase transitions match defined `PhaseTransitionInfo` rules.
+        *   Expected input types match transition requirements.
+        *   Handler results are consistent with state machine configuration.
+        *   Detailed error messages for internal state machine errors.
+
+8.  **`GameService` Class:** Orchestrates the game flow based on moderator input and tracked state. **Delegates state machine management to `GameFlowManager` while handling high-level game logic and external interfaces.**
     *   **Public Methods:**
         *   `StartNewGame(List<string> playerNamesInOrder, List<RoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)` (Guid): Creates a new `GameSession`, initializes players, records roles/events, **validates that all `rolesInPlay` are configured in the service's master night order lists**, sets `GamePhase = Setup`, logs initial state, and generates the first `ModeratorInstruction`.
         *   `ProcessModeratorInput(Guid gameId, ModeratorInput input)` (ProcessResult): **The central entry point for processing moderator actions.**
-            *   Retrieves the current `GameSession` and its `PhaseDefinition` from `GameFlowManager`.
-            *   Validates the received `input.InputTypeProvided` against the `session.PendingModeratorInstruction.ExpectedInputType`.
-            *   Executes the `ProcessInputAndUpdatePhase` handler function defined for the current phase.
-            *   **If the handler succeeds:**
-                *   Uses the returned `HandlerResult` and `GameFlowManager`'s transition definitions (`PhaseTransitionInfo`) to validate the phase transition (if one occurred).
-                *   Determines the next `ModeratorInstruction` (either from `HandlerResult` or the target phase's `DefaultEntryInstruction`).
-                *   **Crucially validates** that the `ExpectedInputType` of the next instruction matches the `ExpectedInputOnArrival` defined in the `PhaseTransitionInfo` for the specific transition path taken. Throws an internal error if validation fails.
-                *   Updates `session.PendingModeratorInstruction`.
-                *   Checks victory conditions if the game state indicates it's appropriate (e.g., after resolutions or entering `GameOver`). Handles victory overrides.
-                *   Returns a `ProcessResult` containing either the final `ModeratorInstruction` for the user or a `GameError`.
+            *   Retrieves the current `GameSession` and delegates to `GameFlowManager.HandleInput`.
+            *   The `GameFlowManager` handles all state machine logic, validation, and transition management.
+            *   Returns the `ProcessResult` from the state machine containing the next instruction or error.
         *   `GetCurrentInstruction(Guid gameId)` (ModeratorInstruction): Retrieves the `PendingModeratorInstruction`.
         *   `GetGameStateView(Guid gameId)` (object): Returns a read-only view/DTO of the tracked game state.
     *   **Internal Logic:**
-        *   Relies on the `GameFlowManager` which holds the state machine configuration (`PhaseDefinition` for each `GamePhase`).
-        *   Phase-specific logic is encapsulated within **handler functions** (e.g., `HandleNightPhase`, `HandleDayVotePhase`) referenced by the `PhaseDefinition`.
-        *   **Each handler function (`Func<GameSession, ModeratorInput, GameService, HandlerResult>`) is responsible for:**
-            *   Processing `ModeratorInput` for its specific phase.
-            *   Updating `GameSession` state (player status, flags, etc.).
-            *   Logging relevant game events (`GameHistoryLog`) using internal helper methods (e.g., `LogElimination`, `LogPhaseTransition`).
-            *   **If transitioning:** Updating `session.GamePhase`, logging the phase transition (`PhaseTransitionLogEntry`) with a specific `PhaseTransitionReason` enum value.
-            *   Returning a `HandlerResult` indicating success/failure, the `PhaseTransitionReason` (if any), and the next instruction (or a signal to use the target phase's default).
-        *   **Night Phase Management (within `HandleNightPhase` handler):**
-            *   Determines the correct night wake-up order using the centralized `GetNightWakeUpOrder` helper method. This method filters a master list of roles with night actions based on the `RolesInPlay` for the current `session`, ensuring a consistent and configurable sequence.
-            *   Manages the sequence of Night 1 identification and role actions.
-            *   Uses helper `GenerateNextNightInstruction` (which relies on the wake-up order from `GetNightWakeUpOrder`) to determine the next role to prompt based on session state (`CurrentNightActingRoleIndex`, `PendingNight1IdentificationForRole`).
-            *   Calls appropriate `IRole` methods (`GenerateIdentificationInstructions`, `ProcessIdentificationInput`, `GenerateNightInstructions`, `ProcessNightAction`).
-            *   Updates `session.GamePhase` to `Day_ResolveNight` when all night actions are complete, logs the transition, and returns the appropriate `HandlerResult`.
-        *   **Validates and Processes Role Actions:** Ensures actions comply with rules (handled within specific `IRole` implementations or the relevant phase handler).
-        *   **Handles Delayed Effects:** Logic remains within relevant phase handlers (e.g., checking `PendingKnightCurseTarget` in `HandleDayResolveNightPhase`).
-        *   **Handles State Resets:** Logic remains within relevant phase handlers or triggered action processing.
-        *   **Tracks Appointments:** Logic within relevant phase handlers (e.g., Sheriff succession handled during `HandleDayResolveVotePhase` or `HandleDayResolveNightPhase`).
-        *   **Checks victory conditions:** Performed by `ProcessModeratorInput` *after* a handler successfully executes and updates state, specifically checking after resolution phases or if the phase becomes `GameOver`. Relies on assigned roles and game state.
-        *   **Manages Positional Logic:** Helper methods (`GetLeftNeighbor`, etc.) are called by roles or handlers as needed.
+        *   Relies on `GameFlowManager` for all state machine operations, phase transitions, and validation.
+        *   Provides role implementations to `GameFlowManager` via dependency injection.
+        *   Handles high-level game setup and external interface concerns.
+        *   Phase-specific logic is now encapsulated within `GameFlowManager` handler methods.
+        *   Victory condition checking is automatically handled by `GameFlowManager` after resolution phases.
 
 --------------------------
 
-1.  **`HandlerResult` Record:** (Replaces old `ProcessResult` description)
-    *   **Purpose:** Acts as the standardized internal return type for all phase handler functions (`PhaseDefinition.ProcessInputAndUpdatePhase`). It communicates the outcome of the handler's execution back to the main `GameService.ProcessModeratorInput` loop.
+9.  **`PhaseHandlerResult` Record:** The standardized internal return type for all phase handler functions (`PhaseDefinition.ProcessInputAndUpdatePhase`). It communicates the outcome of the handler's execution back to the main `GameFlowManager.HandleInput` loop.
+    *   **Purpose:** Provides a structured way for phase handlers to indicate success/failure, request phase transitions, and specify the next moderator instruction.
     *   **Structure:**
         *   `IsSuccess` (bool): Indicates if the handler processed the input successfully.
         *   `NextInstruction` (ModeratorInstruction?): The specific instruction for the moderator for the *next* step, if the handler determined it. Ignored if `UseDefaultInstructionForNextPhase` is true.
-        *   `TransitionReason` (string?): If a phase transition occurred, this holds the unique key (`ConditionOrReason` string) identifying *why* the transition happened (e.g., "VoteTied", "WwActionComplete"). This key **must** match a `PhaseTransitionInfo` defined in the *source* phase's `PossibleTransitions` list in `GameFlowManager`. Null if no transition occurred.
         *   `TransitionReason` (PhaseTransitionReason? Enum): If a phase transition occurred, this holds the enum value identifying *why* the transition happened (e.g., `PhaseTransitionReason.VoteTied`, `PhaseTransitionReason.WwActionComplete`). This value **must** match the `ConditionOrReason` of a `PhaseTransitionInfo` defined in the *source* phase's `PossibleTransitions` list in `GameFlowManager`. Null if no transition occurred.
-        *   `UseDefaultInstructionForNextPhase` (bool): If true, signals `ProcessModeratorInput` to ignore `NextInstruction` and instead use the `DefaultEntryInstruction` defined for the *target* phase in `GameFlowManager`.
+        *   `UseDefaultInstructionForNextPhase` (bool): If true, signals `GameFlowManager` to ignore `NextInstruction` and instead use the `DefaultEntryInstruction` defined for the *target* phase in `GameFlowManager`.
+        *   `ShouldTransitionPhase` (bool): Indicates whether the handler has changed the game phase and the state machine should process a transition.
         *   `Error` (GameError?): Contains error details if `IsSuccess` is false.
     *   **Immutability:** Designed as an immutable record.
-    *   **Usage:** Enables the central `ProcessModeratorInput` logic to understand the outcome of a phase handler, validate the resulting state transition against the declared state machine rules (`GameFlowManager`), determine the correct next instruction, and validate the expected input for that instruction. **Includes static factory methods for common results.**
+    *   **Usage:** Enables the central `GameFlowManager.HandleInput` logic to understand the outcome of a phase handler, validate the resulting state transition against the declared state machine rules, determine the correct next instruction, and validate the expected input for that instruction. **Includes static factory methods for common results:**
+        *   `SuccessTransition()`: For successful phase transitions
+        *   `SuccessInternalGeneric()`: For successful handling without phase changes
+        *   `Failure()`: For error conditions
 
-2.  **`GameError` Class:**
+10.  **State Machine Validation:**
+    *   **Purpose:** The `GameFlowManager` implements comprehensive validation to ensure all phase transitions and state changes conform to the defined state machine rules.
+    *   **Validation Features:**
+        *   **Phase Transition Validation:** Every phase transition is validated against the `PhaseTransitionInfo` defined in the source phase's `PossibleTransitions` list. The validation checks:
+            *   Target phase matches a defined transition
+            *   `PhaseTransitionReason` matches the transition's `ConditionOrReason`
+            *   Expected input type matches the transition's `ExpectedInputOnArrival`
+        *   **Handler Result Validation:** Validates that `PhaseHandlerResult` objects are consistent with state machine configuration:
+            *   Transition reasons must match defined transitions
+            *   Next instruction expectations are consistent with target phase requirements
+            *   Required data (like transition reasons) is provided when needed
+        *   **Internal Error Detection:** Catches internal state machine inconsistencies and provides detailed error messages for debugging.
+    *   **Error Handling:** Validation failures result in `GameError` objects with specific error codes and descriptive messages, ensuring robust error reporting and debugging capabilities.
+
+11.  **`GameError` Class:**
     *   **Purpose:** Provides structured information about a specific error that occurred during game logic processing.
     *   **Structure:**
         *   `Type` (`ErrorType` enum): Classifies the error.
         *   `Code` (`GameErrorCode` enum): Specific error identifier.
         *   `Message` (string): Human-readable description.
         *   `Context` (Optional `IReadOnlyDictionary<string, object>`): Relevant data.
-    *   **Usage:** Returned within a `HandlerResult` (if `IsSuccess` is false) or wrapped in the final `ProcessResult` by `GameService.ProcessModeratorInput`. Allows the calling layer to handle errors gracefully.
+    *   **Usage:** Returned within a `PhaseHandlerResult` (if `IsSuccess` is false) or wrapped in the final `ProcessResult` by `GameFlowManager.HandleInput`. Allows the calling layer to handle errors gracefully.
 
-3.  **`ModeratorInput` Class:** Data structure for communication FROM the moderator.
+12.  **`ModeratorInput` Class:** Data structure for communication FROM the moderator.
     *   `InputTypeProvided` (enum `ExpectedInputType`): Indicates which optional field below is populated.
     *   `SelectedPlayerIds` (List<Guid>?): IDs of players chosen. **Used for role identification (`PlayerSelectionMultiple`) and vote outcome (`PlayerSelectionSingle`, allowing 0 for tie).**
     *   `AssignedPlayerRoles` (Dictionary<Guid, RoleType>?): Player IDs mapped to the role assigned to them. Used during setup/role assignment phases (e.g., Thief, initial role identification).
@@ -222,7 +240,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
 
 --------------------------
 
-11. **`ModeratorInstruction` Class:** Data structure for communication TO the moderator.
+13. **`ModeratorInstruction` Class:** Data structure for communication TO the moderator.
     *   `InstructionText` (string): The core message/question for the moderator.
     *   `ExpectedInputType` (ExpectedInputType Enum): Specifies the kind of input expected, and implies which `Selectable*` list might be populated.
     *   `AffectedPlayerIds` (List<Guid>?): Optional: Player(s) this instruction primarily relates to (for context, e.g., player needing role reveal).
@@ -232,7 +250,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
 
 --------------------------
 
-12. **Enums:**
+14. **Enums:**
     *   `GamePhase`: `Setup`, `Night`, `Day_ResolveNight`, `Day_Event`, `Day_Debate`, `Day_Vote`, `Day_ResolveVote`, `AccusationVoting` (Nightmare), `FriendVoting` (Great Distrust), `GameOver`.
     *   `PlayerStatus`: `Alive`, `Dead`.
     *   `Team` (Represents the fundamental winning factions/conditions):
@@ -249,21 +267,21 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
     *   `ExpectedInputType`: `None`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `AssignPlayerRoles`, `OptionSelection`, `Confirmation`. Corresponds to the populated field in `ModeratorInput`. `AssignPlayerRoles` expects input via `ModeratorInput.AssignedPlayerRoles`.
     *   `WitchPotionType`: `Healing`, `Poison`. (Could be flags).
     *   `NightActionType`: `Unknown`, `WerewolfVictimSelection`, `SeerCheck`, `WitchSave`, `WitchKill`, `DefenderProtect`, `PiperCharm`.
-    *   `PhaseTransitionReason` (Enum used internally by `GameService` and `HandlerResult`):
-        *   `SetupConfirmed`
-        *   `NightStartsConfirmed`
-        *   `IdentifiedAndProceedToWwAction`
-        *   `WwActionComplete`
-        *   `NightResolutionConfirmedProceedToReveal`
-        *   `NightResolutionConfirmedNoVictims`
-        *   `RoleRevealedProceedToDebate`
-        *   `RoleRevealedProceedToNight`
-        *   `DebateConfirmedProceedToVote`
-        *   `VoteOutcomeReported`
-        *   `VoteResolvedProceedToReveal`
-        *   `VoteResolvedTieProceedToNight`
-        *   `VictoryConditionMet`
-        *   `RepeatInstruction`
+    *   `PhaseTransitionReason` (Enum used internally by `GameFlowManager` and `PhaseHandlerResult`):
+        *   `SetupConfirmed`: Transition from Setup to Night_Start when moderator confirms setup is complete
+        *   `NightStarted`: Transition from Night_Start to Night_RoleAction when night begins
+        *   `IdentifiedRoleAndProceedToAction`: Transition within Night_RoleAction after Night 1 role identification
+        *   `RoleActionComplete`: Transition from Night_RoleAction to Night_RoleSleep after role action
+        *   `RoleSleep`: Transition from Night_RoleSleep to either Night_RoleAction (more roles) or Day_ResolveNight (night ends)
+        *   `NightResolutionConfirmedProceedToReveal`: Transition from Day_ResolveNight to Day_Event when there are victims to reveal
+        *   `NightResolutionConfirmedNoVictims`: Transition from Day_ResolveNight to Day_Debate when no victims
+        *   `RoleRevealedProceedToDebate`: Transition from Day_Event to Day_Debate after role reveal from night resolution
+        *   `RoleRevealedProceedToNight`: Transition from Day_Event to Night_RoleAction after role reveal from vote resolution
+        *   `DebateConfirmedProceedToVote`: Transition from Day_Debate to Day_Vote when moderator confirms debate end
+        *   `VoteOutcomeReported`: Transition from Day_Vote to Day_ResolveVote when vote outcome is reported
+        *   `VoteResolvedProceedToReveal`: Transition from Day_ResolveVote to Day_Event when player eliminated by vote
+        *   `VoteResolvedTieProceedToNight`: Transition from Day_ResolveVote to Night_Start when vote ends in tie
+        *   `VictoryConditionMet`: Transition to GameOver when victory conditions are met
     *   `EliminationReason` (Enum used in `PlayerEliminatedLogEntry`):
         *   `Unknown`
         *   `WerewolfAttack`
@@ -318,64 +336,75 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
 
 1.  **Setup Phase (`GamePhase.Setup`):**
     *   `GameService.StartNewGame` initializes `GameSession`, logs `GameStartedLogEntry`, sets initial `PendingModeratorInstruction` ("Setup complete. Proceed to Night 1?", `ExpectedInputType.Confirmation`).
-    *   `GameService.ProcessModeratorInput` executes the `HandleSetupPhase` handler.
+    *   `GameService.ProcessModeratorInput` delegates to `GameFlowManager.HandleInput`.
+    *   `GameFlowManager` executes the `HandleSetupPhase` handler.
     *   `HandleSetupPhase` processes the `Confirmation` input.
-    *   If `true`: Updates `session.GamePhase` to `Night`, logs the transition (`PhaseTransitionLogEntry`, Reason: "SetupConfirmed"), and returns a `HandlerResult` with the next instruction ("The village goes to sleep.", `ExpectedInputType.Confirmation`) and the "SetupConfirmed" reason.
-    *   `ProcessModeratorInput` validates the transition and the next instruction's expected input against `GameFlowManager` definitions, updates `PendingModeratorInstruction`, and returns the `ProcessResult`.
+    *   If `true`: Updates `session.GamePhase` to `Night_Start`, logs the transition (`PhaseTransitionLogEntry`, Reason: `SetupConfirmed`), and returns a `PhaseHandlerResult` with the next instruction ("The village goes to sleep.", `ExpectedInputType.Confirmation`) and the `SetupConfirmed` reason.
+    *   `GameFlowManager` validates the transition and updates `PendingModeratorInstruction`, returns the `ProcessResult`.
 
-2.  **Night Phase (`GamePhase.Night`):**
-    *   `ProcessModeratorInput` executes the `HandleNightPhase` handler.
-    *   **Handle Initial Confirmation:** `HandleNightPhase` processes the `Confirmation` for "Night Starts". If `true`, it calls `GenerateNextNightInstruction` to determine the *first* role step (ID or action) and returns `HandlerResult.SuccessStayInPhase` with that instruction.
-    *   **Handle Pending Identification Input:** If `session.PendingNight1IdentificationForRole` is set, `HandleNightPhase` calls `role.ProcessIdentificationInput`.
-        *   On success: Logs `InitialRoleAssignmentLogEntry`, clears pending state, calls `role.GenerateNightInstructions` for the *same* role's action, and returns `HandlerResult.SuccessStayInPhase` with the action instruction.
-        *   On failure: Returns `HandlerResult.Failure` with the error.
-    *   **Handle Action Input:** If no identification is pending, `HandleNightPhase` assumes the input is for the action of the role at `session.CurrentNightActingRoleIndex`. It calls `role.ProcessNightAction`.
-        *   On success: The `IRole` implementation (e.g., `SimpleWerewolfRole`) logs the action (`NightActionLogEntry`) and returns a `ProcessResult.Success` **often containing a confirmation message** (`ExpectedInputType.None`). `HandleNightPhase` receives this, then calls `GenerateNextNightInstruction` to determine the next *actual* step (next role or end of night). It constructs and returns the final `HandlerResult` with the appropriate next instruction.
-            *   If `GenerateNextNightInstruction` returns an instruction for the *next* role/action within the Night phase: Returns `HandlerResult.SuccessStayInPhase` with that instruction.
-            *   If `GenerateNextNightInstruction` determines the night is over, it updates `session.GamePhase` to `Day_ResolveNight`, logs the transition (Reason: `PhaseTransitionReason.WwActionComplete`), and returns the confirmation instruction for resolution. `HandleNightPhase` then returns `HandlerResult.SuccessTransition` with this instruction and the `WwActionComplete` reason.
-        *   On failure: Returns `HandlerResult.Failure` with the error.
-    *   `ProcessModeratorInput` receives the `HandlerResult`, validates, checks victory conditions, updates `PendingModeratorInstruction`, returns `ProcessResult`.
+2.  **Night Start Phase (`GamePhase.Night_Start`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleNewNightLogic` handler.
+    *   Handler processes the `Confirmation` for "Night Starts". If `true`, it starts a new turn (`session.StartNewTurn()`), advances to the first night role (`session.AdvanceToNextNightRole()`), and transitions to `Night_RoleAction`.
+    *   Returns a `PhaseHandlerResult` with transition to `Night_RoleAction` and the first role's wake-up instruction.
 
-3.  **Night Resolution Phase (`GamePhase.Day_ResolveNight`):**
-    *   `ProcessModeratorInput` executes the `HandleDayResolveNightPhase` handler.
-    *   `HandleDayResolveNightPhase` expects `Confirmation` input.
-    *   Processes logged night actions (WW kill, applying protection/Witch effects - Phase 2+, checking Knight curse - Phase 4+).
+3.  **Night Role Action Phase (`GamePhase.Night_RoleAction`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleNightPhase` handler.
+    *   **Handle Night 1 Identification:** If it's the first night and the current role requires identification (`currentNightRole.RequiresNight1Identification()`), the handler calls `HandleNightRoleIdentification`.
+        *   On success: Logs `InitialRoleAssignmentLogEntry`, then immediately calls `HandleNightActionPhase` for the same role's action.
+        *   On failure: Returns `PhaseHandlerResult.Failure` with the error.
+    *   **Handle Regular Night Action:** If no identification needed, calls `HandleNightActionPhase` which calls `currentNightRole.ProcessNightAction`.
+        *   On success: The `IRole` implementation logs the action (`NightActionLogEntry`) and returns a `PhaseHandlerResult`.
+        *   After successful action, transitions to `Night_RoleSleep` phase.
+        *   On failure: Returns `PhaseHandlerResult.Failure` with the error.
+
+4.  **Night Role Sleep Phase (`GamePhase.Night_RoleSleep`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleNightRoleGoesToSleep` handler.
+    *   Handler processes the `Confirmation` for the role going to sleep.
+    *   Advances to the next night role (`session.AdvanceToNextNightRole()`).
+    *   **If more roles remain:** Transitions back to `Night_RoleAction` with the next role's wake-up instruction.
+    *   **If no more roles:** Transitions to `Day_ResolveNight` for night resolution.
+
+5.  **Night Resolution Phase (`GamePhase.Day_ResolveNight`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleResolveNightPhase` handler.
+    *   Handler expects `Confirmation` input.
+    *   Processes logged night actions (Werewolf victim selection, applying protection effects).
     *   Calculates deaths. Logs `PlayerEliminatedLogEntry`.
-    *   **If eliminations:** Updates `session.GamePhase` to `Day_Event`, logs transition (Reason: "NightResolutionConfirmedProceedToReveal"), generates reveal prompt instruction, and returns `HandlerResult.SuccessTransition` with the instruction and reason.
-    *   **If no eliminations:** Updates `session.GamePhase` to `Day_Debate`, logs transition (Reason: "NightResolutionConfirmedNoVictims"), and returns `HandlerResult.SuccessTransitionUseDefault` (to use `Day_Debate`'s default entry prompt) with the reason.
-    *   `ProcessModeratorInput` receives the `HandlerResult`, validates, checks victory conditions, updates `PendingModeratorInstruction`, returns `ProcessResult`.
+    *   **If eliminations:** Updates `session.GamePhase` to `Day_Event`, logs transition (Reason: `NightResolutionConfirmedProceedToReveal`), generates reveal prompt instruction, and returns `PhaseHandlerResult` with the instruction and reason.
+    *   **If no eliminations:** Updates `session.GamePhase` to `Day_Debate`, logs transition (Reason: `NightResolutionConfirmedNoVictims`), and returns `PhaseHandlerResult` requesting default instruction for `Day_Debate`.
+    *   `GameFlowManager` automatically checks victory conditions after resolution, updates `PendingModeratorInstruction`, returns the `ProcessResult`.
 
-4.  **Day Event Phase (`GamePhase.Day_Event`):**
-    *   `ProcessModeratorInput` executes the `HandleDayEventPhase` handler.
+6.  **Day Event Phase (`GamePhase.Day_Event`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleDayEventPhase` handler.
     *   Handles `AssignPlayerRoles` input for role reveals. Updates `Player.Role`, `IsRoleRevealed`, logs `RoleRevealedLogEntry`.
     *   Handles death triggers based on revealed role (Hunter - Phase 3+, Lovers - Phase 3+).
-    *   Updates `session.GamePhase` to `Day_Debate`, logs transition (Reason: "RoleRevealedProceedToDebate"), returns `HandlerResult.SuccessTransitionUseDefault` with the reason.
+    *   **If coming from night resolution:** Updates `session.GamePhase` to `Day_Debate`, logs transition (Reason: `RoleRevealedProceedToDebate`), returns `PhaseHandlerResult` requesting default instruction.
+    *   **If coming from vote resolution:** Updates `session.GamePhase` to `Night_RoleAction`, logs transition (Reason: `RoleRevealedProceedToNight`), returns `PhaseHandlerResult` requesting default instruction.
     *   (Future phases: Handle event card drawing/application here).
-    *   `ProcessModeratorInput` receives the `HandlerResult`, validates, checks victory conditions, updates `PendingModeratorInstruction`, returns `ProcessResult`.
+    *   `GameFlowManager` automatically checks victory conditions, updates `PendingModeratorInstruction`, returns the `ProcessResult`.
 
-5.  **Debate Phase (`GamePhase.Day_Debate`):**
-    *   `ProcessModeratorInput` executes the `HandleDayDebatePhase` handler.
-    *   Handler expects `Confirmation`. If `true`: Updates `session.GamePhase` to `Day_Vote`, logs transition (Reason: "DebateConfirmedProceedToVote"), generates vote prompt instruction, returns `HandlerResult.SuccessTransition` with instruction and reason.
-    *   `ProcessModeratorInput` receives `HandlerResult`, validates, updates `PendingModeratorInstruction`, returns `ProcessResult`.
+7.  **Debate Phase (`GamePhase.Day_Debate`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleDayDebatePhase` handler.
+    *   Handler expects `Confirmation`. If `true`: Updates `session.GamePhase` to `Day_Vote`, logs transition (Reason: `DebateConfirmedProceedToVote`), generates vote prompt instruction, returns `PhaseHandlerResult` with instruction and reason.
+    *   `GameFlowManager` updates `PendingModeratorInstruction`, returns the `ProcessResult`.
 
-6.  **Voting Phase (Standard: `GamePhase.Day_Vote`):**
-    *   `ProcessModeratorInput` executes the `HandleDayVotePhase` handler.
+8.  **Voting Phase (Standard: `GamePhase.Day_Vote`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleDayVotePhase` handler.
     *   Handler expects `PlayerSelectionSingle` (outcome). Validates input, stores outcome in `PendingVoteOutcome`, logs `VoteOutcomeReportedLogEntry`.
-    *   Updates `session.GamePhase` to `Day_ResolveVote`, logs transition (Reason: "VoteOutcomeReported"), generates confirmation prompt for resolution, returns `HandlerResult.SuccessTransition` with instruction and reason.
-    *   `ProcessModeratorInput` receives `HandlerResult`, validates, updates `PendingModeratorInstruction`, returns `ProcessResult`.
+    *   Updates `session.GamePhase` to `Day_ResolveVote`, logs transition (Reason: `VoteOutcomeReported`), generates confirmation prompt for resolution, returns `PhaseHandlerResult` with instruction and reason.
+    *   `GameFlowManager` updates `PendingModeratorInstruction`, returns the `ProcessResult`.
 
-7.  **Vote Resolution Phase (`GamePhase.Day_ResolveVote`):**
-    *   `ProcessModeratorInput` executes the `HandleDayResolveVotePhase` handler.
+9.  **Vote Resolution Phase (`GamePhase.Day_ResolveVote`):**
+    *   `GameFlowManager.HandleInput` executes the `HandleDayResolveVotePhase` handler.
     *   Handler expects `Confirmation`. Retrieves `PendingVoteOutcome`. Logs `VoteResolvedLogEntry`.
-    *   **If player eliminated:** Updates `Player.Status`, logs `PlayerEliminatedLogEntry`. Handles elimination triggers (Idiot save - Phase 9+, Sheriff pass - Phase 3+, Elder powers lost - Phase 3+, Hunter shot - Phase 3+). Updates `session.GamePhase` to `Day_Event`, logs transition (Reason: "VoteResolvedProceedToReveal"), generates role reveal prompt, returns `HandlerResult.SuccessTransition` with instruction and reason.
-    *   **If tie:** Updates `session.GamePhase` to `Night`, increments `TurnNumber`. Logs transition (Reason: "VoteResolvedTieProceedToNight"), generates night start confirmation prompt, returns `HandlerResult.SuccessTransition` with instruction and reason.
+    *   **If player eliminated:** Updates `Player.Status`, logs `PlayerEliminatedLogEntry`. Updates `session.GamePhase` to `Day_Event`, logs transition (Reason: `VoteResolvedProceedToReveal`), generates role reveal prompt, returns `PhaseHandlerResult` with instruction and reason.
+    *   **If tie:** Updates `session.GamePhase` to `Night_Start`, increments `TurnNumber`. Logs transition (Reason: `VoteResolvedTieProceedToNight`), returns `PhaseHandlerResult` with instruction and reason.
     *   Clears `PendingVoteOutcome`.
-    *   `ProcessModeratorInput` receives `HandlerResult`, validates, checks victory conditions, updates `PendingModeratorInstruction`, returns `ProcessResult`.
+    *   `GameFlowManager` automatically checks victory conditions after resolution, updates `PendingModeratorInstruction`, returns the `ProcessResult`.
 
-8.  **Game Over Phase (`GamePhase.GameOver`):**
-    *   `ProcessModeratorInput` executes `HandleGameOverPhase`.
-    *   Handler returns `HandlerResult.Failure` for any input, as the game has ended.
-    *   `ProcessModeratorInput` sets the final "Game Over" instruction (likely done when victory was first detected).
+10. **Game Over Phase (`GamePhase.GameOver`):**
+    *   `GameFlowManager.HandleInput` executes `HandleGameOverPhase`.
+    *   Handler returns `PhaseHandlerResult.Failure` for any input, as the game has ended.
+    *   The final "Game Over" instruction was set when victory was first detected by the automatic victory checking.
 
 ---------------------------
 
@@ -432,5 +461,25 @@ The chosen approach is an abstract base class (`GameLogEntryBase`) providing uni
 **Game End Log:**
 
 32. **Victory Condition Met (`VictoryConditionMetLogEntry`):** Logs the determined winning team/player(s) and a brief description of the condition met (e.g., "All Werewolves eliminated," "Werewolves equal Villagers," "All survivors charmed," "Angel eliminated early"). *Uniqueness: Marks the end of the game and the outcome.*
+
+**Victory Condition Checking:**
+
+The `GameFlowManager` implements automatic victory condition checking to ensure games end appropriately when win conditions are met:
+
+*   **Automatic Checking:** Victory conditions are automatically evaluated by `GameFlowManager.HandleInput` after specific resolution phases (`Day_ResolveNight` and `Day_ResolveVote`). This ensures immediate game termination when win conditions are achieved.
+*   **Basic Victory Logic (Phase 1):** The current implementation checks fundamental win conditions:
+    *   **Villager Win:** All werewolves eliminated and at least one non-werewolf player remains alive
+    *   **Werewolf Win:** Werewolves equal or outnumber non-werewolves, with at least one werewolf alive
+*   **Victory Process:** When victory conditions are met:
+    1. `GameFlowManager.CheckVictoryConditions` returns the winning team and description
+    2. `session.WinningTeam` is set to the determined winner
+    3. Game transitions to `GameOver` phase with `VictoryConditionMet` reason
+    4. `VictoryConditionMetLogEntry` is logged with winning team and description
+    5. Final game over instruction is generated and set as `PendingModeratorInstruction`
+*   **Future Enhancements:** Later phases will expand victory checking to include:
+    *   Lovers win conditions (both lovers alive as last players)
+    *   Solo role win conditions (Angel, Piper, White Werewolf, Prejudiced Manipulator)
+    *   Event-specific win conditions
+    *   Complex role interactions (Charmed players, infected players, etc.)
 
 This list aims to cover the distinct, loggable events derived from the rules. Each entry captures unique information critical for game logic, auditing, or moderator context.

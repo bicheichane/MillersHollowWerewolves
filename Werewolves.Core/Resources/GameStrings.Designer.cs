@@ -19,7 +19,7 @@ namespace Werewolves.Core.Resources {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class GameStrings {
@@ -66,6 +66,15 @@ namespace Werewolves.Core.Resources {
         internal static string ActionNotInPhase {
             get {
                 return ResourceManager.GetString("ActionNotInPhase", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Confirm everyone is asleep and there is silence.
+        /// </summary>
+        internal static string ConfirmNightStarted {
+            get {
+                return ResourceManager.GetString("ConfirmNightStarted", resourceCulture);
             }
         }
         
@@ -295,6 +304,24 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0} go to sleep..
+        /// </summary>
+        internal static string RoleGoesToSleepMultiple {
+            get {
+                return ResourceManager.GetString("RoleGoesToSleepMultiple", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} goes to sleep..
+        /// </summary>
+        internal static string RoleGoesToSleepSingle {
+            get {
+                return ResourceManager.GetString("RoleGoesToSleepSingle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Internal error: Role implementation not found for {0}..
         /// </summary>
         internal static string RoleImplementationNotFound {
@@ -336,6 +363,15 @@ namespace Werewolves.Core.Resources {
         internal static string RoleRevealedProceedToDebate {
             get {
                 return ResourceManager.GetString("RoleRevealedProceedToDebate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        internal static string RoleWakesUp {
+            get {
+                return ResourceManager.GetString("RoleWakesUp", resourceCulture);
             }
         }
         
@@ -394,7 +430,7 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Each night, the Seer may discover the true identity of one player..
+        ///   Looks up a localized string similar to Each night, the Seer may discover if a player is currently with the werewolves..
         /// </summary>
         internal static string SeerRoleDescription {
             get {
@@ -421,33 +457,6 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Simple Villager has no day action..
-        /// </summary>
-        internal static string SimpleVillagerNoDayAction {
-            get {
-                return ResourceManager.GetString("SimpleVillagerNoDayAction", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Simple Villager role does not require identification..
-        /// </summary>
-        internal static string SimpleVillagerNoIdentification {
-            get {
-                return ResourceManager.GetString("SimpleVillagerNoIdentification", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Simple Villager has no night action..
-        /// </summary>
-        internal static string SimpleVillagerNoNightAction {
-            get {
-                return ResourceManager.GetString("SimpleVillagerNoNightAction", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to A standard villager with no special abilities..
         /// </summary>
         internal static string SimpleVillagerRoleDescription {
@@ -462,15 +471,6 @@ namespace Werewolves.Core.Resources {
         internal static string SimpleVillagerRoleName {
             get {
                 return ResourceManager.GetString("SimpleVillagerRoleName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Simple Werewolves cannot perform actions during the day..
-        /// </summary>
-        internal static string SimpleWerewolfNoDayAction {
-            get {
-                return ResourceManager.GetString("SimpleWerewolfNoDayAction", resourceCulture);
             }
         }
         
@@ -673,15 +673,6 @@ namespace Werewolves.Core.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} Werewolf players successfully identified..
-        /// </summary>
-        internal static string WerewolfIdentifySuccess {
-            get {
-                return ResourceManager.GetString("WerewolfIdentifySuccess", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Werewolves chose {0}. Night action recorded..
         /// </summary>
         internal static string WerewolvesChoiceRecorded {
@@ -696,15 +687,6 @@ namespace Werewolves.Core.Resources {
         internal static string WerewolvesChooseVictimPrompt {
             get {
                 return ResourceManager.GetString("WerewolvesChooseVictimPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Werewolves go to sleep..
-        /// </summary>
-        internal static string WerewolvesGoToSleep {
-            get {
-                return ResourceManager.GetString("WerewolvesGoToSleep", resourceCulture);
             }
         }
     }

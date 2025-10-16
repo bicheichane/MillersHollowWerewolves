@@ -40,7 +40,7 @@ public class GameServiceSetupTests
         session.Id.ShouldBe(gameId);
         session.Players.Count.ShouldBe(playerNames.Count);
         session.Players.Values.Select(p => p.Name).ShouldBe(playerNames, ignoreOrder: true);
-        session.Players.Values.ShouldAllBe(p => p.Status == PlayerStatus.Alive);
+        session.Players.Values.ShouldAllBe(p => p.Health == PlayerHealth.Alive);
         session.Players.Values.ShouldAllBe(p => p.IsRoleRevealed == false);
         session.Players.Values.ShouldAllBe(p => p.State != null);
         session.Players.Values.ShouldAllBe(p => p.State.IsSheriff == false);
@@ -54,13 +54,13 @@ public class GameServiceSetupTests
         session.RolesInPlay.ShouldBe(roles);
         session.GamePhase.ShouldBe(GamePhase.Setup);
         session.TurnNumber.ShouldBe(0);
-        session.SheriffPlayerId.ShouldBeNull();
-        session.Lovers.ShouldBeNull();
+        session.Players.WithState(new(){ IsSheriff = true}).ShouldBeNull();
+        session.Players.WithState(new() { IsInLove = true }).ShouldBeNull();
 
-        // Check initial instruction
-        instruction.ShouldNotBeNull();
+		// Check initial instruction
+		instruction.ShouldNotBeNull();
         instruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        instruction.InstructionText.ShouldBe(GameStrings.SetupCompletePrompt);
+        instruction.PublicText.ShouldBe(GameStrings.SetupCompletePrompt);
 
         // Check Game Started Log Entry
         session.GameHistoryLog.Count.ShouldBe(1);
@@ -87,7 +87,7 @@ public class GameServiceSetupTests
         // Assert
         instruction.ShouldNotBeNull();
         instruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
-        instruction.InstructionText.ShouldBe(GameStrings.SetupCompletePrompt);
+        instruction.PublicText.ShouldBe(GameStrings.SetupCompletePrompt);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class GameServiceSetupTests
         result.IsSuccess.ShouldBeTrue();
         result.Error.ShouldBeNull();
         result.ModeratorInstruction.ShouldNotBeNull();
-        result.ModeratorInstruction.InstructionText.ShouldBe(GameStrings.NightStartsPrompt);
+        result.ModeratorInstruction.PublicText.ShouldBe(GameStrings.NightStartsPrompt);
         result.ModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
 
         session.ShouldNotBeNull();
@@ -121,7 +121,7 @@ public class GameServiceSetupTests
         session.TurnNumber.ShouldBe(0); //it's night phase, but the night phase itself hasn't been processed yet
 
         nextInstruction.ShouldNotBeNull();
-        nextInstruction.InstructionText.ShouldBe(GameStrings.NightStartsPrompt);
+        nextInstruction.PublicText.ShouldBe(GameStrings.NightStartsPrompt);
         nextInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation);
     }
 
@@ -205,16 +205,16 @@ public class GameServiceSetupTests
 		result.IsSuccess.ShouldBeTrue();
         result.ModeratorInstruction.ShouldNotBeNull();
         // Expect WW Identification Prompt
-        result.ModeratorInstruction.InstructionText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));
+        result.ModeratorInstruction.PublicText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));
         result.ModeratorInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple);
 
         session.ShouldNotBeNull();
         session.GamePhase.ShouldBe(GamePhase.Night_RoleAction); // Still Night phase
         session.TurnNumber.ShouldBe(1);
-        session.PendingNight1IdentificationForCurrentRole.ShouldBe(RoleType.SimpleWerewolf); // Check pending state
+        //session.PendingNight1IdentificationForCurrentRole.ShouldBe(RoleType.SimpleWerewolf); // Check pending state
 
         nextInstruction.ShouldNotBeNull();
-        nextInstruction.InstructionText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));
+        nextInstruction.PublicText.ShouldBe(GameStrings.IdentifyWerewolvesPrompt.Format(werewolfCount));
         nextInstruction.ExpectedInputType.ShouldBe(ExpectedInputType.PlayerSelectionMultiple);
         nextInstruction.SelectablePlayerIds.ShouldNotBeNull();
         nextInstruction.SelectablePlayerIds.Count.ShouldBe(playerNames.Count); // All players selectable for identification

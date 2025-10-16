@@ -59,8 +59,8 @@ public class DayPhaseTests
 
         var revealedPlayer = session.Players[victimId];
         revealedPlayer.IsRoleRevealed.ShouldBeTrue();
-        revealedPlayer.RoleType.ShouldNotBeNull();
-        revealedPlayer.RoleType.RoleType.ShouldBe(RoleType.SimpleVillager);
+        revealedPlayer.Role.ShouldNotBeNull();
+        revealedPlayer.Role.RoleType.ShouldBe(RoleType.SimpleVillager);
 
         session.GameHistoryLog.OfType<RoleRevealedLogEntry>()
             .ShouldContain(rl => rl.PlayerId == victimId && rl.RevealedRole == RoleType.SimpleVillager);
@@ -277,7 +277,7 @@ public class DayPhaseTests
         session = _gameService.GetGameStateView(gameId);
         session.ShouldNotBeNull();
 
-        session.Players[wolfId].Status.ShouldBe(PlayerStatus.Dead);
+        session.Players[wolfId].Health.ShouldBe(PlayerHealth.Dead);
         session.PendingVoteOutcome.ShouldBeNull(); // Should be cleared
 
         session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>()
@@ -325,7 +325,7 @@ public class DayPhaseTests
         session = _gameService.GetGameStateView(gameId);
         session.ShouldNotBeNull();
 
-        session.Players.Values.Where(p => p.Id != victimId).ShouldAllBe(p => p.Status == PlayerStatus.Alive);
+        session.Players.Values.Where(p => p.Id != victimId).ShouldAllBe(p => p.Health == PlayerHealth.Alive);
         session.PendingVoteOutcome.ShouldBeNull(); // Should be cleared
 
         session.GameHistoryLog.OfType<PlayerEliminatedLogEntry>().Where(e => e.Reason == EliminationReason.DayVote).ShouldBeEmpty();

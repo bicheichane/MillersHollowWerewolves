@@ -9,11 +9,11 @@ namespace Werewolves.Core.Models;
 public record ModeratorInstruction
 {
     /// <summary>
-    /// The primary text message or question displayed to the moderator.
+    /// The primary text message or question displayed to the moderator, that should be communicated to the players.
     /// This should clearly state the current game situation or the required action.
     /// Example: "Werewolves, wake up and choose your victim."
     /// </summary>
-    public required string InstructionText { get; init; }
+    public string PublicText { get; init; }
 
     /// <summary>
     /// Specifies the type of input the application expects the moderator to provide

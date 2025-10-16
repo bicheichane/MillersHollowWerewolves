@@ -13,7 +13,7 @@ namespace Werewolves.Core.Models.StateMachine;
 /// <param name="DefaultEntryInstruction">Optional function for standard entry prompt.</param>
 /// <param name="PossibleTransitions">List of valid exit transitions for documentation and validation.</param>
 public record PhaseDefinition(
-    Func<GameSession, ModeratorInput, GameService, HandlerResult> ProcessInputAndUpdatePhase,
+    Func<GameSession, ModeratorInput, GameService, PhaseHandlerResult> ProcessInputAndUpdatePhase,
     Func<GameSession, ModeratorInstruction>? DefaultEntryInstruction = null,
     IReadOnlyList<PhaseTransitionInfo>? PossibleTransitions = null
 ); 

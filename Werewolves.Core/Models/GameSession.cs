@@ -5,6 +5,7 @@ using Werewolves.Core.Enums;
 using Werewolves.Core.Extensions;
 using Werewolves.Core.Interfaces; // Required for Dictionary, List, HashSet
 using Werewolves.Core.Models.Log;
+using Werewolves.Core.Models.StateMachine;
 using Werewolves.Core.Roles;
 using Werewolves.Core.Services;
 
@@ -75,7 +76,7 @@ public class GameSession
 		}
 	}
 
-	public IRole? AdvanceToNextPresentRole()
+	public IRole? AdvanceToNextNightRole()
 	{
 		while (_currentNightActingRoleIndex < ActiveNightRoles.Count)
 		{
@@ -99,7 +100,7 @@ public class GameSession
         var totalRoleCount = GetRoleCount(roleType);
 
         // App should always know the role of dead players.
-        var killedRoleCount = Players.WithRole(roleType).WithStatus(PlayerStatus.Dead).Count;
+        var killedRoleCount = Players.WithRole(roleType).WithHealth(PlayerHealth.Dead).Count();
 
         return totalRoleCount - killedRoleCount;
     }
@@ -166,7 +167,21 @@ public class GameSession
 		_currentNightActingRoleIndex = -1; // Reset the acting role index for the new night phase
 	}
 
-	public void TransitionToPhase(GamePhase newPhase, PhaseTransitionReason reason)
+	public PhaseHandlerResult TransitionToPhase(GamePhase newPhase, PhaseTransitionReason reason, ModeratorInstruction instruction)
+	{
+		TransitionToPhaseCore(newPhase, reason);
+
+		return PhaseHandlerResult.SuccessTransition(instruction, reason);
+	}
+
+	public PhaseHandlerResult TransitionToPhaseDefaultInstruction(GamePhase newPhase, PhaseTransitionReason reason)
+	{
+		TransitionToPhaseCore(newPhase, reason);
+
+		return PhaseHandlerResult.SuccessTransitionUseDefault(reason);
+	}
+
+	private void TransitionToPhaseCore(GamePhase newPhase, PhaseTransitionReason reason)
 	{
 		var oldPhase = GamePhase;
 		GamePhase = newPhase;
@@ -178,8 +193,16 @@ public class GameSession
 			PreviousPhase = oldPhase,
 			CurrentPhase = newPhase,
 			Reason = reason
-		});		
+		});
 	}
+
+	public void RecordDayVote(Guid playerGuid)
+	{
+		PendingVoteOutcome = playerGuid;
+		LogVoteOutcomeReported(playerGuid);
+	}
+
+	public void ClearPendingVoteOutcome() => PendingVoteOutcome = null;
 
 	#region Logs
 

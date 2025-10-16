@@ -249,21 +249,6 @@
   <data name="WerewolfIdentifyPlayerAlreadyHasRole" xml:space="preserve">
     <value>Player {0} already has a role assigned during Night 1 identification.</value>
   </data>
-  <data name="WerewolfIdentifySuccess" xml:space="preserve">
-    <value>{0} Werewolf players successfully identified.</value>
-  </data>
-  <data name="SimpleWerewolfNoDayAction" xml:space="preserve">
-    <value>Simple Werewolves cannot perform actions during the day.</value>
-  </data>
-  <data name="SimpleVillagerNoIdentification" xml:space="preserve">
-    <value>Simple Villager role does not require identification.</value>
-  </data>
-  <data name="SimpleVillagerNoNightAction" xml:space="preserve">
-    <value>Simple Villager has no night action.</value>
-  </data>
-  <data name="SimpleVillagerNoDayAction" xml:space="preserve">
-    <value>Simple Villager has no day action.</value>
-  </data>
   <data name="DefaultLogValue" xml:space="preserve">
     <value>Unknown</value>
   </data>
@@ -311,7 +296,7 @@
     <value>Seer</value>
   </data>
   <data name="SeerRoleDescription" xml:space="preserve">
-    <value>Each night, the Seer may discover the true identity of one player.</value>
+    <value>Each night, the Seer may discover if a player is currently with the werewolves.</value>
   </data>
   <data name="SeerIdentificationPrompt" xml:space="preserve">
     <value>Please identify the player who is the Seer.</value>
@@ -339,5 +324,11 @@
   </data>
   <data name="RoleGoesToSleepMultiple" xml:space="preserve">
     <value>{0} go to sleep.</value>
+  </data>
+  <data name="ConfirmNightStarted" xml:space="preserve">
+    <value>Confirm everyone is asleep and there is silence</value>
+  </data>
+  <data name="RoleWakesUp" xml:space="preserve">
+    <value></value>
   </data>
 </root>

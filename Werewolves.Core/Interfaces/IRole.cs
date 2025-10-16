@@ -1,5 +1,6 @@
 using Werewolves.Core.Models;
 using Werewolves.Core.Enums;
+using Werewolves.Core.Models.StateMachine;
 
 namespace Werewolves.Core.Interfaces;
 
@@ -22,7 +23,7 @@ public interface IRole
     /// Generates the instruction prompt for the moderator to identify the player(s)
     /// holding this role, if required.
     /// </summary>
-    ModeratorInstruction? GenerateIdentificationInstructions(GameSession session);
+    ModeratorInstruction GenerateIdentificationInstructions(GameSession session);
 
     /// <summary>
     /// Processes the moderator input provided for Night 1 role identification.
@@ -30,27 +31,27 @@ public interface IRole
     /// Updates the Role and IsRoleRevealed status for the identified players in the session.
     /// Returns a ProcessResult indicating success (potentially with identified players) or failure.
     /// </summary>
-    ProcessResult ProcessIdentificationInput(GameSession session, ModeratorInput input);
+    PhaseHandlerResult ProcessIdentificationInput(GameSession session, ModeratorInput input);
 
     /// <summary>
     /// Generates the instruction prompt for the moderator if this role acts at night.
     /// </summary>
-    ModeratorInstruction? GenerateNightInstructions(GameSession session);
+    ModeratorInstruction GenerateNightInstructions(GameSession session);
 
-    /// <summary>
-    /// Processes the moderator input for the role's night action.
-    /// Updates GameSession state and returns the result (success/failure).
-    /// </summary>
-    ProcessResult ProcessNightAction(GameSession session, ModeratorInput input);
+	/// <summary>
+	/// Processes the moderator input for the role's night action.
+	/// Updates GameSession state and returns the result (success/failure).
+	/// </summary>
+	PhaseHandlerResult ProcessNightAction(GameSession session, ModeratorInput input);
 
     /// <summary>
     /// Generates the instruction prompt for the moderator if this role acts during the day.
     /// (e.g., Hunter's last shot)
     /// </summary>
-    ModeratorInstruction? GenerateDayInstructions(GameSession session);
+    ModeratorInstruction GenerateDayInstructions(GameSession session);
 
-    /// <summary>
-    /// Processes the moderator input for the role's day action.
-    /// </summary>
-    ProcessResult ProcessDayAction(GameSession session, ModeratorInput input);
+	/// <summary>
+	/// Processes the moderator input for the role's day action.
+	/// </summary>
+	PhaseHandlerResult ProcessDayAction(GameSession session, ModeratorInput input);
 } 

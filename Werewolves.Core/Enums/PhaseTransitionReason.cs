@@ -10,6 +10,7 @@ public enum PhaseTransitionReason
     RoleActionComplete,
     RoleSleep,
 
+    NightStarted,
     NightResolutionConfirmedProceedToReveal,
     NightResolutionConfirmedNoVictims,
     RoleRevealedProceedToDebate,
