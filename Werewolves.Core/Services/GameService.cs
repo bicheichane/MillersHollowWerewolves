@@ -141,7 +141,7 @@ public class GameService
 
 		// --- Input Validation Against Last Instruction ---
 		var validationResult = ValidateExpectedInput(session, input);
-		if (validationResult != null)
+		if (validationResult?.IsSuccess == false)
 		{
 			return validationResult; // Return failure if validation fails
 		}

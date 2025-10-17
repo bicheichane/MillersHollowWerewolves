@@ -6,7 +6,7 @@ namespace Werewolves.Core.Enums;
 public enum PhaseTransitionReason
 {
     SetupConfirmed,
-    IdentifiedRoleAndProceedToAction,
+    RoleActionContinue,
     RoleActionComplete,
     RoleSleep,
 
