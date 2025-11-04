@@ -1,0 +1,20 @@
+using System.Text.Json.Serialization;
+using Werewolves.StateModels.Enums;
+
+namespace Werewolves.GameLogic.Models;
+
+/// <summary>
+/// Data structure for communication FROM the moderator.
+/// Represents the moderator's response to a ModeratorInstruction.
+/// </summary>
+public class ModeratorResponse
+{
+    public ExpectedInputType Type { get; internal init; }
+
+    // Optional fields, presence depends on Type
+    public List<Guid>? SelectedPlayerIds { get; internal init; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public Dictionary<Guid, RoleType>? AssignedPlayerRoles { get; internal init; }
+    public string? SelectedOption { get; internal init; }
+    public bool? Confirmation { get; internal init; }
+}

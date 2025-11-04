@@ -22,42 +22,42 @@ public class TestModeratorInput : ModeratorInput{
 
   public static TestModeratorInput Confirm(GamePhase expectedGamePhase, bool confirmation) => new()
 	{
-		InputTypeProvided = ExpectedInputType.Confirmation,
+		Type = ExpectedInputType.Confirmation,
 		Confirmation = confirmation,
 		ExpectedGamePhase = expectedGamePhase
 	};
 
     public static TestModeratorInput AssignPlayerRoles(GamePhase expectedGamePhase, Dictionary<Guid, RoleType> role) => new()
 	{
-		InputTypeProvided = ExpectedInputType.AssignPlayerRoles,
+		Type = ExpectedInputType.AssignPlayerRoles,
 		AssignedPlayerRoles = role,
 		ExpectedGamePhase = expectedGamePhase
 	};
 
     public static TestModeratorInput SelectPlayer(GamePhase expectedGamePhase, Guid? playerId) => new()
 	{
-		InputTypeProvided = ExpectedInputType.PlayerSelectionSingle,
+		Type = ExpectedInputType.PlayerSelectionSingle,
 		SelectedPlayerIds = playerId == null ? [] : [playerId.Value],
 		ExpectedGamePhase = expectedGamePhase
 	};
 
 	public static TestModeratorInput SelectPlayers(GamePhase expectedGamePhase, Guid? playerId) => new()
 	{
-		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
+		Type = ExpectedInputType.PlayerSelectionMultiple,
 		SelectedPlayerIds = playerId == null ? [] : [playerId.Value],
 		ExpectedGamePhase = expectedGamePhase
 	};
 
 	public static TestModeratorInput SelectPlayers(GamePhase expectedGamePhase, List<Guid> playerIds) => new()
 	{
-		InputTypeProvided = ExpectedInputType.PlayerSelectionMultiple,
+		Type = ExpectedInputType.PlayerSelectionMultiple,
 		SelectedPlayerIds = playerIds,
 		ExpectedGamePhase = expectedGamePhase
 	};
 
     public static TestModeratorInput SelectOption(GamePhase expectedGamePhase, string option) => new()
 	{
-		InputTypeProvided = ExpectedInputType.OptionSelection,
+		Type = ExpectedInputType.OptionSelection,
 		SelectedOption = option,
 		ExpectedGamePhase = expectedGamePhase
 	};

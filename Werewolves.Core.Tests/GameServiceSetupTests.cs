@@ -99,7 +99,7 @@ public class GameServiceSetupTests
         var gameId = _gameService.StartNewGame(playerNames, roles);
         var confirmationInput = new ModeratorInput
         {
-            InputTypeProvided = ExpectedInputType.Confirmation,
+            Type = ExpectedInputType.Confirmation,
             Confirmation = true
         };
 
@@ -132,7 +132,7 @@ public class GameServiceSetupTests
         var nonExistentGameId = Guid.NewGuid();
         var confirmationInput = new ModeratorInput
         {
-            InputTypeProvided = ExpectedInputType.Confirmation,
+            Type = ExpectedInputType.Confirmation,
             Confirmation = true
         };
 
@@ -186,13 +186,13 @@ public class GameServiceSetupTests
         
 
         // 1. Process Setup Confirmation
-        var setupConfirmInput = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
+        var setupConfirmInput = new ModeratorInput { Type = ExpectedInputType.Confirmation, Confirmation = true };
         var setupResult = _gameService.ProcessModeratorInput(gameId, setupConfirmInput);
         setupResult.IsSuccess.ShouldBeTrue();
         _gameService.GetCurrentInstruction(gameId)?.ExpectedInputType.ShouldBe(ExpectedInputType.Confirmation); // Should be NightStartsPrompt
 
         // 2. Process Night Starts Confirmation
-        var nightStartsConfirmInput = new ModeratorInput { InputTypeProvided = ExpectedInputType.Confirmation, Confirmation = true };
+        var nightStartsConfirmInput = new ModeratorInput { Type = ExpectedInputType.Confirmation, Confirmation = true };
 
         // Act
         var result = _gameService.ProcessModeratorInput(gameId, nightStartsConfirmInput);

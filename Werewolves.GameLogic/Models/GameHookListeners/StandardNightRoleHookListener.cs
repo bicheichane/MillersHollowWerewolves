@@ -1,0 +1,53 @@
+using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.StateModels.Enums;
+using Werewolves.StateModels.Models;
+
+namespace Werewolves.GameLogic.Models.GameHookListeners;
+
+/// <summary>
+/// Meant to represent simple night roles that only need to prompt for a target and process the selection.
+/// Regardless of whether the target selection or processing are complex in nature or not.
+/// </summary>
+/// <typeparam name="T"></typeparam>
+internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener<T> where T: struct, Enum
+{
+	protected abstract T AwaitingTargetSelectionEnum { get; }
+
+	protected override List<RoleStateMachineStage> DefineStateMachineStages() =>
+	[
+		CreateStage(GameHook.NightActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
+		CreateStage(GameHook.NightActionLoop, WokenUpStateEnum, AwaitingTargetSelectionEnum, HandleNightPowerUse_AndId),
+		CreateStage(GameHook.NightActionLoop, AwaitingTargetSelectionEnum, AsleepStateEnum, HandleParseNightPowerConsequences),
+		CreateStage(GameHook.NightActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
+		CreateEndStage(GameHook.NightActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
+	];
+
+	protected abstract ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input);
+
+	protected abstract void ProcessTargetSelection(GameSession session, ModeratorResponse input);
+
+	protected override HookListenerActionResult<T> HandleNightPowerUse(GameSession session, ModeratorResponse input) =>
+		HandleTargetSelectionRequest(session, input);
+
+	private HookListenerActionResult<T> HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
+	{
+		var instruction = GenerateTargetSelectionInstruction(session, input);
+		return HookListenerActionResult<T>.NeedInput(instruction, AwaitingTargetSelectionEnum);
+		
+	}
+
+	private HookListenerActionResult<T> HandleParseNightPowerConsequences(GameSession session, ModeratorResponse input)
+	{
+		ProcessTargetSelection(session, input);
+		return PrepareSleepInstruction(session);
+	}
+}
+
+internal abstract class StandardNightRoleHookListener : StandardNightRoleHookListener<StandardNightRoleState>
+{
+	protected override StandardNightRoleState WokenUpStateEnum => StandardNightRoleState.AwaitingAwakeConfirmation;
+	protected override StandardNightRoleState AwaitingTargetSelectionEnum => StandardNightRoleState.AwaitingTargetSelection;
+	protected override StandardNightRoleState ReadyToSleepStateEnum => StandardNightRoleState.AwaitingSleepConfirmation;
+	protected override StandardNightRoleState AsleepStateEnum => StandardNightRoleState.Asleep;
+	protected override bool HasNightPowers => true;
+}
