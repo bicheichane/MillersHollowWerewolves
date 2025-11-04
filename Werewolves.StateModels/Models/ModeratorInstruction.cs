@@ -4,7 +4,7 @@ namespace Werewolves.StateModels.Models;
 /// Abstract base class for all moderator instructions.
 /// Provides the foundation for a polymorphic instruction hierarchy with dual text fields.
 /// </summary>
-public abstract class ModeratorInstruction
+public abstract record ModeratorInstruction
 {
     /// <summary>
     /// The text to be read aloud or displayed publicly to all players.

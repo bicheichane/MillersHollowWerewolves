@@ -1,6 +1,7 @@
 using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.StateModels;
+using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
 using static Werewolves.GameLogic.Models.InternalMessages.HookListenerActionResult<Werewolves.GameLogic.Models.GameHookListeners.NightRoleIdOnlyState>;
 
 namespace Werewolves.GameLogic.Models.GameHookListeners;

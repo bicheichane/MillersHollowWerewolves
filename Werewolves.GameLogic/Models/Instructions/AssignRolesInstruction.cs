@@ -7,7 +7,7 @@ namespace Werewolves.GameLogic.Models.Instructions;
 /// Instruction that requires the moderator to assign roles to specific players.
 /// Each player can be assigned from a specific list of available roles.
 /// </summary>
-public class AssignRolesInstruction : ModeratorInstruction
+public record AssignRolesInstruction : ModeratorInstruction
 {
     /// <summary>
     /// Dictionary mapping player IDs to the list of roles that can be assigned to that player.

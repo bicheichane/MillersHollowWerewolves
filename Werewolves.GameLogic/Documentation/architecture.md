@@ -1,4 +1,6 @@
-**Project:** `Werewolves.Core` (.NET Class Library) 
+**Project:** Two-assembly architecture consisting of:
+* `Werewolves.StateModels` (.NET Class Library) - State representation and data models
+* `Werewolves.GameLogic` (.NET Class Library) - Game logic, rules engine, and flow management
  
 **Goal:** To provide the core game logic and state management for a Werewolves of Miller's Hollow moderator helper application, handling rules and interactions based on the provided rulebook pages (excluding Buildings/Village expansion, but including specified New Moon events). The app **tracks the game state based on moderator input**. It assumes moderator input is accurate and provides deterministic state tracking and guidance based on that input. 
  
@@ -11,7 +13,7 @@
 This architecture employs a log-driven, encapsulated state management approach with compiler-enforced separation: 
  
 *   **Canonical State Source:** The `GameSession.GameHistoryLog` is the **single, canonical source of truth** for all **persistent, non-deterministic** game events. This append-only event store drives all state mutations through the State Mutator Pattern. 
-*   **Derived Cached State:** All in-memory representations of persistent state (e.g., `Player.Status`, `Player.State` properties, `TurnNumber`) are treated as **private, read-optimized caches** that are mutated **exclusively** by applying events from the log. 
+*   **Derived Cached State:** All in-memory representations of persistent state (e.g., `Player.Status`, `Player.State` properties, `TurnNumber`) are treated as **assembly-scoped derived state caches** that are mutated **exclusively** by applying events from the log. The primary concern here is **architectural integrity** - ensuring single source of truth, controlled mutation through the State Mutator Pattern, compiler-enforced separation between assemblies, and event-driven state reconstruction for correctness and maintainability.
 *   **Transient Execution State:** The `GamePhaseStateCache` provides a single source of truth for the game's current execution point, tracking the active phase, sub-phase, hook, and any listener that is paused awaiting input. This cache acts as a transient "program counter" and is automatically cleared between main phases to prevent state leakage. 
  
 **Hook System Architecture:** 
@@ -27,27 +29,28 @@ The architecture uses a declarative hook-based system where the `GameFlowManager
  
 The architecture is split into two separate library projects to achieve compiler-enforced encapsulation: 
  
-*   **`Werewolves.Core.StateModel`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state and its mutation mechanisms. 
-*   **`Werewolves.Core.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.Core.StateModel` and can only interact with its `public` API. 
+*   **`Werewolves.StateModels`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state and its mutation mechanisms. 
+*   **`Werewolves.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.StateModels` and can only interact with its `public` API. 
  
 **Core Components:** 
  
 1.  **`GameSession` Class (StateModel):** Represents the tracked state of a single ongoing game. 
-    *   **Canonical State Source:** The `GameHistoryLog` is the **single, canonical source of truth** for all **persistent, non-deterministic** game events. This append-only event store drives all state mutations through the State Mutator Pattern. 
-    *   **Derived Cached State:** All in-memory representations of persistent state (e.g., `Player.Status`, `Player.State` properties, `TurnNumber`) are treated as **private, read-optimized caches** that are mutated **exclusively** by applying events from the log. 
+    *   **Canonical State Source:** The `_gameHistoryLog` is the **single, canonical source of truth** for all **persistent, non-deterministic** game events. This append-only event store drives all state mutations through the State Mutator Pattern. 
+    *   **Derived Cached State:** All in-memory representations of persistent state (e.g., `Player.Status`, `Player.State` properties, `TurnNumber`) are treated as **assembly-scoped derived state caches** that are mutated **exclusively** by applying events from the log. The primary concern here is **architectural integrity** - ensuring single source of truth, controlled mutation through the State Mutator Pattern, compiler-enforced separation between assemblies, and event-driven state reconstruction for correctness and maintainability.
     *   **Transient Execution State:** The `GamePhaseStateCache` provides a single source of truth for the game's current execution point, tracking the active phase, sub-phase, hook, and any listener that is paused awaiting input. This cache acts as a transient "program counter" and is automatically cleared between main phases to prevent state leakage. 
-    *   **Encapsulated Public API:** `GameSession` provides a curated public API for state queries (e.g., `GetPlayerState(Guid)`) and controlled state mutations (e.g., `RecordElimination(Guid, EliminationReason)`). All state changes must go through log entries and their `Apply` methods. 
+    *   **Encapsulated Public API:** `GameSession` provides a curated public API for state queries (e.g., `GetPlayerState(Guid)`) and controlled state mutations (e.g., `EliminatePlayer(Guid, EliminationReason)`). All state changes must go through log entries and their `Apply` methods. 
     *   **State Mutator Pattern:** `GameLogEntryBase` defines an `internal abstract Apply(GameSession.IStateMutator mutator)` method. `GameSession` defines an `internal IStateMutator` interface and a `private nested` implementation class that has privileged access to `internal` setters of other classes in the same assembly. This ensures that only log entries can modify state. 
     *   `Id` (Guid): Unique identifier for the game session. 
     *   `Players` (Dictionary<Guid, Player>): Collection of all players in the game, keyed by their unique ID. Tracks player information provided by the moderator. 
-    *   `PlayerSeatingOrder` (List<Guid>): Stores the Player IDs in clockwise seating order as reported by the Moderator during setup. Crucial for roles like Knight, Fox, Bear Tamer and events like Nightmare, Influences. Established once at game start. (Implemented as `List<Guid>`). 
-    *   `GamePhaseStateCache` (GamePhaseStateCache): Unified state cache that tracks the current execution point, active hooks, and current listener states. This replaces the previous `GamePhase` tracking and `IntraPhaseRoleStates`. 
+    *   `PlayerSeatingOrder` (List<Guid>): Stores the Player IDs in clockwise seating order as reported by the Moderator during setup. Crucial for roles like Knight, Fox, Bear Tamer and events like Nightmare, Influences. Established once at game start. 
+    *   `GamePhaseStateCache` (GamePhaseStateCache): Unified state cache that tracks the current execution point, active hooks, and current listener states. 
     *   `TurnNumber` (int): Tracks the number of full Night/Day cycles completed. Initialized to 0 during `Setup`, increments to 1 at the start of the first `Night`. 
     *   `RolesInPlay` (List<RoleType>): List of role types included in the game (provided by Moderator at setup). 
     *   `EventDeck` (List<EventCard>): Represents the set of event cards included in the physical deck. 
     *   `DiscardPile` (List<EventCard>): Event cards reported as drawn by the moderator. 
     *   `ActiveEvents` (List<ActiveEventState>): Tracks currently active New Moon events (input by Moderator when drawn) and their specific state data. 
-    *   `GameHistoryLog` (List<GameLogEntryBase>): A chronological record of all significant game events, moderator inputs, state changes, and action outcomes tracked during the session. Uses the `GameLogEntryBase` derived types for structured, strongly-typed entries (see "Setup & Initial State Logs" section for examples). This remains the definitive history and source for resolving game state. 
+    *   `PendingVoteOutcome` (Guid?): Stores the ID of the player reported eliminated in the vote, or `Guid.Empty` for a tie. Cleared after resolution. 
+    *   `GameHistoryLog` (List<GameLogEntryBase>): A chronological record of all non-deterministic game events, like moderator inputs, event card draws, etc. Anything that cannot be calculated or derived deterministically from the known game state. Uses the `GameLogEntryBase` derived types for structured, strongly-typed entries (see "Setup & Initial State Logs" section for examples). This remains the definitive history and source for resolving game state. 
     *   `PendingModeratorInstruction` (ModeratorInstruction?): The current prompt/instruction for the moderator, asking for input or guiding the next step. 
     *   `WinningTeam` (Team?): Stores the winning team once determined by `GameFlowManager`. Null otherwise. 
     *   **Helper Methods:** 
@@ -79,21 +82,27 @@ The architecture is split into two separate library projects to achieve compiler
  
 The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This class contains individual properties (e.g., `IsSheriff`, `LoverId`, `VoteMultiplier`) for all dynamic boolean and data-carrying states, typically using `internal set` for controlled modification. The `Player` class then holds a single instance of `PlayerState`. This approach provides a balance of organization (grouping all volatile states together), strong typing, clear separation of concerns (keeping `Player` focused on identity/role), and scalability for future state additions. 
  
-2.  **`Player` Class:** Represents a participant and the tracked information about them. 
-    *   `Id` (Guid): Unique identifier. 
-    *   `Name` (string): Player's name. 
-    *   `Role` (IRole?): The player's character role instance. Null initially. **Set by hook listeners during the Setup phase (for roles requiring identification) or upon role reveal (death, etc.).** 
-    *   `Status` (PlayerStatus Enum): Current status (`Alive`, `Dead`). 
-    *   `IsRoleRevealed` (bool): Flag indicating if the moderator has input this player's role, **or if the role was assigned during Setup based on moderator identification**. `true` means the *application* knows the role. **Implemented as a computed property based on `Role` not being null.** 
-    *   `State` (PlayerState): Encapsulates all dynamic, *persistent* states affecting the player (e.g., Sheriff status, protection, infection, charms, modifiers). This approach keeps the core Player class focused on identity and role, while grouping volatile states for better organization and potential future state management enhancements (like serialization or complex transitions). **This reflects the player's current, ongoing condition.** 
+2.  **`IPlayer` Interface & `Player` Class:** Represents a participant and their core identity information. 
+    *   **Interface-Based Architecture:** The system uses an `IPlayer` interface with a `protected nested Player` implementation within `GameSession` to provide clean abstraction, support testing, and strong encapsulation.
+    *   **Enhanced Encapsulation through Nesting:** The `Player` class is implemented as a `protected nested class` within `GameSession`, ensuring that only `GameSession` and its `StateMutator` can directly access and modify player instances.
+    *   **`Player` Class Properties:**
+        *   `Id` (Guid): Unique identifier. 
+        *   `Name` (string): Player's name. 
+        *   `State` (PlayerState): Encapsulates all dynamic, *persistent* states affecting the player. This approach keeps the core Player class focused on identity, while grouping volatile states for better organization and potential future state management enhancements (like serialization or complex transitions). **This reflects the player's current, ongoing condition.** 
+    *   **Design Philosophy:** The `Player` class maintains only identity information, while all game-related dynamic state is managed through the `PlayerState` property, ensuring clear separation of concerns. State mutations are controlled exclusively through the `StateMutator` pattern to maintain architectural integrity.
  
 -------------- 
  
 3.  **`IGameHookListener` Interface:** Defines the contract for components that respond to game hooks (represents the *rules* of roles and events). 
-    *   **Method Signature:** 
+    *   **Interface Definition:** 
         ```csharp 
-        HookListenerActionResult AdvanceStateMachine(GameSession session, ModeratorInput input); 
+        internal interface IGameHookListener
+        {
+            HookListenerActionResult AdvanceStateMachine(GameSession session, ModeratorResponse input);
+            ListenerIdentifier Role { get; }
+        }
         ``` 
+    *   **Accessibility:** The interface is marked as `internal` to hide implementation details from UI clients and ensure these components are only used within the game logic assembly.
     *   **Interaction Contract:**  
         *   The `GameFlowManager` dispatches to all listeners registered for a fired hook by calling `AdvanceStateMachine` 
         *   Each listener is responsible for determining if it should act based on game state and cached execution state 
@@ -102,6 +111,13 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
         *   `HookListenerActionResult.NeedInput(instruction)`: Listener requires further input; processing halts until next input 
         *   `HookListenerActionResult.Complete(optional_instruction)`: Listener completed all actions for this hook invocation 
         *   `HookListenerActionResult.Error(error)`: An error occurred during processing 
+    *   **Advanced State Machine Features:** The implementation provides sophisticated state management capabilities including:
+        *   Declarative state machine definition with runtime validation
+        *   Comprehensive error checking and state transition validation
+        *   Support for open-ended stages with unknown valid end states at runtime in state flows
+        *   Support for end stages that prevent further state changes in state flows
+        *   Generic `HookListenerActionResult<T>` for precise state tracking with `NextListenerPhase`
+        *   Built-in protection against invalid state transitions and handler overwrites
     *   **Polymorphic Listener Hierarchy:** The architecture provides a hierarchy of abstract base classes that implement `IGameHookListener`:
         *   **`RoleHookListener`**: Universal base for all role listeners, providing core logic and stateless implementation support
         *   **`RoleHookListener<TRoleStateEnum>`**: Base for stateful roles with a declarative state machine engine and runtime validation
@@ -109,17 +125,24 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
         *   **`StandardNightRoleHookListener<T>`**: Further specialization for standard "prompt target → process selection" workflow
         *   **`StandardNightRoleHookListener`**: Non-generic version using default state enum
         *   **`NightRoleIdOnlyHookListener`**: For roles that only require Night 1 identification without subsequent powers
+        *   **`ImmediateFeedbackNightRoleHookListener`**: Specialized base for roles that require immediate moderator feedback during target selection processing
     *   **Concrete Implementations:** All role classes inherit from appropriate base classes in the hierarchy, containing their complete state machine logic with built-in validation and state management. 
     *   **TurnNumber Pattern for First-Night-Only Roles:** Roles with actions exclusive to the first night (e.g., Cupid, Thief, WolfHound, WildChild) are handled automatically by the `NightRoleHookListener` base class, which includes Night 1 identification in the wake-up flow.
  
 --------------------- 
  
-4.  **`PlayerState` Class:** Wrapper class holding all dynamic state information for a `Player`. **Implemented as an inner class within `Player.cs`**. This improves organization and separation of concerns. Properties typically use `internal set` to allow modification primarily by hook listeners or internal logic, maintaining state integrity. **These properties represent the *persistent* or *longer-term* aspects of a player's current state (e.g., holding the Sheriff title, being in love, being infected, having used a specific potion). They reflect the player's ongoing status unless changed by a game event.** 
+4.  **`IPlayerState` Interface & `PlayerState` Class:** Wrapper class holding all dynamic state information for a `Player`. **Implemented with an `IPlayerState` interface and `protected nested PlayerState` class within `GameSession` to provide clean abstraction, support testing, and strong encapsulation.** This improves organization and separation of concerns. Properties use `internal set` to ensure they are managed exclusively through the `StateMutator` pattern as part of the derived cached state pattern, maintaining state integrity. **These properties represent the *persistent* or *longer-term* aspects of a player's current state (e.g., holding the Sheriff title, being in love, being infected, having used a specific potion). They reflect the player's ongoing status unless changed by a game event.** 
+    *   **Enhanced Encapsulation through Nesting:** The `PlayerState` class is implemented as a `protected nested class` within `GameSession`, ensuring that only `GameSession` and its `StateMutator` can directly access and modify player state instances.
+    *   **StateMutator Pattern Integration:** All state mutations are controlled exclusively through the `GameSession.IStateMutator` interface and its `protected StateMutator` implementation. This ensures that only log entries (through their `Apply` methods) can modify player state, maintaining architectural integrity.
+    *   **Core Identity & Role Properties:**
+        *   `Role` (RoleType?): The player's character role type. Null initially. **Set by hook listeners during the Setup phase (for roles requiring identification) or upon role reveal (death, etc.).** 
+        *   `Health` (PlayerHealth Enum): Current health status (`Alive`, `Dead`). 
+        *   `IsRoleRevealed` (bool): Flag indicating if the moderator has input this player's role, **or if the role was assigned during Setup based on moderator identification**. `true` means the *application* knows the role. **Implemented as a computed property based on `Role` not being null.** 
     *   **Boolean States:** 
         *   `IsSheriff` (bool): Indicates if the player currently holds the Sheriff title. 
         *   `IsInLove` (bool): Indicates if the player is part of the Lovers pair. 
-        *   `IsProtectedTonight` (bool): True if the Defender chose to protect this player *this* night. Reset each night resolution. 
         *   `IsInfected` (bool): True if the player was successfully infected by the Accursed Wolf-Father. This is a permanent change towards the Werewolf team. (Ensure Werewolf night logic and Victory conditions correctly account for this). 
+        *   `IsProtectedTonight` (bool): True if the Defender chose to protect this player *this* night. Reset each night resolution. 
         *   `IsCharmed` (bool): True if the player has been targeted by the Piper. Does not prevent normal actions but affects Piper's win condition. 
         *   `IsTempWerewolf` (bool): True if the player is temporarily acting as a Werewolf due to an event like Full Moon Rising. Reset when the event expires. 
         *   `CanVote` (bool): Determines if the player can participate in the current vote. Default is true, modified by roles (Village Idiot revealed) or events. 
@@ -161,16 +184,23 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
  
 ----------------------- 
  
-7.  **`GamePhaseStateCache` Class:** Unified state cache that serves as the single source of truth for the game's current execution point. 
+7.  **`GamePhaseStateCache` Record Struct:** Unified state cache that serves as the single source of truth for the game's current execution point. Implemented as a `record struct` for value semantics and immutability benefits.
     *   **GFM State Tracking:** 
-        *   `GetCurrentPhase()` / `SetCurrentPhase(phase)`: Manages current game phase 
-        *   `SetSubPhase<T>(subPhase)` / `GetGfmSubPhase<T>()`: Manages and retrieves typed sub-phase state 
+        *   `GetCurrentPhase()` / `TransitionMainPhase(phase)`: Manages current game phase with automatic sub-phase state clearing on phase transitions
+        *   `TransitionSubPhase<T>(subPhase)` / `GetSubPhase<T>()`: Manages and retrieves typed sub-phase state with automatic hook state clearing on sub-phase transitions
     *   **Hook & Listener State:** 
-        *   `SetActiveHook(hook)` / `GetActiveHook()` / `CompleteHook()`: Manages currently executing hook 
-        *   `SetCurrentListenerState<T>(listener, state)` / `GetCurrentListenerState<T>(listener)`: Tracks current listener state 
-        *   `CompleteCurrentListener()`: Clears current listener state 
-    *   **Mandatory Cleanup:** 
-        *   `ClearTransientState()`: Called by `GameFlowManager` between main phases to prevent state leakage 
+        *   `TransitionHook(hook)` / `GetActiveHook()`: Manages currently executing hook with automatic listener state clearing on hook transitions
+        *   `TransitionListenerAndState<T>(listener, state)` / `GetCurrentListenerState<T>(listener)`: Tracks current listener state
+        *   `GetCurrentListener()`: Gets the identifier of the currently active listener
+    *   **Automatic State Management:** 
+        *   All transition methods automatically clear related state to prevent leakage:
+            *   `TransitionMainPhase()` clears sub-phase, hook, and listener state
+            *   `TransitionSubPhase<T>()` clears hook and listener state
+            *   `TransitionHook()` clears listener state
+        *   Private cleanup methods ensure proper state isolation: `ClearCurrentSubPhaseState()`, `ClearCurrentHook()`, `ClearCurrentListener()`
+    *   **Access Strategy:** 
+        *   Most methods are `internal` to maintain encapsulation between assemblies
+        *   `GetCurrentPhase()` is `public` to allow external main game phase queries
  
 ----------------------- 
  
@@ -303,7 +333,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
  
 16. **Enums:** 
     *   `GamePhase`: `Setup`, `Night`, `Day_Dawn`, `Day_Debate`, `Day_Vote`, `Day_Dusk`, `AccusationVoting` (Nightmare), `FriendVoting` (Great Distrust), `GameOver`. 
-    *   `PlayerStatus`: `Alive`, `Dead`. 
+    *   `PlayerHealth`: `Alive`, `Dead`. 
     *   `Team` (Represents the fundamental winning factions/conditions): 
         *   Villagers 
         *   Werewolves 

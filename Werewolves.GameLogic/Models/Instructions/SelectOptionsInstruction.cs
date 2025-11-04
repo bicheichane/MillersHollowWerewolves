@@ -7,7 +7,7 @@ namespace Werewolves.GameLogic.Models.Instructions;
 /// Instruction that requires the moderator to select from a list of text options.
 /// Commonly used for event card selections, alignment choices, or other text-based decisions.
 /// </summary>
-public class SelectOptionsInstruction : ModeratorInstruction
+public record SelectOptionsInstruction : ModeratorInstruction
 {
     /// <summary>
     /// The list of selectable options.

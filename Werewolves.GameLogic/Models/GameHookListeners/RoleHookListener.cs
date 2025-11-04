@@ -1,7 +1,10 @@
 using Werewolves.GameLogic.Interfaces;
 using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.StateModels;
+using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
+using Werewolves.StateModels.Interfaces;
 using Werewolves.StateModels.Models;
 using static Werewolves.StateModels.Enums.PlayerHealth;
 
@@ -329,7 +332,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 				}
 
 				//set the new state
-				session.SetCurrentListenerState(RoleType, (TRoleStateEnum)newState);
+				session.TransitionListenerState(RoleType, (TRoleStateEnum)newState);
 			}
 
 

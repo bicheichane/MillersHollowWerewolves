@@ -1,5 +1,5 @@
+using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Log;
-using Werewolves.StateModels.Models;
 
 // Assuming base class is here
 

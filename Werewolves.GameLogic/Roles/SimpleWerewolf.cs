@@ -1,6 +1,8 @@
 using Werewolves.GameLogic.Models;
 using Werewolves.GameLogic.Models.GameHookListeners;
 using Werewolves.GameLogic.Models.Instructions;
+using Werewolves.StateModels;
+using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;

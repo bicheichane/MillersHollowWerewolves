@@ -10,7 +10,16 @@
     <InternalsVisibleTo Include="Werewolves.Core.StateModel.Tests" />
   </ItemGroup>
 
+
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Werewolves.GameLogic</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+
+
+    <ItemGroup>
     <Compile Update="Resources\GameStrings.Designer.cs">
       <DependentUpon>GameStrings.resx</DependentUpon>
       <DesignTime>True</DesignTime>

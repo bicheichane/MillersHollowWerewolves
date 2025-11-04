@@ -1,4 +1,4 @@
-using Werewolves.StateModels.Models;
+using Werewolves.StateModels.Core;
 
 namespace Werewolves.StateModels.Log;
 

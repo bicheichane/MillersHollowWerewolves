@@ -1,6 +1,7 @@
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.GameLogic.Services;
-using Werewolves.StateModels.Models;
+using Werewolves.StateModels;
+using Werewolves.StateModels.Core;
 
 namespace Werewolves.GameLogic.Models.StateMachine;
 
@@ -9,7 +10,7 @@ namespace Werewolves.GameLogic.Models.StateMachine;
 /// </summary>
 /// <param name="ProcessInputAndUpdatePhase">Handler function for the phase.</param>
 /// <param name="PossiblePhaseTransitions">List of valid exit transitions for documentation and validation.</param>
-public record PhaseDefinition(
+internal record PhaseDefinition(
     Func<GameSession, ModeratorResponse, GameService, PhaseHandlerResult> ProcessInputAndUpdatePhase,
     IReadOnlyList<PhaseTransitionInfo>? PossiblePhaseTransitions = null
 ); 

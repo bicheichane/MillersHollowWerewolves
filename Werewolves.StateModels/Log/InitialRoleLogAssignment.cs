@@ -1,5 +1,5 @@
-﻿using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+﻿using Werewolves.StateModels.Core;
+using Werewolves.StateModels.Enums;
 
 namespace Werewolves.StateModels.Log;
 

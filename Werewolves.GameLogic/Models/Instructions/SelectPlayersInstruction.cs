@@ -7,7 +7,7 @@ namespace Werewolves.GameLogic.Models.Instructions;
 /// Instruction that requires the moderator to select one or more players from a list.
 /// Uses a flexible constraint system to define selection requirements.
 /// </summary>
-public class SelectPlayersInstruction : ModeratorInstruction
+public record SelectPlayersInstruction : ModeratorInstruction
 {
     /// <summary>
     /// The list of player IDs that can be selected from.

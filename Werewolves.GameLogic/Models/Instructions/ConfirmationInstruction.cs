@@ -7,7 +7,7 @@ namespace Werewolves.GameLogic.Models.Instructions;
 /// <summary>
 /// Instruction that requires a simple yes/no confirmation from the moderator.
 /// </summary>
-public class ConfirmationInstruction : ModeratorInstruction
+public record ConfirmationInstruction : ModeratorInstruction
 {
     /// <summary>
     /// Initializes a new instance of ConfirmationInstruction.
@@ -39,7 +39,7 @@ public class ConfirmationInstruction : ModeratorInstruction
     }
 }
 
-public class StartGameConfirmationInstruction(Guid gameGuid) : ConfirmationInstruction(GameStrings.SetupCompletePrompt)
+public record StartGameConfirmationInstruction(Guid GameGuid) : ConfirmationInstruction(GameStrings.SetupCompletePrompt)
 {
-    public Guid GameGuid { get; } = gameGuid;
+    public Guid GameGuid { get; } = GameGuid;
 }
