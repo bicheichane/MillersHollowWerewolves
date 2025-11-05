@@ -5,23 +5,48 @@ using Werewolves.StateModels.Models;
 namespace Werewolves.GameLogic.Models.InternalMessages;
 
 /// <summary>
-/// Represents the outcome of a phase handler's execution.
+/// Abstract base record representing the outcome of a phase handler's execution.
 /// </summary>
-public record PhaseHandlerResult(ModeratorInstruction ModeratorInstruction);
+internal abstract record PhaseHandlerResult(ModeratorInstruction? ModeratorInstruction);
 
-public record MainPhaseHandlerResult(ModeratorInstruction ModeratorInstruction, GamePhase MainPhase, PhaseTransitionReason TransitionReason) 
-	: PhaseHandlerResult(ModeratorInstruction)
+/// <summary>
+/// For transitioning between main phases (e.g., Night -> Day_Dawn).
+/// </summary>
+internal sealed record MainPhaseHandlerResult(
+    ModeratorInstruction? ModeratorInstruction, 
+    GamePhase MainPhase, 
+    PhaseTransitionReason TransitionReason) : PhaseHandlerResult(ModeratorInstruction)
 {
-    // Static factory methods
+    /// <summary>
+    /// Creates a main phase transition result.
+    /// </summary>
     public static MainPhaseHandlerResult TransitionPhase(ModeratorInstruction nextInstruction, GamePhase mainPhase, PhaseTransitionReason transitionReason) =>
         new(nextInstruction, mainPhase, transitionReason);
 }
 
-public record SubPhaseHandlerResult(ModeratorInstruction ModeratorInstruction, Enum? SubGamePhase) 
-	: PhaseHandlerResult(ModeratorInstruction)
+/// <summary>
+/// For transitioning between sub-phases (e.g., Night.Start -> Night.ActionLoop).
+/// </summary>
+internal sealed record SubPhaseHandlerResult(
+    ModeratorInstruction? ModeratorInstruction, 
+    Enum SubGamePhase) : PhaseHandlerResult(ModeratorInstruction)
 {
-	public static SubPhaseHandlerResult TransitionSubPhase(ModeratorInstruction nextInstruction, Enum subGamePhase) =>
-		new(nextInstruction, subGamePhase);
-	public static SubPhaseHandlerResult StayInSubPhase(ModeratorInstruction nextInstruction) =>
-		new(nextInstruction, null);
+    /// <summary>
+    /// Creates a sub-phase transition result.
+    /// </summary>
+    public static SubPhaseHandlerResult TransitionSubPhase(ModeratorInstruction nextInstruction, Enum subGamePhase) =>
+        new(nextInstruction, subGamePhase);
+}
+
+/// <summary>
+/// For remaining in the current sub-phase (e.g., while awaiting hook listener input).
+/// </summary>
+internal sealed record StayInSubPhaseHandlerResult(
+    ModeratorInstruction? ModeratorInstruction) : PhaseHandlerResult(ModeratorInstruction)
+{
+    /// <summary>
+    /// Creates a stay-in-sub-phase result.
+    /// </summary>
+    public static StayInSubPhaseHandlerResult StayInSubPhase(ModeratorInstruction nextInstruction) =>
+        new(nextInstruction);
 }

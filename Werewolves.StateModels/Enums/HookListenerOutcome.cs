@@ -16,11 +16,5 @@ public enum HookListenerOutcome
     /// The listener has successfully completed all its actions for this hook invocation.
     /// The GameFlowManager should proceed to the next listener in the hook sequence.
     /// </summary>
-    Complete,
-    
-    /// <summary>
-    /// An error occurred during processing.
-    /// The GameFlowManager should halt and report the error.
-    /// </summary>
-    Error
+    Complete
 }

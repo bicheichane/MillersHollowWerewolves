@@ -35,11 +35,38 @@ public enum DawnSubPhases
 }
 
 /// <summary>
-/// Internal sub-phases for the Day_Dusk phase (vote resolution).
+/// Internal sub-phases for Day_Dusk phase (vote resolution).
 /// Kept for potential future expansion, though currently simpler.
 /// </summary>
 public enum DayDuskSubPhases
 {
     ResolveVote,        // Process the vote outcome and handle eliminations
     TransitionToNext    // Determine next phase (night or dawn for role reveals)
+}
+
+/// <summary>
+/// Internal sub-phases for Setup phase.
+/// Simple phase with single confirmation step.
+/// </summary>
+public enum SetupSubPhases
+{
+    Confirm            // Moderator confirms setup is complete
+}
+
+/// <summary>
+/// Internal sub-phases for Day_Debate phase.
+/// Simple phase with single confirmation step.
+/// </summary>
+public enum DayDebateSubPhases
+{
+    Confirm            // Moderator confirms debate is complete
+}
+
+/// <summary>
+/// Internal sub-phases for Day_Vote phase.
+/// Simple phase with single outcome processing step.
+/// </summary>
+public enum DayVoteSubPhases
+{
+    ProcessOutcome     // Process vote outcome reported by moderator
 }

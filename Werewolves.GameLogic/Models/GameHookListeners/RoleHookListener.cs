@@ -303,37 +303,34 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			var output = ActionToPerform(session, input);
 			var newState = output.NextListenerPhase;
 
-			if (output.Outcome != HookListenerOutcome.Error)
+			if (newState == null)
 			{
-				if (newState == null)
-				{
-					throw new InvalidOperationException(
-						$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to null state");
-				}
-
-				//if we are in a stage that should advance state, but we didn't, throw
-				else if (ShouldAdvanceState &&
-				         newState.Equals(currentState))
-				{
-					throw new InvalidOperationException(
-						$"State Machine Error: MainRole '{MainRoleType}' attempted to remain in state '{newState}' " +
-						$"but this stage requires state advancement.");
-				}
-
-				//if we didn't error out and we ended up in a state not in PossibleEndStages, throw
-				else if (PossibleEndStages != null &&
-				         PossibleEndStages.Contains((TRoleStateEnum)newState) == false)
-				{
-					var joinedPossibleStateList = string.Join(", ", PossibleEndStages);
-					throw new InvalidOperationException(
-						$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to invalid state '{newState}'. " +
-						$"Valid end states from this stage are: {joinedPossibleStateList}."
-					);
-				}
-
-				//set the new state
-				session.TransitionListenerState(MainRoleType, (TRoleStateEnum)newState);
+				throw new InvalidOperationException(
+					$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to null state");
 			}
+
+			//if we are in a stage that should advance state, but we didn't, throw
+			else if (ShouldAdvanceState &&
+			         newState.Equals(currentState))
+			{
+				throw new InvalidOperationException(
+					$"State Machine Error: MainRole '{MainRoleType}' attempted to remain in state '{newState}' " +
+					$"but this stage requires state advancement.");
+			}
+
+			//if we didn't error out and we ended up in a state not in PossibleEndStages, throw
+			else if (PossibleEndStages != null &&
+			         PossibleEndStages.Contains((TRoleStateEnum)newState) == false)
+			{
+				var joinedPossibleStateList = string.Join(", ", PossibleEndStages);
+				throw new InvalidOperationException(
+					$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to invalid state '{newState}'. " +
+					$"Valid end states from this stage are: {joinedPossibleStateList}."
+				);
+			}
+
+			//set the new state
+			session.TransitionListenerState(MainRoleType, (TRoleStateEnum)newState);
 
 
 			return output;

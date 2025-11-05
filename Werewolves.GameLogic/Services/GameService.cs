@@ -90,7 +90,7 @@ public class GameService
 			return validationResult; // Return failure if validation fails
 		}
 
-		return GameFlowManager.HandleInput(this, (GameSession)session, input);
+		return GameFlowManager.HandleInput(session, input);
 	}
 
 	// --- Helper Methods ---
