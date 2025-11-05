@@ -49,8 +49,8 @@ internal partial class GameSession : IGameSession
 
 	internal void TransitionActiveHook(GameHook hook) => PhaseStateCache.TransitionHook(hook);
 
-    internal void TransitionSubPhase<T>(T subPhase) where T : struct, Enum =>
-        PhaseStateCache.TransitionSubPhase<T>(subPhase);
+    internal void TransitionSubPhase(Enum subPhase) =>
+        PhaseStateCache.TransitionSubPhase(subPhase);
 
     internal void TransitionListenerState<T>(ListenerIdentifier listener, T state) where T : struct, Enum =>
         PhaseStateCache.TransitionListenerAndState<T>(listener, state);
@@ -140,7 +140,7 @@ internal partial class GameSession : IGameSession
         PerformNightActionCore(type, targetIds, actionOutcome);
 
     // Public command methods - these create log entries and apply them
-    internal void EliminatePlayer(Guid playerId, EliminationReason reason)
+    internal void EliminatePlayer(Guid playerId, EliminationReason reason, RoleType playerRole)
     {
         var entry = new PlayerEliminatedLogEntry
         {
@@ -148,7 +148,8 @@ internal partial class GameSession : IGameSession
             TurnNumber = TurnNumber,
             CurrentPhase = PhaseStateCache.GetCurrentPhase(),
             PlayerId = playerId,
-            Reason = reason
+            Reason = reason,
+            PlayerRole = playerRole
         };
 
         _gameHistoryLog.Add(entry);

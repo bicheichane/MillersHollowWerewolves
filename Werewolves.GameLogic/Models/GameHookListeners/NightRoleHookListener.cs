@@ -19,13 +19,13 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 	protected abstract T AsleepStateEnum { get; }
 	protected abstract bool HasNightPowers { get; }
 
-	protected override List<RoleStateMachineStage> DefineStateMachineStages() => new()
-	{
+	protected override List<RoleStateMachineStage> DefineStateMachineStages() => 
+	[
 		CreateStage(GameHook.NightActionLoop, null, [WokenUpStateEnum, AsleepStateEnum], HandleRoleWakeupAndId),
 		CreateOpenEndedStage(GameHook.NightActionLoop, WokenUpStateEnum, HandleNightPowerUse_AndId),
 		CreateStage(GameHook.NightActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
 		CreateEndStage(GameHook.NightActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
-	};
+	];
 
 	/// <summary>
 	/// Defines the behaviour when the role has just finished waking up,

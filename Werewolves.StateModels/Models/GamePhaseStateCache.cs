@@ -52,7 +52,7 @@ public record struct GamePhaseStateCache
     /// </summary>
     /// <typeparam name="T">The enum type for the sub-phase.</typeparam>
     /// <param name="subPhase">The optional sub-phase enum value.</param>
-    internal void TransitionSubPhase<T>(T subPhase) where T : struct, Enum
+    internal void TransitionSubPhase(Enum subPhase)
     {
 		ClearCurrentHook();
 		_currentGfmSubPhase = subPhase.ToString();

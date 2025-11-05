@@ -10,11 +10,11 @@ public record PlayerEliminatedLogEntry : GameLogEntryBase
 {
     public required Guid PlayerId { get; init; }
     public required EliminationReason Reason { get; init; }
-
-    /// <summary>
-    /// Applies the player elimination to the game state.
-    /// </summary>
-    internal override void Apply(GameSession.IStateMutator mutator)
+    public required RoleType PlayerRole { get; init; }
+	/// <summary>
+	/// Applies the player elimination to the game state.
+	/// </summary>
+	internal override void Apply(GameSession.IStateMutator mutator)
     {
         mutator.SetPlayerHealth(PlayerId, PlayerHealth.Dead);
     }

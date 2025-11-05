@@ -20,16 +20,11 @@ internal class HookListenerActionResult
     /// </summary>
     public ModeratorInstruction? Instruction { get; }
     
-    /// <summary>
-    /// Error details when Outcome is Error.
-    /// </summary>
-    public GameError? ErrorMessage { get; }
 
-    protected HookListenerActionResult(HookListenerOutcome outcome, ModeratorInstruction? instruction = null, GameError? error = null)
+    protected HookListenerActionResult(HookListenerOutcome outcome, ModeratorInstruction? instruction = null)
     {
         Outcome = outcome;
         Instruction = instruction;
-        ErrorMessage = error;
     }
 
     /// <summary>
@@ -51,29 +46,19 @@ internal class HookListenerActionResult
     {
         return new HookListenerActionResult(HookListenerOutcome.Complete);
     }
-
-    /// <summary>
-    /// Creates an Error result with the provided error details.
-    /// </summary>
-    /// <param name="error">The error that occurred.</param>
-    /// <returns>A HookListenerActionResult indicating an error occurred.</returns>
-    public static HookListenerActionResult Error(GameError error)
-    {
-        return new HookListenerActionResult(HookListenerOutcome.Error, error: error);
-    }
 }
 
 internal class HookListenerActionResult<T> : HookListenerActionResult where T : struct, Enum
 {
 	public T? NextListenerPhase { get; }
 
-	private HookListenerActionResult(HookListenerOutcome outcome, ModeratorInstruction? instruction = null, T? nextListenerPhase = null, GameError? error = null) : base(outcome, instruction, error)
+	private HookListenerActionResult(HookListenerOutcome outcome, ModeratorInstruction? instruction = null, T? nextListenerPhase = null) : base(outcome, instruction)
 	{
 		NextListenerPhase = nextListenerPhase;
 	}
 
 	public HookListenerActionResult(HookListenerActionResult baseResult, T nextListenerPhase) : 
-		base(baseResult.Outcome, baseResult.Instruction, baseResult.ErrorMessage)
+		base(baseResult.Outcome, baseResult.Instruction)
 	{
 		NextListenerPhase = nextListenerPhase;
 	}
@@ -97,16 +82,6 @@ internal class HookListenerActionResult<T> : HookListenerActionResult where T : 
 	{
 		return new HookListenerActionResult<T>(HookListenerOutcome.Complete, nextListenerPhase: nextListenerPhase);
 	}
-
-	/// <summary>
-	/// Creates an Error result with the provided error details.
-	/// </summary>
-	/// <param name="error">The error that occurred.</param>
-	/// <returns>A HookListenerActionResult indicating an error occurred.</returns>
-	public new static HookListenerActionResult<T> Error(GameError error)
-	{
-		return new HookListenerActionResult<T>(HookListenerOutcome.Error, error: error);
-	}
 }
 
 
@@ -114,12 +89,10 @@ public class HookHandlerResult
 {
     public HookHandlerOutcome Outcome { get; }
     public ModeratorInstruction? Instruction { get; }
-    public GameError? ErrorMessage { get; }
-    private HookHandlerResult(HookHandlerOutcome outcome, ModeratorInstruction? instruction = null, GameError? error = null)
+    private HookHandlerResult(HookHandlerOutcome outcome, ModeratorInstruction? instruction = null)
     {
         Outcome = outcome;
         Instruction = instruction;
-        ErrorMessage = error;
     }
 
     public static HookHandlerResult NeedInput(ModeratorInstruction? instruction = null)
@@ -129,9 +102,5 @@ public class HookHandlerResult
     public static HookHandlerResult Complete()
     {
         return new HookHandlerResult(HookHandlerOutcome.Complete);
-    }
-    public static HookHandlerResult Error(GameError error)
-    {
-        return new HookHandlerResult(HookHandlerOutcome.Error, error: error);
     }
 }

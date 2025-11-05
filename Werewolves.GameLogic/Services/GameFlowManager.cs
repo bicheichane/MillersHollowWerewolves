@@ -11,6 +11,9 @@ using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
+using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
+using static Werewolves.GameLogic.Models.InternalMessages.PhaseHandlerResult;
+using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
 
 namespace Werewolves.GameLogic.Services;
 
@@ -20,8 +23,7 @@ namespace Werewolves.GameLogic.Services;
 internal static class GameFlowManager
 {
     #region Static Flow Definitions
-    // Hook system infrastructure - defined at class level
-    private static readonly Dictionary<GameHook, List<ListenerIdentifier>> _masterHookListeners = new()
+    private static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
         // Define hook-to-listener mappings here
         [GameHook.NightActionLoop] =
@@ -31,7 +33,7 @@ internal static class GameFlowManager
         ]
     };
 
-    private static readonly Dictionary<ListenerIdentifier, IGameHookListener> _listenerImplementations = new()
+    private static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
     {
         // Define listener implementations here
         [ListenerIdentifier.Create(RoleType.SimpleWerewolf)] = new SimpleWerewolf(),
@@ -39,8 +41,7 @@ internal static class GameFlowManager
         [ListenerIdentifier.Create(RoleType.SimpleVillager)] = new SimpleVillager()
     };
 
-    // Phase definitions - defined at class level for performance and consistency
-    private static readonly Dictionary<GamePhase, PhaseDefinition> _phaseDefinitions = new()
+    private static readonly Dictionary<GamePhase, PhaseDefinition> PhaseDefinitions = new()
     {
         [GamePhase.Setup] = new(
             ProcessInputAndUpdatePhase: HandleSetupPhase,
@@ -95,8 +96,6 @@ internal static class GameFlowManager
             // No transitions out of GameOver
         )
     };
-
-
     #endregion
 
     #region State Machine
@@ -105,105 +104,87 @@ internal static class GameFlowManager
     {
         
         ModeratorInstruction? nextInstructionToSend = null;
-        do
+        
+    
+        var currentPhase = session.GetCurrentPhase();
+        
+        // --- Execute Phase Handler ---
+        PhaseHandlerResult handlerResult = ProcessInputAndUpdatePhase(session, input);
+
+        if (handlerResult is MainPhaseHandlerResult mainPhaseResult)
         {
-            var phaseBeforeHandler = session.GetCurrentPhase();
-            
+            var previousPhaseDef = PhaseDefinitions[currentPhase];
 
-            // --- Execute Phase Handler ---
-            PhaseHandlerResult handlerResult = ProcessInputAndUpdatePhase(session, input);
+            var possibleTransitions =
+                previousPhaseDef.PossiblePhaseTransitions ?? (List<PhaseTransitionInfo>)[];
 
-            // --- Handle Handler Failure ---
-            if (!handlerResult.IsSuccess)
+            var transitionInfo = possibleTransitions.FirstOrDefault(t =>
+                t.TargetPhase == mainPhaseResult.MainPhase &&
+                t.ConditionOrReason == mainPhaseResult.TransitionReason);
+
+            if (transitionInfo == null)
             {
-                // Return failure, keeping the current pending instruction
-                return ProcessResult.Failure(handlerResult.Error!);
+                throw new InvalidOperationException(
+                    $"Internal State Machine Error: Undocumented transition from '{currentPhase}' to '{mainPhaseResult.MainPhase}' with reason '{mainPhaseResult.TransitionReason}'");
             }
 
-            // --- Process Handler Success ---
-            var phaseAfterHandler = session.GetCurrentPhase(); // Fetch potentially updated phase
+			session.TransitionMainPhase(
+                mainPhaseResult.MainPhase,
+                mainPhaseResult.TransitionReason);
+		}
+        else 
+        if (handlerResult is SubPhaseHandlerResult { SubGamePhase: not null } subPhaseResult)
+        {
+            session.TransitionSubPhase(subPhaseResult.SubGamePhase);
+        }
 
-            // Note: ExpectedInputType is now handled differently in the new architecture
-            // Each instruction type knows its own expected response format
 
+		nextInstructionToSend = handlerResult.ModeratorInstruction;
 
-            try // Wrap state machine validation logic in try-catch for robustness
-            {
-                if (phaseAfterHandler != phaseBeforeHandler)
-                {
-                    // --- Phase Changed --- Validate Transition and Determine Next Instruction ---
-                    if (handlerResult.TransitionReason == null)
-                    {
-                        // TODO: Use GameString
-                        throw new InvalidOperationException(
-                            $"Internal State Machine Error: Phase transitioned from {phaseBeforeHandler} to {phaseAfterHandler} but handler did not provide a TransitionReason.");
-                    }
+		if(TryGetVictoryInstructions(session, currentPhase, out var victoryInstruction))
+        {
+            nextInstructionToSend = victoryInstruction;
+		}
 
-                    var previousPhaseDef = _phaseDefinitions[phaseBeforeHandler];
-
-                    var possibleTransitions =
-                        previousPhaseDef.PossiblePhaseTransitions ?? (List<PhaseTransitionInfo>)[];
-                    var transitionInfo = possibleTransitions.FirstOrDefault(t =>
-                        t.TargetPhase == phaseAfterHandler &&
-                        t.ConditionOrReason == handlerResult.TransitionReason); // Enum comparison
-
-                    if (transitionInfo == null)
-                    {
-                        // TODO: Use GameString
-                        throw new InvalidOperationException(
-                            $"Internal State Machine Error: Undocumented transition from '{phaseBeforeHandler}' to '{phaseAfterHandler}' with reason '{handlerResult.TransitionReason}'. Add to PhaseDefinition.");
-                    }
-
-                    // Use new log-driven phase transition
-                    session.TransitionMainPhase(transitionInfo.TargetPhase, (PhaseTransitionReason)transitionInfo.ConditionOrReason!);
-				}
-
-                nextInstructionToSend = handlerResult.ModeratorInstruction;
-            }
-            catch (Exception ex)
-            {
-                // Log the internal error and return a generic failure to the caller
-                Console.Error.WriteLine($"STATE MACHINE ERROR: {ex.Message}");
-                // TODO: Consider a specific internal error GameError for the public API
-                return ProcessResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError,
-                    $"Internal state machine error: {ex.Message}"));
-            }
-
-            // --- Post-Processing: Victory Check ---
-            // Check victory ONLY after specific resolution phases
-            if (phaseBeforeHandler == GamePhase.Day_Dawn || phaseBeforeHandler == GamePhase.Day_Dusk)
-            {
-                var victoryCheckResult = CheckVictoryConditions(session);
-                if (victoryCheckResult != null &&
-                    session.GetCurrentPhase() !=
-                    GamePhase.GameOver) // Check if victory wasn't already set
-                {
-                    // Victory condition met!
-                    session.VictoryConditionMet(victoryCheckResult.Value.WinningTeam, victoryCheckResult.Value.Description);
-
-                    var finalInstruction = new ConfirmationInstruction(
-                        String.Format(GameStrings.GameOverMessage, victoryCheckResult.Value.Description)
-                    );
-                    nextInstructionToSend = finalInstruction; // Override instruction
-                }
-            }
-        } while (nextInstructionToSend == null);
-
-        // --- Update Pending Instruction ---
-        session.PendingModeratorInstruction = nextInstructionToSend;
+		// --- Update Pending Instruction ---
+		session.PendingModeratorInstruction = nextInstructionToSend;
 
 		// If no victory override, return the determined success result
 		return ProcessResult.Success(nextInstructionToSend);
+    }
+
+    private static bool TryGetVictoryInstructions(GameSession session, GamePhase currentPhase,
+        out ModeratorInstruction? nextInstructionToSend)
+    {
+        nextInstructionToSend = null;
+        // --- Post-Processing: Victory Check ---
+        // Check victory ONLY after specific resolution phases
+        if (currentPhase == GamePhase.Day_Dawn || currentPhase == GamePhase.Day_Dusk)
+        {
+            var victoryCheckResult = CheckVictoryConditions(session);
+            if (victoryCheckResult != null)
+            {
+                // Victory condition met!
+                session.VictoryConditionMet(victoryCheckResult.Value.WinningTeam, victoryCheckResult.Value.Description);
+
+                var finalInstruction = new ConfirmationInstruction(
+                    String.Format(GameStrings.GameOverMessage, victoryCheckResult.Value.Description)
+                );
+                nextInstructionToSend = finalInstruction; // Override instruction
+                return true;
+            }
+        }
+
+		return false;
     }
 
     private static PhaseHandlerResult ProcessInputAndUpdatePhase(GameSession session, ModeratorResponse input)
     {
         var currentPhase = session.GetCurrentPhase();
         
-        if (!_phaseDefinitions.TryGetValue(currentPhase, out var phaseDef))
+        if (!PhaseDefinitions.TryGetValue(currentPhase, out var phaseDef))
         {
-            return PhaseHandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, 
-                $"No phase definition found for phase: {currentPhase}"));
+            throw new InvalidOperationException($"No phase definition found for phase: {currentPhase}");
         }
 
         // Get service reference - this would need to be passed in or stored
@@ -237,12 +218,6 @@ internal static class GameFlowManager
 
     #region Phase Handlers
 
-    private static PhaseHandlerResult TransitionToPhase(GameSession session, GamePhase phase, PhaseTransitionReason reason, ModeratorInstruction instruction)
-    {
-        session.TransitionMainPhase(phase, reason);
-        return PhaseHandlerResult.SuccessTransition(instruction, reason);
-	}
-
 	private static PhaseHandlerResult HandleSetupPhase(GameSession session, ModeratorResponse input, GameService service)
     {
         var nightStartInstruction = new ConfirmationInstruction(
@@ -251,7 +226,7 @@ internal static class GameFlowManager
         );
         // Transition happens, specific instruction provided.
         
-        return TransitionToPhase(session, GamePhase.Night, PhaseTransitionReason.SetupConfirmed, nightStartInstruction);
+        return TransitionPhase(nightStartInstruction, GamePhase.Night, PhaseTransitionReason.SetupConfirmed);
     }
 
     /// <summary>
@@ -272,8 +247,7 @@ internal static class GameFlowManager
                 return HandleNightActionLoop(session, input, service);
             
             default:
-                return PhaseHandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, 
-                    $"Unknown night sub-phase: {subPhase}"));
+                throw new InvalidOperationException($"Unknown night sub-phase: {subPhase}");
         }
     }
 
@@ -301,8 +275,8 @@ internal static class GameFlowManager
                 return HandleDawnFinalize(session, input, service);
             
             default:
-                return PhaseHandlerResult.Failure(new GameError(ErrorType.Unknown, GameErrorCode.Unknown_InternalError, 
-                    $"Unknown dawn sub-phase: {subPhase}"));
+                throw new InvalidOperationException(
+                    $"Unknown dawn sub-phase: {subPhase}");
         }
     }
 
@@ -315,7 +289,7 @@ internal static class GameFlowManager
             publicAnnouncement: GameStrings.DebateStartsPrompt
         );
         
-        return TransitionToPhase(session, GamePhase.Day_Vote, PhaseTransitionReason.DebateConfirmedProceedToVote, voteInstruction);
+        return TransitionPhase(voteInstruction, GamePhase.Day_Vote, PhaseTransitionReason.DebateConfirmedProceedToVote);
     }
 
     private static PhaseHandlerResult HandleDayVotePhase(GameSession session, ModeratorResponse input, GameService service)
@@ -326,7 +300,7 @@ internal static class GameFlowManager
             publicAnnouncement: GameStrings.VoteStartsPrompt
         );
         
-        return TransitionToPhase(session, GamePhase.Day_Dusk, PhaseTransitionReason.VoteOutcomeReported, duskInstruction);
+        return TransitionPhase(duskInstruction, GamePhase.Day_Dusk, PhaseTransitionReason.VoteOutcomeReported);
     }
 
     private static PhaseHandlerResult HandleDayDuskPhase(GameSession session, ModeratorResponse input, GameService service)
@@ -338,7 +312,7 @@ internal static class GameFlowManager
             publicAnnouncement: GameStrings.NightStartsPrompt
         );
         
-        return TransitionToPhase(session, GamePhase.Night, PhaseTransitionReason.VoteResolvedTieProceedToNight, nightInstruction);
+        return TransitionPhase(nightInstruction, GamePhase.Night, PhaseTransitionReason.VoteResolvedTieProceedToNight);
     }
 
     private static PhaseHandlerResult HandleAccusationVotingPhase(GameSession session, ModeratorResponse input, GameService service)
@@ -355,9 +329,7 @@ internal static class GameFlowManager
 
     private static PhaseHandlerResult HandleGameOverPhase(GameSession session, ModeratorResponse input, GameService service)
     {
-        // No actions allowed in GameOver state, return error if any input is attempted
-        var error = new GameError(ErrorType.InvalidOperation, GameErrorCode.InvalidOperation_GameIsOver, GameStrings.GameOverMessage);
-        return PhaseHandlerResult.Failure(error);
+        return StayInSubPhase(new ConfirmationInstruction("you won, shut up now"));
     }
 
     #endregion
@@ -373,14 +345,12 @@ internal static class GameFlowManager
         // - Increment turn number if transitioning from day phase
         // - Issue "Village goes to sleep" instruction
         // - Transition to ActionLoop (unified night actions including first-night identification)
-        
-        session.TransitionSubPhase<NightSubPhases>(NightSubPhases.ActionLoop);
 
         var instruction = new ConfirmationInstruction(
             publicAnnouncement: "Village goes to sleep. Night actions begin."
         );
 
-        return PhaseHandlerResult.SuccessStayInPhase(instruction);
+        return TransitionSubPhase(instruction, NightSubPhases.ActionLoop);
     }
 
     /// <summary>
@@ -391,33 +361,14 @@ internal static class GameFlowManager
         // Fire the unified night action loop hook
         var hookResult = FireHook(GameHook.NightActionLoop, session, input);
 
-        return HandleHookResult(hookResult, () =>
+        return HandleHookResult(hookResult, onComplete: () =>
         {
             var instruction = new ConfirmationInstruction(
                 publicAnnouncement: "Night actions complete. Village wakes up."
             );
 
-            return TransitionToPhase(session, GamePhase.Day_Dawn, PhaseTransitionReason.NightActionLoopComplete,
-                instruction);
+            return TransitionPhase(instruction, GamePhase.Day_Dawn, PhaseTransitionReason.NightActionLoopComplete);
         });
-    }
-
-    private static PhaseHandlerResult HandleHookResult(HookHandlerResult hookResult, Func<PhaseHandlerResult> onComplete)
-    {
-        switch (hookResult.Outcome)
-        {
-            case HookHandlerOutcome.NeedInput:
-                return PhaseHandlerResult.SuccessStayInPhase(hookResult.Instruction!);
-            
-            case HookHandlerOutcome.Error:
-                return PhaseHandlerResult.Failure(hookResult.ErrorMessage!);
-            
-            case HookHandlerOutcome.Complete:
-                return onComplete();
-            
-            default:
-                throw new InvalidOperationException($"Unknown HookListenerOutcome: {hookResult.Outcome}");
-        }
     }
 
     #endregion
@@ -435,14 +386,12 @@ internal static class GameFlowManager
         // - Process queue of cascading effects (Hunter, Lovers, etc.)
         // - Handle moderator input for targets if needed
         // - Transition to AnnounceVictims when complete
-        
-        session.TransitionSubPhase<DawnSubPhases>(DawnSubPhases.AnnounceVictims);
 
         var instruction = new ConfirmationInstruction(
             publicAnnouncement: "Night victims calculated. Ready to announce."
         );
 
-        return PhaseHandlerResult.SuccessStayInPhase(instruction);
+        return TransitionSubPhase(instruction, DawnSubPhases.AnnounceVictims);
     }
 
     /// <summary>
@@ -454,14 +403,12 @@ internal static class GameFlowManager
         // - Issue single instruction to announce all victims
         // - Await moderator confirmation to proceed
         // - Transition to ProcessRoleReveals
-        
-        session.TransitionSubPhase<DawnSubPhases>(DawnSubPhases.ProcessRoleReveals);
 
         var instruction = new ConfirmationInstruction(
             publicAnnouncement: "Victims announced. Ready to process role reveals."
         );
 
-        return PhaseHandlerResult.SuccessStayInPhase(instruction);
+        return TransitionSubPhase(instruction, DawnSubPhases.ProcessRoleReveals);
     }
 
     /// <summary>
@@ -475,13 +422,11 @@ internal static class GameFlowManager
         // - Pause and resume as input is received for each reveal
         // - Transition to Finalize when complete
         
-        session.TransitionSubPhase<DawnSubPhases>(DawnSubPhases.Finalize);
-        
         var instruction = new ConfirmationInstruction(
             publicAnnouncement: "Role reveals processed. Finalizing dawn phase."
         );
         
-        return PhaseHandlerResult.SuccessStayInPhase(instruction);
+        return TransitionSubPhase(instruction, DawnSubPhases.Finalize);
     }
 
     /// <summary>
@@ -497,12 +442,12 @@ internal static class GameFlowManager
             publicAnnouncement: "Dawn phase complete. Beginning debate."
         );
 
-        return TransitionToPhase(session, GamePhase.Day_Debate, PhaseTransitionReason.DawnNoVictimsProceedToDebate, instruction);
+        return TransitionPhase(instruction, GamePhase.Day_Debate, PhaseTransitionReason.DawnNoVictimsProceedToDebate);
     }
 
     #endregion
 
-    #region Hook System Infrastructure (Placeholder Implementation)
+    #region Hook System Infrastructure
 
     /// <summary>
     /// Fires a game hook and dispatches to registered listeners.
@@ -518,7 +463,7 @@ internal static class GameFlowManager
         session.TransitionActiveHook(hook);
         
         // Get registered listeners for this hook
-        if (!_masterHookListeners.TryGetValue(hook, out var listeners))
+        if (!HookListeners.TryGetValue(hook, out var listeners))
         {
             // No listeners registered for this hook, complete it
             return HookHandlerResult.Complete();
@@ -530,7 +475,7 @@ internal static class GameFlowManager
         // Dispatch to each listener in sequence
         foreach (var listenerId in listeners)
         {
-            if (!_listenerImplementations.TryGetValue(listenerId, out var listener))
+            if (!ListenerImplementations.TryGetValue(listenerId, out var listener))
             {
                 throw new InvalidOperationException($"Listener implementation not found for listener ID: {listenerId}");
             }
@@ -550,10 +495,6 @@ internal static class GameFlowManager
                     // Handler needs input, pause processing
                     return HookHandlerResult.NeedInput(result.Instruction);
 
-                case HookListenerOutcome.Error:
-                    // Listener encountered an error
-                    return HookHandlerResult.Error(result.ErrorMessage!);
-
                 case HookListenerOutcome.Complete:
                     // Listener completed successfully, continue to next
                     continue;
@@ -568,5 +509,22 @@ internal static class GameFlowManager
     }
 
 
-    #endregion
+    private static PhaseHandlerResult HandleHookResult(HookHandlerResult hookResult, Func<PhaseHandlerResult> onComplete)
+    {
+        switch (hookResult.Outcome)
+        {
+            case HookHandlerOutcome.NeedInput:
+                return StayInSubPhase(hookResult.Instruction!);
+
+            case HookHandlerOutcome.Complete:
+                return onComplete();
+
+            default:
+                throw new InvalidOperationException($"Unknown HookListenerOutcome: {hookResult.Outcome}");
+        }
+    }
+
+
+
+	#endregion
 }

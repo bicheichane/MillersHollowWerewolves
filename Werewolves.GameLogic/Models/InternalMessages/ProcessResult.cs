@@ -14,14 +14,13 @@ namespace Werewolves.GameLogic.Models.InternalMessages;
 /// <param name="Error">Error details if IsSuccess is false.</param>
 public record ProcessResult(
     bool IsSuccess,
-    ModeratorInstruction? ModeratorInstruction,
-    GameError? Error = null
+    ModeratorInstruction? ModeratorInstruction
 )
 {
     // Static factory methods for convenience
     public static ProcessResult Success(ModeratorInstruction instruction) =>
-        new(true, instruction, null);
+        new(true, instruction);
 
-    public static ProcessResult Failure(GameError error) =>
-        new(false, null, error);
+    public static ProcessResult Failure(ModeratorInstruction instruction) =>
+        new(false, null);
 } 

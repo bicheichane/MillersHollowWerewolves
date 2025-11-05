@@ -250,12 +250,10 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
 10. **`PhaseHandlerResult` Record:** The standardized internal return type for all phase handler functions. It communicates the outcome of the handler's execution back to the main `GameFlowManager.HandleInput` loop. 
     *   **Purpose:** Provides a structured way for phase handlers to indicate success/failure, request phase transitions, and specify the next moderator instruction. 
     *   **Structure:** 
-        *   `IsSuccess` (bool): Indicates if the handler processed the input successfully. 
         *   `NextInstruction` (ModeratorInstruction?): The specific instruction for the moderator for the *next* step, if the handler determined it. Ignored if `UseDefaultInstructionForNextPhase` is true. 
         *   `TransitionReason` (PhaseTransitionReason? Enum): If a phase transition occurred, this holds the enum value identifying *why* the transition happened (e.g., `PhaseTransitionReason.VoteTied`, `PhaseTransitionReason.WwActionComplete`). This value **must** match the `ConditionOrReason` of a `PhaseTransitionInfo` defined in the *source* phase's `PossibleTransitions` list in `GameFlowManager`. Null if no transition occurred. 
         *   `UseDefaultInstructionForNextPhase` (bool): If true, signals `GameFlowManager` to ignore `NextInstruction` and instead use the `DefaultEntryInstruction` defined for the *target* phase in `GameFlowManager`. 
         *   `ShouldTransitionPhase` (bool): Indicates whether the handler has changed the game phase and the state machine should process a transition. 
-        *   `Error` (GameError?): Contains error details if `IsSuccess` is false. 
     *   **Immutability:** Designed as an immutable record. 
     *   **Usage:** Enables the central `GameFlowManager.HandleInput` logic to understand the outcome of a phase handler, validate the resulting state transition against the declared state machine rules, determine the correct next instruction, and validate the expected input for that instruction. **Includes static factory methods for common results:** 
         *   `SuccessTransition()`: For successful phase transitions 
@@ -293,17 +291,9 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
         *   **State Cache Validation:** Validates that `IntraPhaseStateCache` operations are consistent with state machine rules. 
         *   **Internal Error Detection:** Catches internal state machine inconsistencies and provides detailed error messages for debugging. 
     *   **Error Handling:** Validation failures result in `GameError` objects with specific error codes and descriptive messages, ensuring robust error reporting and debugging capabilities. 
+
  
-13. **`GameError` Class:** 
-    *   **Purpose:** Provides structured information about a specific error that occurred during game logic processing. 
-    *   **Structure:** 
-        *   `Type` (`ErrorType` enum): Classifies the error. 
-        *   `Code` (`GameErrorCode` enum): Specific error identifier. 
-        *   `Message` (string): Human-readable description. 
-        *   `Context` (Optional `IReadOnlyDictionary<string, object>`): Relevant data. 
-    *   **Usage:** Returned within a `PhaseHandlerResult` (if `IsSuccess` is false) or wrapped in the final `ProcessResult` by `GameFlowManager.HandleInput`. Allows the calling layer to handle errors gracefully. 
- 
-14. **`ModeratorResponse` Class:** Data structure for communication FROM the moderator. 
+13. **`ModeratorResponse` Class:** Data structure for communication FROM the moderator. 
     *   `Type` (enum `ExpectedInputType`): Indicates which optional field below is populated. 
     *   `SelectedPlayerIds` (List<Guid>?): IDs of players chosen. **Used for role identification (`PlayerSelectionMultiple`) and vote outcome (`PlayerSelectionSingle`, allowing 0 for tie).** 
     *   `AssignedPlayerRoles` (Dictionary<Guid, RoleType>?): Player IDs mapped to the role assigned to them. Used during setup/role assignment phases (e.g., Thief, initial role identification). 
@@ -318,7 +308,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
  
 -------------------------- 
  
-15. **`ModeratorInstruction` Class Hierarchy:** Polymorphic instruction system for communication TO the moderator. 
+14. **`ModeratorInstruction` Class Hierarchy:** Polymorphic instruction system for communication TO the moderator. 
     *   **Abstract Base Class:** 
         *   `PublicAnnouncement` (string?): Text to be read aloud or displayed publicly to all players. 
         *   `PrivateInstruction` (string?): Text for moderator's eyes only, containing reminders, rules, or guidance. 
@@ -331,7 +321,7 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
  
 -------------------------- 
  
-16. **Enums:** 
+15. **Enums:** 
     *   `GamePhase`: `Setup`, `Night`, `Day_Dawn`, `Day_Debate`, `Day_Vote`, `Day_Dusk`, `AccusationVoting` (Nightmare), `FriendVoting` (Great Distrust), `GameOver`. 
     *   `PlayerHealth`: `Alive`, `Dead`. 
     *   `Team` (Represents the fundamental winning factions/conditions): 
@@ -472,8 +462,9 @@ Consequently, the `ModeratorInput` structure requires the moderator to provide o
     *   The final "Game Over" instruction was set when victory was first detected by the automatic victory checking. 
  
 --------------------------- 
- 
-**Setup & Initial State Logs:** 
+# Game Logs 
+
+## Setup & Initial State Logs:
  
 The chosen approach is an abstract base class (`GameLogEntryBase`) providing universal properties (`Timestamp`, `TurnNumber`, `Phase`) combined with distinct concrete derived types (preferably records) for each specific loggable event (`PlayerEliminatedLog`, `RoleRevealedLog`, etc.). This flat hierarchy significantly reduces boilerplate for universal fields via the base class while maintaining strong type safety, clarity, and maintainability through specific derived types. 
  
@@ -482,7 +473,7 @@ The chosen approach is an abstract base class (`GameLogEntryBase`) providing uni
 2.  **Initial Role Assignment (`InitialRoleAssignmentLogEntry`):** Records roles assigned during the *Night 1* identification process. Logs the `PlayerId` and the `AssignedRole` (`RoleType`). Generated by hook listeners during the `NightSequenceStart` hook when processing moderator input for identification. *Uniqueness: Captures the moderator's identification of key roles before Night 1.* 
 3.  **Phase Transition (`PhaseTransitionLogEntry`):** Records when the game moves from one phase to another. Logs the `PreviousPhase`, `CurrentPhase`, and the `Reason` string identifying the specific condition that triggered the transition (matching the `ConditionOrReason` from `PhaseTransitionInfo`). *Uniqueness: Tracks the flow of the game through its defined states.* 
  
-**Hook Action Logs (Inputs & Choices):** 
+## Hook Action Logs (Inputs & Choices):
  
 4.  **Seer View Attempt:** Logs the Seer's ID and the ID of the player they chose to view. (The *result* might be logged separately or implicitly handled by resolution logic, especially with Somnambulism). *Uniqueness: Records the Seer's target choice.* 
 5.  **Fox Check Performed:** Logs the Fox's ID, the player they targeted, the IDs of the two neighbors checked, the Yes/No result given (WW nearby?), and whether the Fox lost their power as a result. *Uniqueness: Records the Fox's check details and outcome.* 
@@ -507,7 +498,7 @@ The chosen approach is an abstract base class (`GameLogEntryBase`) providing uni
 17. **Bear Tamer Growl Occurred:** Logs that the conditions were met for the Moderator to growl (Bear Tamer alive next to a player with assigned Werewolf role). *Uniqueness: Contextual indicator based on known state and positioning.* 
 18. **Devoted Servant Swap Executed:** Logs the Servant's ID, the ID of the player they saved from reveal, and the (hidden) role the Servant adopted. *Uniqueness: Records the role and player swap.* 
  
-**Day Phase Specific Logs:** 
+## Day Phase Specific Logs:
  
 19. **Event Card Drawn:** Logs the specific New Moon Event Card ID and Name drawn at the start of the day. *Uniqueness: Records the active event modifying the day/upcoming night.* 
 20. **Gypsy Question Asked & Answered:** Logs the text of the Spiritualism question asked by the Medium and the "Yes" or "No" answer provided by the Moderator (as the spirit). *Uniqueness: Records the outcome of the Spiritualism event.* 
@@ -523,11 +514,11 @@ The chosen approach is an abstract base class (`GameLogEntryBase`) providing uni
 30. **Scapegoat Voting Restrictions Set:** Logs the decision made by an eliminated Scapegoat regarding who can/cannot vote the following day. *Uniqueness: Records temporary voting rule changes.* 
 31. **Phase Transition:** *(See entry #3 above)* 
  
-**Game End Log:** 
+## Game End Log:
  
 32. **Victory Condition Met (`VictoryConditionMetLogEntry`):** Logs the determined winning team/player(s) and a brief description of the condition met (e.g., "All Werewolves eliminated," "Werewolves equal Villagers," "All survivors charmed," "Angel eliminated early"). *Uniqueness: Marks the end of the game and the outcome.* 
  
-**Victory Condition Checking:** 
+# Victory Condition Checking:
  
 The `GameFlowManager` implements automatic victory condition checking to ensure games end appropriately when win conditions are met: 
  

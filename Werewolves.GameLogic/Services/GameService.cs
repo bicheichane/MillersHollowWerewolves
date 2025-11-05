@@ -80,9 +80,7 @@ public class GameService
 	{
 		if (!_sessions.TryGetValue(gameId, out var session))
 		{
-			return ProcessResult.Failure(new GameError(ErrorType.GameNotFound,
-													GameErrorCode.GameNotFound_SessionNotFound,
-													GameStrings.GameNotFound));
+			return ProcessResult.Failure(new ConfirmationInstruction(privateInstruction: "ERROR: Game not found"));
 		}
 
 		// --- Input Validation Against Last Instruction ---
@@ -118,9 +116,7 @@ public class GameService
         {
             // Should only happen if StartNewGame didn't set the initial instruction
             // TODO: Use GameString
-            return ProcessResult.Failure(new GameError(ErrorType.InvalidOperation,
-                                                    GameErrorCode.InvalidOperation_UnexpectedInput,
-                                                    "Internal error: No pending instruction available."));
+            throw new InvalidOperationException("Internal error: No pending instruction available.");
         }
 
         // In the new architecture, validation is handled by each instruction's CreateResponse method
@@ -130,9 +126,7 @@ public class GameService
         // For now, we'll do basic type checking - the detailed validation happens in CreateResponse
         if (DoesResponseTypeMatchInstruction(lastRequest, input) == false)
         {
-            return ProcessResult.Failure(new GameError(ErrorType.InvalidInput,
-                                                    GameErrorCode.InvalidInput_InputTypeMismatch,
-                                                    "Confirmation instruction requires a boolean confirmation."));
+            throw new InvalidOperationException("Confirmation instruction requires a boolean confirmation.");
         }
 
         return null; // Basic validation passed

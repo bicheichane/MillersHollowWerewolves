@@ -7,26 +7,21 @@ namespace Werewolves.GameLogic.Models.InternalMessages;
 /// <summary>
 /// Represents the outcome of a phase handler's execution.
 /// </summary>
-/// <param name="IsSuccess">Indicates if processing was successful.</param>
-/// <param name="ModeratorInstruction">The instruction for the moderator for the next step.</param>
-/// <param name="TransitionReason">The ConditionOrReason key matching the PhaseTransitionInfo for the transition that occurred. Null if no phase transition happened.</param>
-/// <param name="Error">Error details if IsSuccess is false.</param>
-public record PhaseHandlerResult(
-    bool IsSuccess,
-    ModeratorInstruction? ModeratorInstruction,
-    PhaseTransitionReason? TransitionReason,
-    GameError? Error = null
-)
+public record PhaseHandlerResult(ModeratorInstruction ModeratorInstruction);
+
+public record MainPhaseHandlerResult(ModeratorInstruction ModeratorInstruction, GamePhase MainPhase, PhaseTransitionReason TransitionReason) 
+	: PhaseHandlerResult(ModeratorInstruction)
 {
     // Static factory methods
-    public static PhaseHandlerResult SuccessTransition(ModeratorInstruction nextInstruction, PhaseTransitionReason transitionReason) =>
-        new(true, nextInstruction, transitionReason,  null);
-    public static PhaseHandlerResult SuccessStayInPhase(ModeratorInstruction nextInstruction) =>
-        new(true, nextInstruction, null, null);
+    public static MainPhaseHandlerResult TransitionPhase(ModeratorInstruction nextInstruction, GamePhase mainPhase, PhaseTransitionReason transitionReason) =>
+        new(nextInstruction, mainPhase, transitionReason);
+}
 
-    public static PhaseHandlerResult SuccessInternalGeneric() => new(true, null, null);
-    public static PhaseHandlerResult Failure(GameError error) =>
-        new(false, null, null, error);
-
-    public bool ShouldTransitionPhase => IsSuccess && TransitionReason != null;
-} 
+public record SubPhaseHandlerResult(ModeratorInstruction ModeratorInstruction, Enum? SubGamePhase) 
+	: PhaseHandlerResult(ModeratorInstruction)
+{
+	public static SubPhaseHandlerResult TransitionSubPhase(ModeratorInstruction nextInstruction, Enum subGamePhase) =>
+		new(nextInstruction, subGamePhase);
+	public static SubPhaseHandlerResult StayInSubPhase(ModeratorInstruction nextInstruction) =>
+		new(nextInstruction, null);
+}
