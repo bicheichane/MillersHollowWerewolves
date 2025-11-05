@@ -12,7 +12,7 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// <summary>
     /// Dictionary mapping player IDs to the list of roles that can be assigned to that player.
     /// </summary>
-    public IReadOnlyDictionary<Guid, IReadOnlyList<RoleType>> SelectableRolesForPlayers { get; }
+    public IReadOnlyDictionary<Guid, IReadOnlyList<MainRoleType>> SelectableRolesForPlayers { get; }
 
     /// <summary>
     /// Initializes a new instance of AssignRolesInstruction.
@@ -22,7 +22,7 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// <param name="privateInstruction">Private guidance for the moderator.</param>
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
     public AssignRolesInstruction(
-        IReadOnlyDictionary<Guid, IReadOnlyList<RoleType>> selectableRolesForPlayers,
+        IReadOnlyDictionary<Guid, IReadOnlyList<MainRoleType>> selectableRolesForPlayers,
         string? publicAnnouncement = null,
         string? privateInstruction = null,
         IReadOnlyList<Guid>? affectedPlayerIds = null)
@@ -52,7 +52,7 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// <param name="assignments">Dictionary mapping player IDs to their assigned roles.</param>
     /// <returns>A validated ModeratorResponse.</returns>
     /// <exception cref="ArgumentException">Thrown when assignments are invalid.</exception>
-    public ModeratorResponse CreateResponse(Dictionary<Guid, RoleType> assignments)
+    public ModeratorResponse CreateResponse(Dictionary<Guid, MainRoleType> assignments)
     {
         ValidateAssignments(assignments);
 
@@ -68,7 +68,7 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// </summary>
     /// <param name="assignments">The assignments to validate.</param>
     /// <exception cref="ArgumentException">Thrown when validation fails.</exception>
-    private void ValidateAssignments(Dictionary<Guid, RoleType> assignments)
+    private void ValidateAssignments(Dictionary<Guid, MainRoleType> assignments)
     {
         if (assignments == null)
         {
@@ -86,7 +86,7 @@ public record AssignRolesInstruction : ModeratorInstruction
             var availableRoles = SelectableRolesForPlayers[assignment.Key];
             if (!availableRoles.Contains(assignment.Value))
             {
-                throw new ArgumentException($"Role {assignment.Value} is not in the list of assignable roles for player {assignment.Key}.");
+                throw new ArgumentException($"MainRole {assignment.Value} is not in the list of assignable roles for player {assignment.Key}.");
             }
         }
     }

@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Werewolves.StateModels\Werewolves.StateModels.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Roles\SecondaryRoles\" />
+  </ItemGroup>
+
 </Project>

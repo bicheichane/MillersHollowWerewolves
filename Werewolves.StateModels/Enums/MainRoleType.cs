@@ -1,11 +1,11 @@
+using System.Security.Cryptography.X509Certificates;
+
 namespace Werewolves.StateModels.Enums;
 
 /// <summary>
-/// Represents the specific character roles in the game.
-/// Minimal initial set from Roadmap Phase 0.
-/// (Will be expanded significantly in later phases based on Architecture doc)
+/// Represents the specific main character roles in the game.
 /// </summary>
-public enum RoleType
+public enum MainRoleType
 {
     // Werewolves
     SimpleWerewolf,
@@ -46,5 +46,16 @@ public enum RoleType
 
     // New Moon Roles
     Gypsy, // Phase 8+
-    TownCrier // Phase 8+
-} 
+}
+
+/// <summary>
+/// these can be stacked on top of main role types AND represent additional abilities that are linked to specific GameHooks.
+/// by contrast, the cursed one or the sheriff can be given to any main role type, but do not have specific game hooks associated with them, so are not added here
+/// </summary>
+[Flags]
+public enum SecondaryRoleType
+{
+    Lovers,
+    Charmed,
+    TownCrier,
+}

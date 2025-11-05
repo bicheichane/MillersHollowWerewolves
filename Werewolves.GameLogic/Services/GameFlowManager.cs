@@ -5,6 +5,7 @@ using Werewolves.GameLogic.Models.Instructions;
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.GameLogic.Models.StateMachine;
 using Werewolves.GameLogic.Roles;
+using Werewolves.GameLogic.Roles.MainRoles;
 using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
@@ -14,6 +15,9 @@ using Werewolves.StateModels.Resources;
 using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.PhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
+using static Werewolves.StateModels.Enums.MainRoleType;
+using static Werewolves.StateModels.Enums.SecondaryRoleType;
+using static Werewolves.StateModels.Models.ListenerIdentifier;
 
 namespace Werewolves.GameLogic.Services;
 
@@ -25,20 +29,57 @@ internal static class GameFlowManager
     #region Static Flow Definitions
     private static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
-        // Define hook-to-listener mappings here
+        // Define hook-to-listener mappings here.
+        // ORDER MATTERS!!!!
         [GameHook.NightActionLoop] =
         [
-            ListenerIdentifier.Create(RoleType.SimpleWerewolf),
-            ListenerIdentifier.Create(RoleType.Seer)
-        ]
-    };
+            Listener(Thief),                //first night only
+            Listener(Actor),
+            Listener(LittleGirl),           //first night only
+            Listener(Cupid),                //first night only
+            Listener(Lovers),              //first night only
+            Listener(Fox),
+            Listener(StutteringJudge),      //first night only
+            Listener(TwoSisters),
+            Listener(ThreeBrothers),
+            Listener(WildChild),            //first night only
+            Listener(BearTamer),            //first night only
+            Listener(Defender),
+			Listener(SimpleWerewolf),
+            Listener(AccursedWolfFather),
+            Listener(BigBadWolf),
+			Listener(Seer),
+            Listener(Witch),
+            Listener(Gypsy),
+            Listener(Piper),
+            Listener(Charmed)
+		],
+
+        [GameHook.DayBreakAfterVictims] =
+        [
+            Listener(BearTamer),
+            Listener(Gypsy),
+            Listener(TownCrier),
+        ],
+
+        [GameHook.OnFirstVoteConcluded] =
+        [
+            Listener(StutteringJudge),
+		],
+
+        [GameHook.OnPlayerEliminationFinalized] =
+        [
+            Listener(Hunter),
+            Listener(Lovers)
+		]
+	};
 
     private static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
     {
         // Define listener implementations here
-        [ListenerIdentifier.Create(RoleType.SimpleWerewolf)] = new SimpleWerewolf(),
-        [ListenerIdentifier.Create(RoleType.Seer)] = new Seer(),
-        [ListenerIdentifier.Create(RoleType.SimpleVillager)] = new SimpleVillager()
+        [Listener(SimpleWerewolf)] = new SimpleWerewolfRole(),
+        [Listener(Seer)] = new SeerRole(),
+        [Listener(SimpleVillager)] = new SimpleVillagerRole()
     };
 
     private static readonly Dictionary<GamePhase, PhaseDefinition> PhaseDefinitions = new()
@@ -196,8 +237,8 @@ internal static class GameFlowManager
     private static (Team WinningTeam, string Description)? CheckVictoryConditions(GameSession session)
     {
         // Phase 1: Basic checks using assigned/revealed roles
-        var aliveWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).WithRole(RoleType.SimpleWerewolf).Count();
-        int aliveNonWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).WithoutRole(RoleType.SimpleWerewolf).Count();
+        var aliveWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).WithRole(SimpleWerewolf).Count();
+        int aliveNonWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).WithoutRole(SimpleWerewolf).Count();
 
 		// Villager win
 		if (aliveWerewolves == 0 && aliveNonWerewolves > 0)
@@ -423,7 +464,7 @@ internal static class GameFlowManager
         // - Transition to Finalize when complete
         
         var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Role reveals processed. Finalizing dawn phase."
+            publicAnnouncement: "MainRole reveals processed. Finalizing dawn phase."
         );
         
         return TransitionSubPhase(instruction, DawnSubPhases.Finalize);
@@ -477,10 +518,12 @@ internal static class GameFlowManager
         {
             if (!ListenerImplementations.TryGetValue(listenerId, out var listener))
             {
-                throw new InvalidOperationException($"Listener implementation not found for listener ID: {listenerId}");
+				//throw new InvalidOperationException($"Listener implementation not found for listener ID: {listenerId}");
+				// TODO: Skip unimplemented listeners for now
+                continue;
             }
 
-            if (currentListener != null && currentListener != listenerId)
+			if (currentListener != null && currentListener != listenerId)
             {
                 // Another listener is currently paused, skip until resumed
                 continue;

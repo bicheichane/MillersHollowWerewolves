@@ -10,7 +10,7 @@ public record PlayerEliminatedLogEntry : GameLogEntryBase
 {
     public required Guid PlayerId { get; init; }
     public required EliminationReason Reason { get; init; }
-    public required RoleType PlayerRole { get; init; }
+    public required MainRoleType PlayerMainRole { get; init; }
 	/// <summary>
 	/// Applies the player elimination to the game state.
 	/// </summary>

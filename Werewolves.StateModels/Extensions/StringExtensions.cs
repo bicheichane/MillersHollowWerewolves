@@ -1,4 +1,5 @@
-﻿using Werewolves.StateModels.Enums;
+﻿using System.Data;
+using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Interfaces;
 
 namespace Werewolves.StateModels.Extensions
@@ -10,9 +11,9 @@ namespace Werewolves.StateModels.Extensions
 
 	public static class PublicPlayerExtensions
 	{
-		public static IEnumerable<IPlayer> WithRole(this IEnumerable<IPlayer> players, RoleType? roleType) =>
+		public static IEnumerable<IPlayer> WithRole(this IEnumerable<IPlayer> players, MainRoleType? roleType) =>
 			PlayerExtensionHelpers.WithRole(players, roleType);
-		public static IEnumerable<IPlayer> WithoutRole(this IEnumerable<IPlayer> players, RoleType? roleType) =>
+		public static IEnumerable<IPlayer> WithoutRole(this IEnumerable<IPlayer> players, MainRoleType? roleType) =>
 			PlayerExtensionHelpers.WithoutRole(players, roleType);
 
 		public static IEnumerable<IPlayer> WithHealth(this IEnumerable<IPlayer> players, PlayerHealth health) =>
@@ -23,8 +24,8 @@ namespace Werewolves.StateModels.Extensions
 		public static IEnumerable<IPlayer> WhereRevealed(this IEnumerable<IPlayer> players, bool isRevealed) =>
 			PlayerExtensionHelpers.WhereRevealed(players, isRevealed);
 
-		public static IEnumerable<IPlayer> WithRole(this Dictionary<Guid, IPlayer> players, RoleType roleType) =>
-			PlayerExtensionHelpers.WithRole(players.Values, roleType);
+		public static IEnumerable<IPlayer> WithRole(this Dictionary<Guid, IPlayer> players, MainRoleType mainRoleType) =>
+			PlayerExtensionHelpers.WithRole(players.Values, mainRoleType);
 
 		public static IEnumerable<IPlayer> WhereRevealed(this Dictionary<Guid, IPlayer> players, bool isRevealed) =>
 			PlayerExtensionHelpers.WhereRevealed(players.Values, isRevealed);
@@ -38,26 +39,31 @@ namespace Werewolves.StateModels.Extensions
 
 	internal static class PlayerExtensionHelpers
 	{
-		internal static IEnumerable<T> WithRole<T>(this IEnumerable<T> players, RoleType? roleType) where T : IPlayer =>
-			players.Where(p => p.State.Role == roleType);
+		internal static IEnumerable<T> WithRole<T>(this IEnumerable<T> players, MainRoleType? roleType) where T : IPlayer =>
+			players.Where(p => p.State.MainRole == roleType);
 		
-		internal static IEnumerable<T> WithoutRole<T>(this IEnumerable<T> players, RoleType? roleType) where T : IPlayer =>
-			players.Where(p => p.State.Role != roleType);
+		internal static IEnumerable<T> WithoutRole<T>(this IEnumerable<T> players, MainRoleType? roleType) where T : IPlayer =>
+			players.Where(p => p.State.MainRole != roleType);
+
+		internal static IEnumerable<T> WithSecondaryRole<T>(this IEnumerable<T> players, SecondaryRoleType? roleType)
+			where T : IPlayer =>
+			players.Where(p =>
+				p.State.SecondaryRoles.HasValue && (p.State.SecondaryRoles.Value & roleType) == roleType);
 
 		internal static IEnumerable<T> WithHealth<T>(this IEnumerable<T> players, PlayerHealth health) where T : IPlayer =>
 			players.Where(p => p.State.Health == health);
 
 		internal static IEnumerable<T> WhereRevealed<T>(this IEnumerable<T> players, bool isRevealed) where T : IPlayer =>
-			players.Where(p => p.State.IsRoleRevealed == isRevealed);
+			players.Where(p => p.State.IsMainRoleRevealed == isRevealed);
 	}
 
 	/*
 protected static class InternalPlayerExtensions
 {
-	internal static IEnumerable<Player> WithRole(this IEnumerable<Player> players, RoleType? roleType) =>
-		PlayerExtensionHelpers.WithRole(players, roleType);
-	internal static IEnumerable<Player> WithoutRole(this IEnumerable<Player> players, RoleType? roleType) =>
-		PlayerExtensionHelpers.WithoutRole(players, roleType);
+	internal static IEnumerable<Player> WithRole(this IEnumerable<Player> players, MainRoleType? mainRoleType) =>
+		PlayerExtensionHelpers.WithRole(players, mainRoleType);
+	internal static IEnumerable<Player> WithoutRole(this IEnumerable<Player> players, MainRoleType? mainRoleType) =>
+		PlayerExtensionHelpers.WithoutRole(players, mainRoleType);
 
 	internal static IEnumerable<Player> WithHealth(this IEnumerable<Player> players, PlayerHealth health) =>
 		PlayerExtensionHelpers.WithHealth(players, health);
@@ -67,8 +73,8 @@ protected static class InternalPlayerExtensions
 	internal static IEnumerable<Player> WhereRevealed(this IEnumerable<Player> players, bool isRevealed) =>
 		PlayerExtensionHelpers.WhereRevealed(players, isRevealed);
 
-	internal static IEnumerable<Player> WithRole(this Dictionary<Guid, Player> players, RoleType roleType) =>
-		PlayerExtensionHelpers.WithRole(players.Values, roleType);
+	internal static IEnumerable<Player> WithRole(this Dictionary<Guid, Player> players, MainRoleType mainRoleType) =>
+		PlayerExtensionHelpers.WithRole(players.Values, mainRoleType);
 
 	internal static IEnumerable<Player> WhereRevealed(this Dictionary<Guid, Player> players, bool isRevealed) =>
 		PlayerExtensionHelpers.WhereRevealed(players.Values, isRevealed);

@@ -17,10 +17,10 @@ public record AssignRoleLogEntry : GameLogEntryBase
 	/// <summary>
 	/// The specific role type assigned.
 	/// </summary>
-	public required RoleType AssignedRole { get; init; }
+	public required MainRoleType AssignedMainRole { get; init; }
 
 	// Potential future additions:
-	// public RoleType? DiscardedRole { get; init; } // For Thief
+	// public MainRoleType? DiscardedRole { get; init; } // For Thief
 	// public List<Guid>? AssociatedPlayerIds { get; init; } // For Cupid's Lovers
 	// public Guid? ModelPlayerId { get; init; } // For Wild Child
 

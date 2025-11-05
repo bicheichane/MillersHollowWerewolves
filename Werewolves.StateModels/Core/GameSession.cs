@@ -19,7 +19,7 @@ internal partial class GameSession : IGameSession
     // Core immutable properties
     private readonly Dictionary<Guid, Player> _players;
     private readonly List<Guid> _playerSeatingOrder;
-    private readonly List<RoleType> _rolesInPlay;
+    private readonly List<MainRoleType> _rolesInPlay;
 
     // Private canonical state - the single source of truth
     private readonly List<GameLogEntryBase> _gameHistoryLog = new();
@@ -68,7 +68,7 @@ internal partial class GameSession : IGameSession
 
     public ModeratorInstruction? PendingModeratorInstruction { get; internal set; } = null;
 
-    internal GameSession(List<string> playerNamesInOrder, List<RoleType> rolesInPlay,
+    internal GameSession(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay,
         List<string>? eventCardIdsInDeck = null)
     {
         ArgumentNullException.ThrowIfNull(playerNamesInOrder);
@@ -124,7 +124,7 @@ internal partial class GameSession : IGameSession
         return playerList;
     }
 
-    public int RoleInPlayCount(RoleType type) => _rolesInPlay.Count(r => r == type);
+    public int RoleInPlayCount(MainRoleType type) => _rolesInPlay.Count(r => r == type);
 
     #endregion
 
@@ -140,7 +140,7 @@ internal partial class GameSession : IGameSession
         PerformNightActionCore(type, targetIds, actionOutcome);
 
     // Public command methods - these create log entries and apply them
-    internal void EliminatePlayer(Guid playerId, EliminationReason reason, RoleType playerRole)
+    internal void EliminatePlayer(Guid playerId, EliminationReason reason, MainRoleType playerMainRole)
     {
         var entry = new PlayerEliminatedLogEntry
         {
@@ -149,14 +149,14 @@ internal partial class GameSession : IGameSession
             CurrentPhase = PhaseStateCache.GetCurrentPhase(),
             PlayerId = playerId,
             Reason = reason,
-            PlayerRole = playerRole
+            PlayerMainRole = playerMainRole
         };
 
         _gameHistoryLog.Add(entry);
         entry.Apply(new StateMutator(this));
     }
 
-    internal void RevealPlayerRole(Guid playerId, RoleType roleType)
+    internal void RevealPlayerRole(Guid playerId, MainRoleType mainRoleType)
     {
         var entry = new RoleRevealedLogEntry
         {
@@ -164,18 +164,18 @@ internal partial class GameSession : IGameSession
             TurnNumber = TurnNumber,
             CurrentPhase = PhaseStateCache.GetCurrentPhase(),
             PlayerId = playerId,
-            RevealedRole = roleType
+            RevealedMainRole = mainRoleType
         };
 
         _gameHistoryLog.Add(entry);
         entry.Apply(new StateMutator(this));
     }
 
-    internal void AssignRole(Guid playerId, RoleType roleType) =>
-        AssignRole([playerId], roleType);
+    internal void AssignRole(Guid playerId, MainRoleType mainRoleType) =>
+        AssignRole([playerId], mainRoleType);
 
 
-    internal void AssignRole(List<Guid> playerIds, RoleType roleType)
+    internal void AssignRole(List<Guid> playerIds, MainRoleType mainRoleType)
     {
         var entry = new AssignRoleLogEntry()
         {
@@ -183,7 +183,7 @@ internal partial class GameSession : IGameSession
             TurnNumber = TurnNumber,
             CurrentPhase = PhaseStateCache.GetCurrentPhase(),
             PlayerIds = playerIds,
-            AssignedRole = roleType
+            AssignedMainRole = mainRoleType
         };
 
         _gameHistoryLog.Add(entry);
@@ -312,7 +312,7 @@ internal partial class GameSession : IGameSession
     internal interface IStateMutator
     {
         void SetPlayerHealth(Guid playerId, PlayerHealth health);
-        void SetPlayerRole(Guid playerId, RoleType? role);
+        void SetPlayerRole(Guid playerId, MainRoleType? role);
         void SetWinningTeam(Team? winningTeam);
         void SetPendingVoteOutcome(Guid? pendingVoteOutcome);
         void SetCurrentPhase(GamePhase newPhase);
@@ -334,10 +334,10 @@ internal partial class GameSession : IGameSession
 
         }
 
-        public void SetPlayerRole(Guid playerId, RoleType? role)
+        public void SetPlayerRole(Guid playerId, MainRoleType? role)
         {
             var player = _session.GetPlayerInternal(playerId);
-            player.State.Role = role;
+            player.State.MainRole = role;
         }
 
         public void SetWinningTeam(Team? winningTeam)

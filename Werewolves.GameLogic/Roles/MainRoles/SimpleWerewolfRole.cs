@@ -8,17 +8,17 @@ using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 
-namespace Werewolves.GameLogic.Roles;
+namespace Werewolves.GameLogic.Roles.MainRoles;
 
 /// <summary>
 /// Simple Werewolf role implementation using the polymorphic hook listener pattern.
 /// Inherits from StandardNightRoleHookListener for standard target selection workflow.
 /// </summary>
-internal class SimpleWerewolf : StandardNightRoleHookListener
+internal class SimpleWerewolfRole : StandardNightRoleHookListener
 {
     
     internal override string PublicName => GameStrings.SimpleWerewolfRoleName;
-    public override ListenerIdentifier Role => ListenerIdentifier.Create(RoleType.SimpleWerewolf);
+    public override ListenerIdentifier Role => ListenerIdentifier.Listener(MainRoleType.SimpleWerewolf);
     protected override bool HasNightPowers => true;
 
     protected override ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input)

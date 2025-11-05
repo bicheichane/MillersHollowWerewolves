@@ -9,7 +9,7 @@ namespace Werewolves.StateModels.Log;
 public record RoleRevealedLogEntry : GameLogEntryBase
 {
     public required Guid PlayerId { get; init; }
-    public required RoleType RevealedRole { get; init; }
+    public required MainRoleType RevealedMainRole { get; init; }
 
     /// <summary>
     /// Applies the role reveal to the game state.
@@ -18,8 +18,8 @@ public record RoleRevealedLogEntry : GameLogEntryBase
     /// </summary>
     internal override void Apply(GameSession.IStateMutator mutator)
     {
-        // Role reveal doesn't change core game state, it's primarily for logging
+        // MainRole reveal doesn't change core game state, it's primarily for logging
         // The actual role assignment is handled by InitialRoleLogAssignment
-        // This could potentially set a "IsRoleRevealed" flag if needed in the future
+        // This could potentially set a "IsMainRoleRevealed" flag if needed in the future
     }
 }

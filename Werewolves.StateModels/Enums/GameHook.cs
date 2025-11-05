@@ -7,14 +7,16 @@ namespace Werewolves.StateModels.Enums;
 public enum GameHook
 {
     // Core phase hooks
-    FirstNightActionLoop,               // Special hook for first night actions (identification + regular actions)
 	NightActionLoop,                    // Main hook for iterating through night role actions
     
     // Player lifecycle hooks
     OnPlayerEliminationFinalized,       // Fired when a player elimination is confirmed
     OnRoleRevealed,                     // Fired when a player's role is revealed
+    OnFirstVoteConcluded,
     
     // Day phase hooks
-    DayVoteStarted,                     // Fired when voting phase begins
+    DayBreakBeforeVictims,               // Fired at the start of the day before announcing victims
+    DayBreakAfterVictims,               // Fired at the start of the day after announcing victims
+	DayVoteStarted,                     // Fired when voting phase begins
     NightResolutionStarted,             // Fired when night resolution begins
 }

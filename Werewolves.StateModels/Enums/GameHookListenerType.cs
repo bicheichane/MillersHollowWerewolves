@@ -7,12 +7,17 @@ namespace Werewolves.StateModels.Enums;
 public enum GameHookListenerType
 {
     /// <summary>
-    /// A role-based listener (e.g., Werewolf, Seer, Hunter).
+    /// A main role-based listener (e.g., Werewolf, Seer, Hunter).
     /// </summary>
-    Role,
+    MainRole,
     
     /// <summary>
     /// An event card-based listener (e.g., Retribution, Backfire).
     /// </summary>
-    Event
+    Event,
+
+    /// <summary>
+    /// A secondary role-based listener. Can stack on top of main roles (i.e. sheriff, lovers, etc.)
+    /// </summary>
+    SecondaryRole
 }

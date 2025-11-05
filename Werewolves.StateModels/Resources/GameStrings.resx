@@ -232,7 +232,7 @@
     <value>Player list cannot be empty.</value>
   </data>
   <data name="RoleListCannotBeEmpty" xml:space="preserve">
-    <value>Role list cannot be empty.</value>
+    <value>MainRole list cannot be empty.</value>
   </data>
   <data name="VictoryConditionAllWerewolvesEliminated" xml:space="preserve">
     <value>All werewolves eliminated.</value>
@@ -269,12 +269,12 @@
     <value>Could not find the player target for role reveal.</value>
   </data>
   <data name="RoleImplementationNotFound" xml:space="preserve">
-    <value>Internal error: Role implementation not found for {0}.</value>
-    <comment>{0} = RoleType enum value</comment>
+    <value>Internal error: MainRole implementation not found for {0}.</value>
+    <comment>{0} = MainRoleType enum value</comment>
   </data>
   <data name="RoleRevealedProceedToDebate" xml:space="preserve">
     <value>{0}'s role was {1}. Proceed to debate?</value>
-    <comment>{0} = Player Name, {1} = RoleType</comment>
+    <comment>{0} = Player Name, {1} = MainRoleType</comment>
   </data>
   <data name="VotePhaseStartPrompt" xml:space="preserve">
     <value>Day vote phase. Please determine the outcome and report the single player eliminated (or report a tie).</value>

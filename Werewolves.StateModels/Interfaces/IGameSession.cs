@@ -11,5 +11,5 @@ public interface IGameSession
 	public IPlayer GetPlayer(Guid playerId);
 	public IPlayerState GetPlayerState(Guid playerId);
 	public IEnumerable<IPlayer> GetPlayers();
-	public int RoleInPlayCount(RoleType type);
+	public int RoleInPlayCount(MainRoleType type);
 }

@@ -39,7 +39,7 @@ internal abstract class RoleHookListener : IGameHookListener
 	protected abstract HookListenerActionResult AdvanceCoreStateMachine(GameSession session,
 		ModeratorResponse input);
 
-	#region Role Helper functions
+	#region MainRole Helper functions
 
 	protected List<IPlayer>? GetAliveRolePlayers(GameSession session) =>
 		session.GetPlayers().WithRole(Role).WithHealth(Alive).ToList();
@@ -265,7 +265,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="RoleType"></param>
+	/// <param name="MainRoleType"></param>
 	/// <param name="GameHook"></param>
 	/// <param name="StartStage"></param>
 	/// <param name="ActionToPerform">
@@ -280,7 +280,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 	/// <param name="ShouldOverwriteStartStage">While false, will throw an exception if it attempts to replace a handler for the same start stage.
 	/// Otherwise, will proceed with replacing it</param>
 	internal record RoleStateMachineStage(
-		RoleType RoleType,
+		MainRoleType MainRoleType,
 		GameHook GameHook,
 		TRoleStateEnum? StartStage,
 		Func<GameSession, ModeratorResponse, HookListenerActionResult<TRoleStateEnum>> ActionToPerform,
@@ -296,7 +296,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			if (currentState.Equals(StartStage) == false)
 			{
 				throw new InvalidOperationException(
-					$"State Machine Error: Role '{RoleType}' attempted to execute stage for '{currentState} but " +
+					$"State Machine Error: MainRole '{MainRoleType}' attempted to execute stage for '{currentState} but " +
 					$"executed {StartStage} instead'.");
 			}
 
@@ -308,7 +308,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 				if (newState == null)
 				{
 					throw new InvalidOperationException(
-						$"State Machine Error: Role '{RoleType}' attempted to transition to null state");
+						$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to null state");
 				}
 
 				//if we are in a stage that should advance state, but we didn't, throw
@@ -316,7 +316,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 				         newState.Equals(currentState))
 				{
 					throw new InvalidOperationException(
-						$"State Machine Error: Role '{RoleType}' attempted to remain in state '{newState}' " +
+						$"State Machine Error: MainRole '{MainRoleType}' attempted to remain in state '{newState}' " +
 						$"but this stage requires state advancement.");
 				}
 
@@ -326,13 +326,13 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 				{
 					var joinedPossibleStateList = string.Join(", ", PossibleEndStages);
 					throw new InvalidOperationException(
-						$"State Machine Error: Role '{RoleType}' attempted to transition to invalid state '{newState}'. " +
+						$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to invalid state '{newState}'. " +
 						$"Valid end states from this stage are: {joinedPossibleStateList}."
 					);
 				}
 
 				//set the new state
-				session.TransitionListenerState(RoleType, (TRoleStateEnum)newState);
+				session.TransitionListenerState(MainRoleType, (TRoleStateEnum)newState);
 			}
 
 

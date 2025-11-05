@@ -1,4 +1,6 @@
 using Werewolves.StateModels.Enums;
+using Werewolves.StateModels.Interfaces;
+using static Werewolves.StateModels.Enums.GameHookListenerType;
 
 namespace Werewolves.StateModels.Models;
 
@@ -10,12 +12,12 @@ namespace Werewolves.StateModels.Models;
 public record ListenerIdentifier
 {
     /// <summary>
-    /// The type of listener (Role or Event).
+    /// The type of listener (MainRole or Event).
     /// </summary>
     public GameHookListenerType ListenerType { get; }
     
     /// <summary>
-    /// Stores the RoleType or EventCardType enum value as a string for better debugging/logging.
+    /// Stores the MainRoleType or EventCardType enum value as a string for better debugging/logging.
     /// </summary>
     public string ListenerId { get; }
 
@@ -25,26 +27,9 @@ public record ListenerIdentifier
         ListenerId = listenerId;
     }
 
-    public static ListenerIdentifier Create<T>(T listenerEnum) where T : struct, Enum
-    {
-        var listenerId = listenerEnum.ToString();
-        GameHookListenerType listenerType;
-        if (typeof(T) == typeof(RoleType))
-        {
-            listenerType = GameHookListenerType.Role;
-        }
-        /*
-        else if (typeof(T) == typeof(EventCardType))
-        {
-            listenerType = GameHookListenerType.Event;
-        } */
-        else
-        {
-            throw new ArgumentException("ListenerIdentifier can only be created for RoleType or EventCardType enums.");
-        }
+    public static ListenerIdentifier Listener(MainRoleType mainRoleType) => new(MainRole, mainRoleType.ToString());
 
-        return new ListenerIdentifier(listenerType, listenerId);
-    }
+    public static ListenerIdentifier Listener(SecondaryRoleType secondaryRoleType) => new(SecondaryRole, secondaryRoleType.ToString());
 
     public override int GetHashCode()
     {
@@ -56,33 +41,51 @@ public record ListenerIdentifier
         return $"{ListenerType}:{ListenerId}";
     }
 
-    //create impilicit conversion from RoleType to ListenerIdentifier
-    public static implicit operator ListenerIdentifier(RoleType roleType)
+    //create impilicit conversion from MainRoleType to ListenerIdentifier
+    public static implicit operator ListenerIdentifier(MainRoleType mainRoleType)
     {
-        return Create(roleType);
+        return Listener(mainRoleType);
     }
 
-    //create implicit conversion from ListernerIdentifier to RoleType
-    public static implicit operator RoleType(ListenerIdentifier listenerIdentifier)
+    //create implicit conversion from ListernerIdentifier to MainRoleType
+    public static implicit operator MainRoleType(ListenerIdentifier listenerIdentifier)
     {
-        if (listenerIdentifier.ListenerType != GameHookListenerType.Role)
+        if (listenerIdentifier.ListenerType != MainRole)
         {
-            throw new InvalidCastException("ListenerIdentifier is not of type Role.");
+            throw new InvalidCastException("ListenerIdentifier is not of type MainRole.");
         }
-        if (Enum.TryParse<RoleType>(listenerIdentifier.ListenerId, out var roleType))
+        if (Enum.TryParse<MainRoleType>(listenerIdentifier.ListenerId, out var roleType))
         {
             return roleType;
         }
-        throw new InvalidCastException("ListenerIdentifier ListenerId could not be parsed to RoleType.");
+        throw new InvalidCastException("ListenerIdentifier ListenerId could not be parsed to MainRoleType.");
     }
 
-    //create implicit conversion from EventCardType to ListenerIdentifier
-    /*public static implicit operator ListenerIdentifier(EventCardType eventCardType)
+    //create the implicit operators for SecondaryRoleType
+    public static implicit operator ListenerIdentifier(SecondaryRoleType secondaryRoleType)
     {
-        return Create(eventCardType);
+        return Listener(secondaryRoleType);
+	}
+    public static implicit operator SecondaryRoleType(ListenerIdentifier listenerIdentifier)
+    {
+        if (listenerIdentifier.ListenerType != SecondaryRole)
+        {
+            throw new InvalidCastException("ListenerIdentifier is not of type SecondaryRole.");
+        }
+        if (Enum.TryParse<SecondaryRoleType>(listenerIdentifier.ListenerId, out var roleType))
+        {
+            return roleType;
+        }
+        throw new InvalidCastException("ListenerIdentifier ListenerId could not be parsed to SecondaryRoleType.");
+	}
+
+	//create implicit conversion from EventCardType to ListenerIdentifier
+	/*public static implicit operator ListenerIdentifier(EventCardType eventCardType)
+    {
+        return Listener(eventCardType);
     } */
-    //create implicit conversion from ListenerIdentifier to EventCardType
-    /*public static implicit operator EventCardType(ListenerIdentifier listenerIdentifier)
+	//create implicit conversion from ListenerIdentifier to EventCardType
+	/*public static implicit operator EventCardType(ListenerIdentifier listenerIdentifier)
     {
         if (listenerIdentifier.ListenerType != GameHookListenerType.Event)
         {

@@ -38,7 +38,7 @@ public class GameService
     /// <param name="rolesInPlay">List of RoleTypes included in the game.</param>
     /// <param name="eventCardIdsInDeck">Optional list of event card IDs included.</param>
     /// <returns>The unique ID for the newly created game session.</returns>
-    public StartGameConfirmationInstruction StartNewGame(List<string> playerNamesInOrder, List<RoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
+    public StartGameConfirmationInstruction StartNewGame(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
     {
 	    var session = new GameSession(playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
 

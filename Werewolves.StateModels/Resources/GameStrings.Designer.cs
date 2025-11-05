@@ -322,7 +322,7 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Internal error: Role implementation not found for {0}..
+        ///   Looks up a localized string similar to Internal error: MainRole implementation not found for {0}..
         /// </summary>
         public static string RoleImplementationNotFound {
             get {
@@ -331,7 +331,7 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Role list cannot be empty..
+        ///   Looks up a localized string similar to MainRole list cannot be empty..
         /// </summary>
         public static string RoleListCannotBeEmpty {
             get {

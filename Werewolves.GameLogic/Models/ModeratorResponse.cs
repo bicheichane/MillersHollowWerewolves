@@ -14,7 +14,7 @@ public class ModeratorResponse
     // Optional fields, presence depends on Type
     public List<Guid>? SelectedPlayerIds { get; internal init; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public Dictionary<Guid, RoleType>? AssignedPlayerRoles { get; internal init; }
+    public Dictionary<Guid, MainRoleType>? AssignedPlayerRoles { get; internal init; }
     public string? SelectedOption { get; internal init; }
     public bool? Confirmation { get; internal init; }
 }

@@ -36,12 +36,18 @@ internal partial class GameSession
 	/// </summary>
 	protected class PlayerState : IPlayerState
 	{
-		public bool IsRoleRevealed => Role != null;
-		public RoleType? Role { get; internal set; } = null;
+		public bool IsMainRoleRevealed => MainRole != null;
+		public MainRoleType? MainRole { get; internal set; } = null;
+		/// <summary>
+		/// these can be stacked on top of main role types AND represent additional abilities that are linked to specific GameHooks.
+		/// by contrast, the infected one or the sheriff can be given to any main role type, but do not have specific game hooks associated with them, so are not added here
+		/// </summary>
+		public SecondaryRoleType? SecondaryRoles { get; internal set; } = null;
 		public PlayerHealth Health { get; internal set; } = PlayerHealth.Alive;
-		public bool IsSheriff { get; internal set; } = false;
-		public bool IsInLove { get; internal set; } = false;
+
 		public bool IsInfected { get; internal set; } = false;
+		public bool IsSheriff { get; internal set; } = false;
+
 
 		// Other properties will be added in later phases as defined in Architecture doc
 		// e.g.:

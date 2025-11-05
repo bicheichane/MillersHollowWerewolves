@@ -10,15 +10,15 @@ using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 using static Werewolves.StateModels.Enums.PlayerHealth;
 
-namespace Werewolves.GameLogic.Roles;
+namespace Werewolves.GameLogic.Roles.MainRoles;
 
 /// <summary>
 /// Seer role implementation using the polymorphic hook listener pattern.
 /// Inherits from StandardNightRoleHookListener for standard target selection workflow.
 /// </summary>
-internal class Seer : StandardNightRoleHookListener
+internal class SeerRole : StandardNightRoleHookListener
 {
-    public override ListenerIdentifier Role => ListenerIdentifier.Create(RoleType.Seer);
+    public override ListenerIdentifier Role => ListenerIdentifier.Listener(MainRoleType.Seer);
     internal override string PublicName => GameStrings.SeerRoleName;
     protected override bool HasNightPowers => true;
 
@@ -63,11 +63,11 @@ internal class Seer : StandardNightRoleHookListener
         // TODO: Add checks for Wild Child, Wolf Hound, Events in later phases
         // TODO: Check PlayerState.IsInfected when implemented
 
-        if (player.State.Role != null)
+        if (player.State.MainRole != null)
         {
-            return player.State.Role switch
+            return player.State.MainRole switch
             {
-                RoleType.SimpleWerewolf => true,
+                MainRoleType.SimpleWerewolf => true,
                 // TODO: Add other werewolf types when implemented
                 _ => false
             };

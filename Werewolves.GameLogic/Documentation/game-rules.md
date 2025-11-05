@@ -157,8 +157,8 @@ The game alternates between Night and Day phases. The helper app guides the Mode
 2.  Actor
 3.  Little Girl (identification time)
 4.  Cupid
-5.  Fox
-6.  Lovers (recognize each other)
+5.  Lovers (recognize each other)
+6.  Fox
 7.  Stuttering Judge (shows sign to Moderator)
 8.  Two Sisters / Three Brothers (recognize each other)
 9.  Wild Child (chooses model)
