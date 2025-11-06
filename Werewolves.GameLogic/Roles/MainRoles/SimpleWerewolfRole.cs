@@ -31,8 +31,6 @@ internal class SimpleWerewolfRole : StandardNightRoleHookListener
 
         var potentialTargets = GetPotentialTargets(session, false);
 
-        
-
         return new SelectPlayersInstruction(
             publicAnnouncement: GameStrings.WerewolvesChooseVictimPrompt,
             selectablePlayerIds: potentialTargets,
@@ -45,13 +43,6 @@ internal class SimpleWerewolfRole : StandardNightRoleHookListener
     {
         var victimId = input.SelectedPlayerIds!.First();
 
-        // Log the werewolf attack
-        var logEntry = new WerewolfVictimChoiceLogEntry
-        {
-            Timestamp = DateTime.UtcNow,
-            TurnNumber = session.TurnNumber,
-            CurrentPhase = session.GetCurrentPhase(),
-            VictimId = victimId
-        };
+        session.PerformNightAction(NightActionType.WerewolfVictimSelection, victimId);
     }
 }

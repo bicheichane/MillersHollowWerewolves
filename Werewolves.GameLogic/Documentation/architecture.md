@@ -67,10 +67,6 @@ Represents the tracked state of a single ongoing game.
     *   `GetRoleCount(MainRoleType roleType)`: Returns the total count of a specific main role included in the game setup. 
     *   `GetAliveRoleCount(MainRoleType roleType)`: Returns the count of living players known (or deduced) to have a specific main role. 
 *   **State Flags & Tracking (Based on Moderator Input):** 
-    
-    *   `PendingEliminations` (Queue<Guid>): Players awaiting elimination resolution due to cascading effects (calculated based on game rules and tracked state). 
-    *   `PendingVoteOutcome` (Guid?): Stores the ID of the player reported eliminated in the vote, or `Guid.Empty` for a tie. Cleared after resolution. 
-    *   `LastEliminatedPlayerId` (Guid?): Tracks the most recently eliminated player for event triggers. 
     *   **Derived Cached State (Deterministic Results):** 
         *   `AreVillagerPowersDisabled` (bool): Game-wide flag indicating whether all Villager special abilities have been lost due to Elder elimination by vote. *Causal Logs: `VoteOutcomeReportedLogEntry` (eliminating Elder) & `RoleRevealedLogEntry` (confirming Elder).* 
 

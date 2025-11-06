@@ -1,5 +1,6 @@
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
+using static Werewolves.StateModels.Enums.NightActionType;
 
 namespace Werewolves.StateModels.Log;
 
@@ -11,7 +12,7 @@ public record NightActionLogEntry : GameLogEntryBase
     public List<Guid>? TargetIds { get; init; } // ID of the player targeted, if applicable
 
     /// Example: "WerewolfVictimSelection", "SeerCheck", "WitchSave", "WitchKill"
-    public required NightActionType ActionType { get; init; } = NightActionType.Unknown; // Use enum
+    public required NightActionType ActionType { get; init; } = Unknown; // Use enum
 
 	// Add other relevant fields as needed, e.g., chosen role, potion type
 
@@ -33,7 +34,8 @@ public record NightActionLogEntry : GameLogEntryBase
     {
         switch (ActionType)
         {
-            default:
+	        case WerewolfVictimSelection: //no state change, just logging
+			default:
                 break;
         }
     }
