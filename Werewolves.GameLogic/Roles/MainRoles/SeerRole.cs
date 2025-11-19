@@ -34,7 +34,7 @@ internal class SeerRole : StandardNightRoleHookListener
 
         return new SelectPlayersInstruction(
             publicAnnouncement: GameStrings.SeerNightActionPrompt,
-            constraint: SelectionConstraint.Single, 
+            countConstraint: SelectionCountConstraint.Single, 
             selectablePlayerIds: potentialTargets,
             affectedPlayerIds: new List<Guid> { seerPlayer.Id }
         );

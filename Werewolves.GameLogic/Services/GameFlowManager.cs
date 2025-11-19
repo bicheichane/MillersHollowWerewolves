@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Werewolves.GameLogic.Interfaces;
 using Werewolves.GameLogic.Models;
 using Werewolves.GameLogic.Models.GameHookListeners;
@@ -14,7 +15,14 @@ using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.PhaseHandlerResult;
+using static Werewolves.GameLogic.Models.InternalMessages.StayInSubPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
+using static Werewolves.GameLogic.Models.StateMachine.EndNavigationSubPhaseStage;
+using static Werewolves.GameLogic.Models.StateMachine.HookSubPhaseStage;
+using static Werewolves.GameLogic.Models.StateMachine.LogicSubPhaseStage;
+using static Werewolves.GameLogic.Models.StateMachine.MidNavigationSubPhaseStage;
+using static Werewolves.GameLogic.Models.StateMachine.SubPhaseStage;
+using static Werewolves.StateModels.Enums.GameHook;
 using static Werewolves.StateModels.Enums.MainRoleType;
 using static Werewolves.StateModels.Enums.SecondaryRoleType;
 using static Werewolves.StateModels.Models.ListenerIdentifier;
@@ -27,11 +35,11 @@ namespace Werewolves.GameLogic.Services;
 internal static class GameFlowManager
 {
     #region Static Flow Definitions
-    private static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
+    internal static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
         // Define hook-to-listener mappings here.
         // ORDER MATTERS!!!!
-        [GameHook.NightActionLoop] =
+        [NightActionLoop] = 
         [
             Listener(Thief),                //first night only
             Listener(Actor),
@@ -55,26 +63,26 @@ internal static class GameFlowManager
             Listener(Charmed)
 		],
 
-        [GameHook.DayBreakAfterVictims] =
+        [DayBreakAfterVictims] =
         [
             Listener(BearTamer),
             Listener(Gypsy),
             Listener(TownCrier),
         ],
 
-        [GameHook.OnFirstVoteConcluded] =
+        [OnFirstVoteConcluded] =
         [
             Listener(StutteringJudge),
 		],
 
-        [GameHook.OnPlayerEliminationFinalized] =
+        [OnPlayerEliminationFinalized] =
         [
             Listener(Hunter),
             Listener(Lovers)
 		]
 	};
 
-    private static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
+    internal static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
     {
         // Define listener implementations here
         [Listener(SimpleWerewolf)] = new SimpleWerewolfRole(),
@@ -82,116 +90,100 @@ internal static class GameFlowManager
         [Listener(SimpleVillager)] = new SimpleVillagerRole()
     };
 
-    private static readonly Dictionary<GamePhase, IPhaseDefinition> PhaseDefinitions = new()
+    internal static readonly Dictionary<GamePhase, IPhaseDefinition> PhaseDefinitions = new()
     {
-        // Simple phase without sub-phases
-        [GamePhase.Setup] = new PhaseDefinition<SetupSubPhases>(
+        [GamePhase.Setup] = new PhaseManager<SetupSubPhases>(
         [
-            new() {
-                StartSubPhase = SetupSubPhases.Confirm,
-                Handler = HandleSetupConfirmation,
-                PossibleNextMainPhaseTransitions = [ new(GamePhase.Night, PhaseTransitionReason.SetupConfirmed) ]
-            }
+            new(subPhase: SetupSubPhases.Confirm, //Handler = HandleSetupConfirmation,
+                subPhaseStages: 
+                    [NavigationEndStage(SetupSubPhaseStage.ConfirmSetup, HandleSetupPhase)], 
+                possibleNextMainPhaseTransitions: 
+                    [new(GamePhase.Night)])
         ], entrySubPhase: SetupSubPhases.Confirm),
 
-        // Complex phase with declarative sub-phases
-        [GamePhase.Night] = new PhaseDefinition<NightSubPhases>(
+        [GamePhase.Night] = new PhaseManager<NightSubPhases>(
         [
-            new() {
-                StartSubPhase = NightSubPhases.Start,
-                Handler = HandleNightStart,
-                PossibleNextSubPhases = [ NightSubPhases.ActionLoop ]
-            },
-            new() {
-                StartSubPhase = NightSubPhases.ActionLoop,
-                Handler = HandleNightActionLoop,
-                // The handler can either stay in ActionLoop (via StayInSubPhaseResult) 
-                // or transition to Day_Dawn when the hook completes.
-                PossibleNextMainPhaseTransitions = [ new(GamePhase.Day_Dawn, PhaseTransitionReason.NightActionLoopComplete) ]
-            }
+            new(
+                subPhase: NightSubPhases.Start,
+                subPhaseStages: [ 
+                    LogicStage(NightSubPhaseStage.NightStart, HandleNightStart),
+                    HookStage(NightActionLoop, HandleNightActionStop),
+                    NavigationEndStageSilent(GamePhase.Dawn)
+                ],
+                possibleNextMainPhaseTransitions:
+                [ new (GamePhase.Dawn) ]
+			)
         ], entrySubPhase: NightSubPhases.Start),
 
-        // Complex phase with declarative sub-phases
-        [GamePhase.Day_Dawn] = new PhaseDefinition<DawnSubPhases>(
+        
+        [GamePhase.Dawn] = new PhaseManager<DawnSubPhases>(
         [
-            new() {
-                StartSubPhase = DawnSubPhases.CalculateVictims,
-                Handler = HandleDawnCalculateVictims,
-                PossibleNextSubPhases = [ DawnSubPhases.AnnounceVictims ]
-            },
-            new() {
-                StartSubPhase = DawnSubPhases.AnnounceVictims,
-                Handler = HandleDawnAnnounceVictims,
-                PossibleNextSubPhases = [ DawnSubPhases.ProcessRoleReveals ]
-            },
-            new() {
-                StartSubPhase = DawnSubPhases.ProcessRoleReveals,
-                Handler = HandleDawnProcessRoleReveals,
-                PossibleNextSubPhases = [ DawnSubPhases.Finalize ]
-            },
-            new() {
-                StartSubPhase = DawnSubPhases.Finalize,
-                Handler = HandleDawnFinalize,
-                PossibleNextMainPhaseTransitions = [ 
-                    new(GamePhase.Day_Debate, PhaseTransitionReason.DawnNoVictimsProceedToDebate),
-                    new(GamePhase.Day_Debate, PhaseTransitionReason.DawnVictimsProceedToDebate)
+            new(
+                subPhase : DawnSubPhases.CalculateVictims,
+                subPhaseStages: [
+                    NavigationEndStage(DawnSubPhaseStage.CheckForVictims, HandleDawnCalculateVictims)
+                ],
+                possibleNextSubPhases:[DawnSubPhases.AnnounceVictims, DawnSubPhases.Finalize]
+			),
+            new(
+                subPhase : DawnSubPhases.AnnounceVictims,
+                subPhaseStages: [
+                    LogicStage(DawnSubPhaseStage.AnnounceVictims, HandleVictimsAnnounceAndRoleRequest),
+                    LogicStage(DawnSubPhaseStage.DawnRoleReveals, HandleVictimsAnnounceAndRoleResponse),
+                    NavigationEndStageSilent(DawnSubPhases.Finalize)
+					],
+                possibleNextSubPhases: [DawnSubPhases.Finalize]
+			),
+            new(
+                subPhase: DawnSubPhases.Finalize,
+                subPhaseStages: [
+                    NavigationEndStageSilent(GamePhase.Day)
+                ],
+                possibleNextMainPhaseTransitions: [
+                    new(GamePhase.Day),
                 ]
-            }
+			)
         ], entrySubPhase: DawnSubPhases.CalculateVictims),
 
-        // Simple phase without sub-phases
-        [GamePhase.Day_Debate] = new PhaseDefinition<DayDebateSubPhases>(
+        [GamePhase.Day] = new PhaseManager<DaySubPhases>(
         [
-            new() {
-                StartSubPhase = DayDebateSubPhases.Confirm,
-                Handler = HandleDayDebateConfirmation,
-                PossibleNextMainPhaseTransitions = [ new(GamePhase.Day_Vote, PhaseTransitionReason.DebateConfirmedProceedToVote) ]
-            }
-        ], entrySubPhase: DayDebateSubPhases.Confirm),
+            new(
+                subPhase: DaySubPhases.Debate,
+                subPhaseStages: 
+                    [ NavigationEndStage(DaySubPhaseStage.Debate, HandleDebate)],
+                possibleNextSubPhases:
+                    [ DaySubPhases.NormalVoting,
+                        //Additional voting sub-phases to be added here
+                    ]
+			),
+            new(
+                subPhase: DaySubPhases.NormalVoting,
+                subPhaseStages: [ 
+                    LogicStage(DaySubPhaseStage.StartNormalVote, HandleDayNormalVoteOutcomeRequest),
+                    NavigationEndStage(DaySubPhaseStage.ProcessVote, HandleDayNormalVoteOutcomeResponse)],
+                possibleNextSubPhases:
+                    [ DaySubPhases.ProcessVoteRoleReveal, DaySubPhases.Finalize ]
+			),
+            // Additional sub-phases (AccusationVoting, FriendVoting) can be added here
+            new(
+                subPhase: DaySubPhases.ProcessVoteRoleReveal,
+                subPhaseStages: [ 
+                    LogicStage(DaySubPhaseStage.VoteRoleRevealRequest, HandleDayVoteRoleRevealRequest),
+                    LogicStage(DaySubPhaseStage.VoteRoleRevealResponse, HandleDayVoteRoleRevealResponse),
+                    NavigationEndStageSilent(DaySubPhases.Finalize)
+				],
+                possibleNextSubPhases:
+                    [ DaySubPhases.Finalize ]
+			),
+            new(
+                subPhase: DaySubPhases.Finalize,
+                subPhaseStages:
+                    [ NavigationEndStageSilent(GamePhase.Night) ],
+                possibleNextMainPhaseTransitions:
+                    [ new(GamePhase.Night) ]
+            )
+        ], entrySubPhase: DaySubPhases.Debate),
 
-        // Simple phase without sub-phases
-        [GamePhase.Day_Vote] = new PhaseDefinition<DayVoteSubPhases>(
-        [
-            new() {
-                StartSubPhase = DayVoteSubPhases.ProcessOutcome,
-                Handler = HandleDayVoteProcessOutcome,
-                PossibleNextMainPhaseTransitions = [ new(GamePhase.Day_Dusk, PhaseTransitionReason.VoteOutcomeReported) ]
-            }
-        ], entrySubPhase: DayVoteSubPhases.ProcessOutcome),
-
-        // Complex phase with declarative sub-phases
-        [GamePhase.Day_Dusk] = new PhaseDefinition<DayDuskSubPhases>(
-        [
-            new() {
-                StartSubPhase = DayDuskSubPhases.ResolveVote,
-                Handler = HandleDayDuskResolveVote,
-                PossibleNextSubPhases = [ DayDuskSubPhases.TransitionToNext ]
-            },
-            new() {
-                StartSubPhase = DayDuskSubPhases.TransitionToNext,
-                Handler = HandleDayDuskTransitionToNext,
-                PossibleNextMainPhaseTransitions = [ 
-                    new(GamePhase.Day_Dawn, PhaseTransitionReason.VoteResolvedProceedToReveal),
-                    new(GamePhase.Night, PhaseTransitionReason.VoteResolvedTieProceedToNight)
-                ]
-            }
-        ], entrySubPhase: DayDuskSubPhases.ResolveVote),
-
-        // Legacy phases - still using old approach for now
-        [GamePhase.AccusationVoting] = new PhaseDefinition(
-            ProcessInputAndUpdatePhase: HandleAccusationVotingPhase,
-            PossiblePhaseTransitions: []
-        ),
-
-        [GamePhase.FriendVoting] = new PhaseDefinition(
-            ProcessInputAndUpdatePhase: HandleFriendVotingPhase,
-            PossiblePhaseTransitions: []
-        ),
-
-        [GamePhase.GameOver] = new PhaseDefinition(
-            ProcessInputAndUpdatePhase: HandleGameOverPhase
-            // No transitions out of GameOver
-        )
     };
     #endregion
 
@@ -199,37 +191,27 @@ internal static class GameFlowManager
 
     internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
     {
-        
-        ModeratorInstruction? nextInstructionToSend = null;
-        
-    
         var currentPhase = session.GetCurrentPhase();
         
         // --- Execute Phase Handler ---
         PhaseHandlerResult handlerResult = RouteInputToPhaseHandler(session, input);
 
-        if (handlerResult is MainPhaseHandlerResult mainPhaseResult)
-        {
-			
-		}
-        else 
-        if (handlerResult is SubPhaseHandlerResult { SubGamePhase: not null } subPhaseResult)
-        {
-            
-        }
-
-
-		nextInstructionToSend = handlerResult.ModeratorInstruction;
+		var nextInstructionToSend = handlerResult.ModeratorInstruction;
 
 		if(TryGetVictoryInstructions(session, currentPhase, out var victoryInstruction))
         {
             nextInstructionToSend = victoryInstruction;
 		}
 
+        if (nextInstructionToSend == null)
+        {
+            throw new InvalidOperationException("HandleInput: null nextInstructionToSend");
+        }
+
 		// --- Update Pending Instruction ---
 		session.PendingModeratorInstruction = nextInstructionToSend;
 
-		// If no victory override, return the determined success result
+		
 		return ProcessResult.Success(nextInstructionToSend);
     }
 
@@ -239,7 +221,8 @@ internal static class GameFlowManager
         nextInstructionToSend = null;
         // --- Post-Processing: Victory Check ---
         // Check victory ONLY after specific resolution phases
-        if (currentPhase == GamePhase.Day_Dawn || currentPhase == GamePhase.Day_Dusk)
+        if (currentPhase == GamePhase.Dawn || 
+            (currentPhase == GamePhase.Day && session.GetSubPhase<DaySubPhases>() == DaySubPhases.Finalize))
         {
             var victoryCheckResult = CheckVictoryConditions(session);
             if (victoryCheckResult != null)
@@ -247,9 +230,7 @@ internal static class GameFlowManager
                 // Victory condition met!
                 session.VictoryConditionMet(victoryCheckResult.Value.WinningTeam, victoryCheckResult.Value.Description);
 
-                var finalInstruction = new ConfirmationInstruction(
-                    String.Format(GameStrings.GameOverMessage, victoryCheckResult.Value.Description)
-                );
+                var finalInstruction = new FinishedGameConfirmationInstruction(victoryCheckResult.Value.Description);
                 nextInstructionToSend = finalInstruction; // Override instruction
                 return true;
             }
@@ -291,390 +272,173 @@ internal static class GameFlowManager
         return null;
     }
 
-    #endregion
+	#endregion
 
-    #region Phase Handlers
+	#region Setup Phase Handlers
 
-	private static PhaseHandlerResult HandleSetupPhase(GameSession session, ModeratorResponse input)
+	private static MajorNavigationPhaseHandlerResult HandleSetupPhase(GameSession session, ModeratorResponse input)
     {
         var nightStartInstruction = new ConfirmationInstruction(
             publicAnnouncement: GameStrings.NightStartsPrompt,
             privateInstruction: GameStrings.ConfirmNightStarted
         );
         // Transition happens, specific instruction provided.
-        
-        return TransitionPhase(nightStartInstruction, GamePhase.Night, PhaseTransitionReason.SetupConfirmed);
+
+        return TransitionPhase(nightStartInstruction, GamePhase.Night);
     }
 
-    /// <summary>
-    /// Consolidated Night phase handler with internal sub-phase management.
-    /// Handles village sleep, role identification (first night only), and action loop.
-    /// </summary>
-    private static PhaseHandlerResult HandleNightPhase(GameSession session, ModeratorResponse input)
+	#endregion
+
+	#region Night Phase Handler Methods
+
+	/// <summary>
+	/// Handles the Night.Start sub-phase: village goes to sleep, increment turn number.
+	/// </summary>
+	private static ModeratorInstruction HandleNightStart(GameSession session, ModeratorResponse input)
     {
-        // Get current sub-phase from cache, default to Start
-        var subPhase = session.GetSubPhase<NightSubPhases>() ?? NightSubPhases.Start;
-
-        switch (subPhase)
-        {
-            case NightSubPhases.Start:
-                return HandleNightStart(session, input);
-            
-            case NightSubPhases.ActionLoop:
-                return HandleNightActionLoop(session, input);
-            
-            default:
-                throw new InvalidOperationException($"Unknown night sub-phase: {subPhase}");
-        }
-    }
-
-    /// <summary>
-    /// Consolidated Day_Dawn phase handler with internal sub-phase management.
-    /// Handles victim calculation, announcements, and role reveals.
-    /// </summary>
-    private static PhaseHandlerResult HandleDayDawnPhase(GameSession session, ModeratorResponse input)
-    {
-        // Get current sub-phase from cache, default to CalculateVictims
-        var subPhase = session.GetSubPhase<DawnSubPhases>() ?? DawnSubPhases.CalculateVictims;
-
-        switch (subPhase)
-        {
-            case DawnSubPhases.CalculateVictims:
-                return HandleDawnCalculateVictims(session, input);
-            
-            case DawnSubPhases.AnnounceVictims:
-                return HandleDawnAnnounceVictims(session, input);
-            
-            case DawnSubPhases.ProcessRoleReveals:
-                return HandleDawnProcessRoleReveals(session, input);
-            
-            case DawnSubPhases.Finalize:
-                return HandleDawnFinalize(session, input);
-            
-            default:
-                throw new InvalidOperationException(
-                    $"Unknown dawn sub-phase: {subPhase}");
-        }
-    }
-
-    private static PhaseHandlerResult HandleDayDebatePhase(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement debate phase logic
-        // For now, transition to vote on confirmation
-
-        var voteInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.DebateStartsPrompt
-        );
-        
-        return TransitionPhase(voteInstruction, GamePhase.Day_Vote, PhaseTransitionReason.DebateConfirmedProceedToVote);
-    }
-
-    private static PhaseHandlerResult HandleDayVotePhase(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement vote phase logic
-        // For now, transition to dusk on any input
-        var duskInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.VoteStartsPrompt
-        );
-        
-        return TransitionPhase(duskInstruction, GamePhase.Day_Dusk, PhaseTransitionReason.VoteOutcomeReported);
-    }
-
-    private static PhaseHandlerResult HandleDayDuskPhase(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement vote resolution logic
-        // For now, transition to night (tie) or dawn (elimination)
-        // This would normally depend on the vote outcome
-        var nightInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.NightStartsPrompt
-        );
-        
-        return TransitionPhase(nightInstruction, GamePhase.Night, PhaseTransitionReason.VoteResolvedTieProceedToNight);
-    }
-
-    private static PhaseHandlerResult HandleAccusationVotingPhase(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement Nightmare event accusation voting
-        throw new NotImplementedException();
-    }
-
-    private static PhaseHandlerResult HandleFriendVotingPhase(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement Great Distrust event friend voting
-        throw new NotImplementedException();
-    }
-
-    private static PhaseHandlerResult HandleGameOverPhase(GameSession session, ModeratorResponse input)
-    {
-        return StayInSubPhaseHandlerResult.StayInSubPhase(new ConfirmationInstruction("you won, shut up now"));
-    }
-
-    #endregion
-
-    #region Night Phase Helper Methods
-
-    /// <summary>
-    /// Handles the Night.Start sub-phase: village goes to sleep, increment turn number.
-    /// </summary>
-    private static PhaseHandlerResult HandleNightStart(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement village sleep logic
-        // - Increment turn number if transitioning from day phase
-        // - Issue "Village goes to sleep" instruction
-        // - Transition to ActionLoop (unified night actions including first-night identification)
-
         var instruction = new ConfirmationInstruction(
             publicAnnouncement: "Village goes to sleep. Night actions begin."
         );
 
-        return TransitionSubPhase(instruction, NightSubPhases.ActionLoop);
+        return instruction;
     }
 
-    /// <summary>
-    /// Handles the Night.ActionLoop sub-phase: main role action sequence.
-    /// </summary>
-    private static PhaseHandlerResult HandleNightActionLoop(GameSession session, ModeratorResponse input)
+    private static ModeratorInstruction HandleNightActionStop(GameSession session, ModeratorResponse input)
     {
-        // Fire the unified night action loop hook
-        var hookResult = FireHook(GameHook.NightActionLoop, session, input);
+        var instruction = new ConfirmationInstruction(
+            publicAnnouncement: "Night actions complete. Village wakes up."
+        );
 
-        return HandleHookResult(hookResult, onComplete: () =>
-        {
-            var instruction = new ConfirmationInstruction(
-                publicAnnouncement: "Night actions complete. Village wakes up."
-            );
-
-            return TransitionPhase(instruction, GamePhase.Day_Dawn, PhaseTransitionReason.NightActionLoopComplete);
-        });
-    }
+        return instruction;
+	}
 
     #endregion
 
-    #region Dawn Phase Helper Methods
+    #region Dawn Phase Handler Methods
 
     /// <summary>
     /// Handles the Dawn.CalculateVictims sub-phase: process night actions to determine final victims.
     /// </summary>
-    private static PhaseHandlerResult HandleDawnCalculateVictims(GameSession session, ModeratorResponse input)
+    private static MajorNavigationPhaseHandlerResult HandleDawnCalculateVictims(GameSession session, ModeratorResponse input)
     {
-        // TODO: Implement victim calculation logic
-        // - Query GameHistoryLog for all night actions
-        // - Calculate final list of eliminated players
-        // - Process queue of cascading effects (Hunter, Lovers, etc.)
-        // - Handle moderator input for targets if needed
-        // - Transition to AnnounceVictims when complete
+		// - Calculate final list of eliminated players
+		// - Transition to AnnounceVictims if there are any victims, otherwise transition to Finalize
 
-        var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Night victims calculated. Ready to announce."
-        );
+		DawnSubPhases nextSubPhase = DawnSubPhases.Finalize;
 
-        return TransitionSubPhase(instruction, DawnSubPhases.AnnounceVictims);
-    }
+        var victimList = new List<Guid>();
+        
+        var werewolfSelection = session.GetPlayersTargetedByNightAction(NightActionType.WerewolfVictimSelection, SelectionCountConstraint.Single).Single();
 
-    /// <summary>
-    /// Handles the Dawn.AnnounceVictims sub-phase: moderator announces all victims from the night.
-    /// </summary>
-    private static PhaseHandlerResult HandleDawnAnnounceVictims(GameSession session, ModeratorResponse input)
+        session.EliminatePlayer(werewolfSelection.Id, EliminationReason.WerewolfAttack);
+
+        victimList.Add(werewolfSelection.Id);
+
+        if (victimList.Count > 0)
+        {
+            nextSubPhase = DawnSubPhases.AnnounceVictims;
+		}
+
+		return TransitionSubPhaseSilent(nextSubPhase);
+	}
+
+    private static ModeratorInstruction HandleVictimsAnnounceAndRoleRequest(GameSession session, ModeratorResponse input)
     {
-        // TODO: Implement victim announcement logic
-        // - Issue single instruction to announce all victims
-        // - Await moderator confirmation to proceed
-        // - Transition to ProcessRoleReveals
+        var victimList = session.GetPlayersEliminatedLastDawn().ToImmutableHashSet();
 
-        var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Victims announced. Ready to process role reveals."
-        );
+        var victimNameList = string.Join(Environment.NewLine, victimList.Select(p => p.Name));
 
-        return TransitionSubPhase(instruction, DawnSubPhases.ProcessRoleReveals);
+        var unassignedRoles = session.GetUnassignedRoles();
+
+        return new AssignRolesInstruction(
+            publicAnnouncement: GameStrings.MultipleVictimEliminatedAnnounce.Format(victimNameList),
+            privateInstruction: GameStrings.RevealRolePromptSpecify,
+            playersForAssignment: victimList.Select(p => p.Id).ToImmutableHashSet(),
+            rolesForAssignment: unassignedRoles
+		);
     }
 
     /// <summary>
     /// Handles the Dawn.ProcessRoleReveals sub-phase: reveal roles for each eliminated player.
     /// </summary>
-    private static PhaseHandlerResult HandleDawnProcessRoleReveals(GameSession session, ModeratorResponse input)
+    private static void HandleVictimsAnnounceAndRoleResponse(GameSession session, ModeratorResponse input)
     {
-        // TODO: Implement role reveal processing logic
-        // - Iterate through eliminated players
-        // - For each player, issue instruction to provide revealed role
-        // - Pause and resume as input is received for each reveal
-        // - Transition to Finalize when complete
+        foreach (var entry in input.AssignedPlayerRoles!)
+        {
+            session.AssignRole(entry.Key, entry.Value);
+        }
         
-        var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "MainRole reveals processed. Finalizing dawn phase."
-        );
-        
-        return TransitionSubPhase(instruction, DawnSubPhases.Finalize);
+        //proceed to the next sub-phase state silently
     }
 
-    /// <summary>
-    /// Handles the Dawn.Finalize sub-phase: complete dawn processing and transition to debate.
-    /// </summary>
-    private static PhaseHandlerResult HandleDawnFinalize(GameSession session, ModeratorResponse input)
-    {
-        // TODO: Implement dawn finalization logic
-        // - Determine if there were victims or not
-        // - Transition to Day_Debate with appropriate reason
+	#endregion
 
-        var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Dawn phase complete. Beginning debate."
-        );
-
-        return TransitionPhase(instruction, GamePhase.Day_Debate, PhaseTransitionReason.DawnNoVictimsProceedToDebate);
-    }
-
-    #endregion
-
-    #region Focused Sub-Phase Handlers
-
-    /// <summary>
-    /// Handles the Setup.Confirm sub-phase: moderator confirms setup is complete.
-    /// </summary>
-    private static PhaseHandlerResult HandleSetupConfirmation(GameSession session, ModeratorResponse input)
-    {
-        var nightStartInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.NightStartsPrompt,
-            privateInstruction: GameStrings.ConfirmNightStarted
-        );
-        
-        return MainPhaseHandlerResult.TransitionPhase(nightStartInstruction, GamePhase.Night, PhaseTransitionReason.SetupConfirmed);
-    }
+	#region Day Phase Handler Methods
 
     /// <summary>
     /// Handles the DayDebate.Confirm sub-phase: moderator confirms debate is complete.
     /// </summary>
-    private static PhaseHandlerResult HandleDayDebateConfirmation(GameSession session, ModeratorResponse input)
+    private static SubPhaseHandlerResult HandleDebate(GameSession session, ModeratorResponse input)
     {
         var voteInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.DebateStartsPrompt
+            publicAnnouncement: GameStrings.DebateStartsPrompt,
+            privateInstruction: GameStrings.DebateModeratorInstructions
         );
+
+        //TODO: add conditional logic to check which voting style should be performed
         
-        return MainPhaseHandlerResult.TransitionPhase(voteInstruction, GamePhase.Day_Vote, PhaseTransitionReason.DebateConfirmedProceedToVote);
+        return TransitionSubPhase(voteInstruction, DaySubPhaseStage.StartNormalVote);
+    }
+
+    private static ModeratorInstruction HandleDayNormalVoteOutcomeRequest(GameSession session, ModeratorResponse input)
+    {
+        var alivePlayers = session.GetPlayers().WithHealth(PlayerHealth.Alive);
+
+        var selectPlayerInstruction = new SelectPlayersInstruction(
+            alivePlayers.ToIdList(),
+            SelectionCountConstraint.Optional,
+            publicAnnouncement: GameStrings.VoteStartsPublicInstruction,
+            privateInstruction: GameStrings.VoteStartsModeratorInstruction);
+
+        return selectPlayerInstruction;
     }
 
     /// <summary>
     /// Handles the DayVote.ProcessOutcome sub-phase: process vote outcome reported by moderator.
     /// </summary>
-    private static PhaseHandlerResult HandleDayVoteProcessOutcome(GameSession session, ModeratorResponse input)
+    private static MajorNavigationPhaseHandlerResult HandleDayNormalVoteOutcomeResponse(GameSession session, ModeratorResponse input)
     {
-        var duskInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.VoteStartsPrompt
-        );
-        
-        return MainPhaseHandlerResult.TransitionPhase(duskInstruction, GamePhase.Day_Dusk, PhaseTransitionReason.VoteOutcomeReported);
+        var selectedPlayer = input.SelectedPlayerIds!;
+
+		if (selectedPlayer.Count == 0) //tie
+        {
+            return TransitionSubPhaseSilent(DaySubPhases.Finalize);
+		}
+        else
+        {
+            var playerId = selectedPlayer[0];
+            session.EliminatePlayer(playerId, EliminationReason.DayVote);
+			return TransitionSubPhaseSilent(DaySubPhases.ProcessVoteRoleReveal);
+        }
     }
 
-    /// <summary>
-    /// Handles the DayDusk.ResolveVote sub-phase: process the vote outcome and handle eliminations.
-    /// </summary>
-    private static PhaseHandlerResult HandleDayDuskResolveVote(GameSession session, ModeratorResponse input)
+    private static ModeratorInstruction HandleDayVoteRoleRevealRequest(GameSession gameSession, ModeratorResponse input)
     {
-        // TODO: Implement vote resolution logic
-        // This would normally depend on the vote outcome
-        
-        var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Vote resolution processed."
-        );
+        var votedPlayer = gameSession.GetPlayerEliminatedLastVote();
+        var availableRoles = gameSession.GetUnassignedRoles();
 
-        return SubPhaseHandlerResult.TransitionSubPhase(instruction, DayDuskSubPhases.TransitionToNext);
+        return new AssignRolesInstruction(
+            [votedPlayer],
+            availableRoles,
+            privateInstruction: GameStrings.RevealRolePromptSpecify
+        );
     }
 
-    /// <summary>
-    /// Handles the DayDusk.TransitionToNext sub-phase: determine next phase (night or dawn for role reveals).
-    /// </summary>
-    private static PhaseHandlerResult HandleDayDuskTransitionToNext(GameSession session, ModeratorResponse input)
+    private static void HandleDayVoteRoleRevealResponse(GameSession session, ModeratorResponse input)
     {
-        // TODO: Implement logic to determine if there was an elimination or tie
-        // For now, assume tie and transition to night
-        
-        var nightInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.NightStartsPrompt
-        );
-        
-        return MainPhaseHandlerResult.TransitionPhase(nightInstruction, GamePhase.Night, PhaseTransitionReason.VoteResolvedTieProceedToNight);
-    }
+        var entry = input.AssignedPlayerRoles!.Single();
+        session.AssignRole(entry.Key, entry.Value);
+	}
 
     #endregion
-
-    #region Hook System Infrastructure
-
-    /// <summary>
-    /// Fires a game hook and dispatches to registered listeners.
-    /// Implements the hook dispatch logic for the unified night action loop.
-    /// </summary>
-    /// <param name="hook">The hook to fire.</param>
-    /// <param name="session">The current game session.</param>
-    /// <param name="input">The moderator response.</param>
-    /// <returns>A HookHandlerResult indicating the outcome of the hook firing.</returns>
-    private static HookHandlerResult FireHook(GameHook hook, GameSession session, ModeratorResponse input)
-    {
-        // Set the active hook in the cache
-        session.TransitionActiveHook(hook);
-        
-        // Get registered listeners for this hook
-        if (!HookListeners.TryGetValue(hook, out var listeners))
-        {
-            // No listeners registered for this hook, complete it
-            return HookHandlerResult.Complete();
-        }
-        
-        // Check if we have a currently paused listener
-        var currentListener = session.GetCurrentListener();
-
-        // Dispatch to each listener in sequence
-        foreach (var listenerId in listeners)
-        {
-            if (!ListenerImplementations.TryGetValue(listenerId, out var listener))
-            {
-				//throw new InvalidOperationException($"Listener implementation not found for listener ID: {listenerId}");
-				// TODO: Skip unimplemented listeners for now
-                continue;
-            }
-
-			if (currentListener != null && currentListener != listenerId)
-            {
-                // Another listener is currently paused, skip until resumed
-                continue;
-            }
-            
-            // Call the listener's state machine
-            var result = listener.AdvanceStateMachine(session, input);
-            
-            switch(result.Outcome)
-            {
-                case HookListenerOutcome.NeedInput:
-                    // Handler needs input, pause processing
-                    return HookHandlerResult.NeedInput(result.Instruction);
-
-                case HookListenerOutcome.Complete:
-                    // Listener completed successfully, continue to next
-                    continue;
-                
-                default:
-                    throw new InvalidOperationException($"Unknown HookListenerActionOutcome: {result.Outcome}");
-            }
-        }
-        
-        // All listeners completed successfully
-        return HookHandlerResult.Complete();
-    }
-
-
-    private static PhaseHandlerResult HandleHookResult(HookHandlerResult hookResult, Func<PhaseHandlerResult> onComplete)
-    {
-        switch (hookResult.Outcome)
-        {
-            case HookHandlerOutcome.NeedInput:
-                return StayInSubPhaseHandlerResult.StayInSubPhase(hookResult.Instruction!);
-
-            case HookHandlerOutcome.Complete:
-                return onComplete();
-
-            default:
-                throw new InvalidOperationException($"Unknown HookListenerOutcome: {hookResult.Outcome}");
-        }
-    }
-
-
-
-	#endregion
 }

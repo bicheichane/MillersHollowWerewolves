@@ -12,10 +12,24 @@ public record struct GamePhaseStateCache
 {
     // Tracks the GFM's current execution point.
     private GamePhase _currentPhase;
-    private string? _currentGfmSubPhase;
+    private string? _currentSubPhase;
 
-    // Tracks the currently executing hook sequence.
-    private GameHook? _activeHook;
+	/// <summary>
+	/// Tracks the currently executing subphase stage.
+	/// Essentially acts like a mutex for subphase execution, but unlike a mutex
+	/// this allows us to track which stage is currently active for debugging/logging purposes.
+	/// While null, any subphase stage can start execution.
+	/// Otherwise, only the active subphase stage can continue or finish execution.
+	/// </summary>
+	private string? _currentSubPhaseStage;
+
+	/// <summary>
+	/// Tracks all previously executed subphase stages within a given sub-phase.
+	/// Resets on every sub-phase transition.
+	/// This is to prevent sub-phase stages from being re-entered multiple times within the same sub-phase,
+	/// after they've completed once.
+	/// </summary>
+	private List<string> _previousSubPhaseStages = new();
     
     // Tracks the single listener that is currently paused awaiting input.
     private ListenerIdentifier? _currentListener;
@@ -31,18 +45,12 @@ public record struct GamePhaseStateCache
     }
 
     // --- GFM State Accessors ---
-
-    /// <summary>
-    /// Gets the current game phase.
-    /// </summary>
-    /// <returns>The current game phase.</returns>
-    internal GamePhase GetCurrentPhase() => _currentPhase;
     
     internal void TransitionMainPhase(GamePhase phase)
     {
         if (_currentPhase != phase)
         {
-            ClearCurrentSubPhaseState();
+            ClearCurrentSubPhase();
         }
         _currentPhase = phase;
     }
@@ -54,18 +62,25 @@ public record struct GamePhaseStateCache
     /// <param name="subPhase">The optional sub-phase enum value.</param>
     internal void TransitionSubPhase(Enum subPhase)
     {
-		ClearCurrentHook();
-		_currentGfmSubPhase = subPhase.ToString();
+		ClearCurrentSubPhase();
+		_currentSubPhase = subPhase.ToString();
     }
 
     /// <summary>
-    /// Sets the currently active hook.
+    /// Sets the currently active sub phase stage.
     /// </summary>
-    /// <param name="hook">The hook that is currently being processed.</param>
-    internal void TransitionHook(GameHook hook)
+    /// <param name="subPhaseStage">The sub phase stage that is currently being processed.</param>
+    internal void StartSubPhaseStage(string subPhaseStage)
     {
-	    ClearCurrentListener();
-		_activeHook = hook;
+		_currentSubPhaseStage = subPhaseStage;
+    }
+
+    internal void CompleteSubPhaseStage()
+    {
+		//ok to throw if _currentSubPhaseStage is null here - indicates a logic error.
+		//we shouldn't be able to attempt to complete subphase stages when none are active.
+		_previousSubPhaseStages.Add(_currentSubPhaseStage!);
+		ClearSubPhaseStage();
     }
 
 
@@ -81,6 +96,12 @@ public record struct GamePhaseStateCache
         _currentListenerState = enumState.ToString();
     }
 
+    /// <summary>
+    /// Gets the current game phase.
+    /// </summary>
+    /// <returns>The current game phase.</returns>
+    internal GamePhase GetCurrentPhase() => _currentPhase;
+
 	/// <summary>
 	/// Gets the current GFM sub-phase as the specified enum type.
 	/// </summary>
@@ -88,9 +109,9 @@ public record struct GamePhaseStateCache
 	/// <returns>The sub-phase value, or null if not set or parsing fails.</returns>
 	internal T? GetSubPhase<T>() where T : struct, Enum
     {
-        if (_currentGfmSubPhase != null)
+        if (_currentSubPhase != null)
         {
-            if (Enum.TryParse<T>(_currentGfmSubPhase, out var result))
+            if (Enum.TryParse<T>(_currentSubPhase, out var result))
             {
                 return result;
             }
@@ -99,10 +120,11 @@ public record struct GamePhaseStateCache
     }
 
     /// <summary>
-    /// Gets the currently active hook.
+    /// Gets the currently active sub phase stage.
     /// </summary>
-    /// <returns>The active hook, or null if no hook is active.</returns>
-    internal GameHook? GetActiveHook() => _activeHook;
+    /// <returns>The active sub phase stage, or null if none is active.</returns>
+    internal string? GetActiveSubPhaseStage() => _currentSubPhaseStage;
+    internal bool HasSubPhaseStageCompleted(string subPhaseStageId) => _previousSubPhaseStages.Contains(subPhaseStageId);
 
 	/// <summary>
 	/// Gets the state for a current listener.
@@ -137,9 +159,9 @@ public record struct GamePhaseStateCache
     /// <summary>
     /// Marks the current hook as completed and clears it.
     /// </summary>
-    private void ClearCurrentHook()
+    private void ClearSubPhaseStage()
     {
-        _activeHook = null;
+        _currentSubPhaseStage = null;
         ClearCurrentListener();
     }
 
@@ -147,9 +169,10 @@ public record struct GamePhaseStateCache
 	/// Central cleanup method that must be called when transitioning between main GamePhases.
 	/// Guarantees transient state is never leaked across phases.
 	/// </summary>
-	private void ClearCurrentSubPhaseState()
+	private void ClearCurrentSubPhase()
     {
-        _currentGfmSubPhase = null;
-        ClearCurrentHook();
+        _currentSubPhase = null;
+        _previousSubPhaseStages = [];
+		ClearSubPhaseStage();
     }
 }

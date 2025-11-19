@@ -9,12 +9,22 @@ namespace Werewolves.StateModels.Enums;
 /// For example, do not have a sub-phase that starts by modifying some game state
 /// and afterwards firing a hook to notify players. If the sub-phase is re-entered,
 /// the game state would be modified again, leading to inconsistent behavior.
-/// 
+///
+/// We're currently enforcing this by ensuring that each sub-phase consists of discrete stages,
+/// that can only be executed once per sub-phase entry, and forcibly move to either another stage,
+/// sub-phase, or main-phase.
 /// *****************************************************************
 
 /// <summary>
+/// Internal sub-phases for Setup phase.
+/// </summary>
+public enum SetupSubPhases
+{
+    Confirm            // Moderator confirms setup is complete
+}
+
+/// <summary>
 /// Internal sub-phases for the consolidated Night phase.
-/// Updated per Revision 2.1: Night hooks simplification.
 /// </summary>
 public enum NightSubPhases
 {
@@ -24,7 +34,6 @@ public enum NightSubPhases
 
 /// <summary>
 /// Internal sub-phases for the consolidated Day_Dawn phase.
-/// Updated per Revision 2: Game Phase Simplification.
 /// </summary>
 public enum DawnSubPhases
 {
@@ -35,38 +44,19 @@ public enum DawnSubPhases
 }
 
 /// <summary>
-/// Internal sub-phases for Day_Dusk phase (vote resolution).
-/// Kept for potential future expansion, though currently simpler.
-/// </summary>
-public enum DayDuskSubPhases
-{
-    ResolveVote,        // Process the vote outcome and handle eliminations
-    TransitionToNext    // Determine next phase (night or dawn for role reveals)
-}
-
-/// <summary>
-/// Internal sub-phases for Setup phase.
-/// Simple phase with single confirmation step.
-/// </summary>
-public enum SetupSubPhases
-{
-    Confirm            // Moderator confirms setup is complete
-}
-
-/// <summary>
 /// Internal sub-phases for Day_Debate phase.
-/// Simple phase with single confirmation step.
 /// </summary>
-public enum DayDebateSubPhases
+public enum DaySubPhases
 {
-    Confirm            // Moderator confirms debate is complete
+    Debate,            // Moderator confirms debate is complete
+    NormalVoting,
+    AccusationVoting,
+    FriendVoting,
+    ProcessVoteRoleReveal,
+    Finalize
 }
 
-/// <summary>
-/// Internal sub-phases for Day_Vote phase.
-/// Simple phase with single outcome processing step.
-/// </summary>
-public enum DayVoteSubPhases
+public enum VictorySubPhases
 {
-    ProcessOutcome     // Process vote outcome reported by moderator
+    Complete
 }

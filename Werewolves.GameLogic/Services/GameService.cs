@@ -90,7 +90,14 @@ public class GameService
 			return validationResult; // Return failure if validation fails
 		}
 
-		return GameFlowManager.HandleInput(session, input);
+		var result = GameFlowManager.HandleInput(session, input);
+
+		if (result.ModeratorInstruction is FinishedGameConfirmationInstruction)
+		{
+			_sessions.Remove(gameId, out _);
+		}
+
+		return result;
 	}
 
 	// --- Helper Methods ---

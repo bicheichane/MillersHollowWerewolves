@@ -79,6 +79,15 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Try to moderate and ensure everyone has a chance to speak and intervene. Confirm once the debate has finished..
+        /// </summary>
+        public static string DebateModeratorInstructions {
+            get {
+                return ResourceManager.GetString("DebateModeratorInstructions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Daytime debate begins. When finished, confirm to proceed to vote..
         /// </summary>
         public static string DebateStartsPrompt {
@@ -156,6 +165,15 @@ namespace Werewolves.StateModels.Resources {
         public static string InvalidVoteOutcome {
             get {
                 return ResourceManager.GetString("InvalidVoteOutcome", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The following players were eliminated during the night: \n{0}.
+        /// </summary>
+        public static string MultipleVictimEliminatedAnnounce {
+            get {
+                return ResourceManager.GetString("MultipleVictimEliminatedAnnounce", resourceCulture);
             }
         }
         
@@ -264,15 +282,6 @@ namespace Werewolves.StateModels.Resources {
         public static string ResolveVotePrompt {
             get {
                 return ResourceManager.GetString("ResolveVotePrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Reveal the role of the eliminated player ({0})?.
-        /// </summary>
-        public static string RevealRolePrompt {
-            get {
-                return ResourceManager.GetString("RevealRolePrompt", resourceCulture);
             }
         }
         
@@ -493,6 +502,15 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Player {0} was eliminated during the night..
+        /// </summary>
+        public static string SingleVictimEliminatedAnnounce {
+            get {
+                return ResourceManager.GetString("SingleVictimEliminatedAnnounce", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cannot target {0} because they are an ally (Werewolf)..
         /// </summary>
         public static string TargetIsAllyError {
@@ -525,15 +543,6 @@ namespace Werewolves.StateModels.Resources {
         public static string UnexpectedInput {
             get {
                 return ResourceManager.GetString("UnexpectedInput", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Player {0} was eliminated during the night..
-        /// </summary>
-        public static string VictimEliminatedAnnounce {
-            get {
-                return ResourceManager.GetString("VictimEliminatedAnnounce", resourceCulture);
             }
         }
         
@@ -619,15 +628,6 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Day vote phase. Please determine the outcome and report the single player eliminated (or report a tie)..
-        /// </summary>
-        public static string VotePhaseStartPrompt {
-            get {
-                return ResourceManager.GetString("VotePhaseStartPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to The vote resulted in a tie. Proceed to the next night?.
         /// </summary>
         public static string VoteResultTieProceedToNight {
@@ -637,11 +637,20 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Day vote phase. Please determine the outcome and report the single player eliminated (or report a tie)..
+        /// </summary>
+        public static string VoteStartsModeratorInstruction {
+            get {
+                return ResourceManager.GetString("VoteStartsModeratorInstruction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Voting phase. Determine the outcome and report the eliminated player or if it was a tie..
         /// </summary>
-        public static string VoteStartsPrompt {
+        public static string VoteStartsPublicInstruction {
             get {
-                return ResourceManager.GetString("VoteStartsPrompt", resourceCulture);
+                return ResourceManager.GetString("VoteStartsPublicInstruction", resourceCulture);
             }
         }
         

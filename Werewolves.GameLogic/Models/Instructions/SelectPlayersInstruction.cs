@@ -17,26 +17,26 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// <summary>
     /// The constraint defining how many players must be selected.
     /// </summary>
-    public SelectionConstraint Constraint { get; }
+    public SelectionCountConstraint CountConstraint { get; }
 
     /// <summary>
     /// Initializes a new instance of SelectPlayersInstruction.
     /// </summary>
     /// <param name="selectablePlayerIds">The list of player IDs that can be selected.</param>
-    /// <param name="constraint">The constraint defining selection requirements.</param>
+    /// <param name="countConstraint">The constraint defining selection requirements.</param>
     /// <param name="publicAnnouncement">The text to be read aloud to players.</param>
     /// <param name="privateInstruction">Private guidance for the moderator.</param>
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
     public SelectPlayersInstruction(
         IReadOnlyList<Guid> selectablePlayerIds,
-        SelectionConstraint constraint,
+        SelectionCountConstraint countConstraint,
         string? publicAnnouncement = null,
         string? privateInstruction = null,
         IReadOnlyList<Guid>? affectedPlayerIds = null)
         : base(publicAnnouncement, privateInstruction, affectedPlayerIds)
     {
         SelectablePlayerIds = selectablePlayerIds ?? throw new ArgumentNullException(nameof(selectablePlayerIds));
-        Constraint = constraint;
+        CountConstraint = countConstraint;
 
         if (selectablePlayerIds.Count == 0)
         {
@@ -76,17 +76,7 @@ public record SelectPlayersInstruction : ModeratorInstruction
 
         var count = selectedPlayerIds.Count;
 
-        // Check minimum constraint
-        if (count < Constraint.Minimum)
-        {
-            throw new ArgumentException($"Selection must include at least {Constraint.Minimum} player(s), but {count} provided.");
-        }
-
-        // Check maximum constraint
-        if (count > Constraint.Maximum)
-        {
-            throw new ArgumentException($"Selection must include at most {Constraint.Maximum} player(s), but {count} provided.");
-        }
+        SelectionCountConstraint.EnforceConstraint(selectedPlayerIds.ToList(), CountConstraint);
 
         // Check that all selected players are in the selectable list
         foreach (var playerId in selectedPlayerIds)

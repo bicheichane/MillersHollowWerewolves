@@ -35,7 +35,7 @@ internal class SimpleWerewolfRole : StandardNightRoleHookListener
             publicAnnouncement: GameStrings.WerewolvesChooseVictimPrompt,
             selectablePlayerIds: potentialTargets,
             affectedPlayerIds: werewolves.Select(w => w.Id).ToList(),
-            constraint: SelectionConstraint.Single
+            countConstraint: SelectionCountConstraint.Single
         );
     }
 

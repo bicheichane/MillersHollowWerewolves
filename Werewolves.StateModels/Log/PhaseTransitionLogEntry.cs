@@ -9,8 +9,6 @@ namespace Werewolves.StateModels.Log;
 public record PhaseTransitionLogEntry : GameLogEntryBase
 {
     public required GamePhase PreviousPhase { get; init; }
-    public required PhaseTransitionReason Reason { get; init; }
-
     /// <summary>
     /// Applies the phase transition to the game state.
     /// </summary>

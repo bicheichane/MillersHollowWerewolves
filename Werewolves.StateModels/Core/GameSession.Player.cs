@@ -55,6 +55,4 @@ internal partial class GameSession
 		// public int VoteMultiplier { get; public set; } = 1;
 		// ... and many more
 	}
-
-	
 }

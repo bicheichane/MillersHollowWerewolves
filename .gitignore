@@ -5,3 +5,11 @@
 **/bin/
 
 .vscode/
+
+xml
+
+=0.2.6
+
+cline_mcp_settings.json
+
+mcp_demo_analysis.md

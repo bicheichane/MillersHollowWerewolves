@@ -10,5 +10,6 @@ public enum ExpectedInputType
     PlayerSelection,
     AssignPlayerRoles,
     OptionSelection,
-    Confirmation
+    Confirmation,
+	FinishedGame //special case where no input is expected because the game is over
 } 

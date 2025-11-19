@@ -86,7 +86,11 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		if (StateMachineStagesDictionary == null)
 			InitStateMachineStages();
 
-		var currentHook = (GameHook)session.GetActiveHook()!;
+		if (session.TryGetActiveGameHook(out var currentHook) == false)
+		{
+			throw new InvalidOperationException(
+				$"{Role}: Tried to advance role state machine without an active game hook");
+		}
 		var currentState = GetCurrentListenerState(session);
 
 		RoleStateMachineStage? stageToExecute = null;

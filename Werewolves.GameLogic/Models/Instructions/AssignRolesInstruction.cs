@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
 
@@ -12,7 +13,8 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// <summary>
     /// Dictionary mapping player IDs to the list of roles that can be assigned to that player.
     /// </summary>
-    public IReadOnlyDictionary<Guid, IReadOnlyList<MainRoleType>> SelectableRolesForPlayers { get; }
+    public ImmutableHashSet<Guid> PlayersForAssignment { get; }
+    public IReadOnlyList<MainRoleType> RolesForAssignment { get; }
 
     /// <summary>
     /// Initializes a new instance of AssignRolesInstruction.
@@ -22,26 +24,30 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// <param name="privateInstruction">Private guidance for the moderator.</param>
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
     public AssignRolesInstruction(
-        IReadOnlyDictionary<Guid, IReadOnlyList<MainRoleType>> selectableRolesForPlayers,
-        string? publicAnnouncement = null,
+        ImmutableHashSet<Guid> playersForAssignment,
+        IReadOnlyList<MainRoleType> rolesForAssignment,
+		string? publicAnnouncement = null,
         string? privateInstruction = null,
         IReadOnlyList<Guid>? affectedPlayerIds = null)
         : base(publicAnnouncement, privateInstruction, affectedPlayerIds)
     {
-        SelectableRolesForPlayers = selectableRolesForPlayers ?? throw new ArgumentNullException(nameof(selectableRolesForPlayers));
+        PlayersForAssignment = playersForAssignment ?? throw new ArgumentNullException(nameof(playersForAssignment));
 
-        if (selectableRolesForPlayers.Count == 0)
+        if (playersForAssignment.Count == 0)
         {
-            throw new ArgumentException("SelectableRolesForPlayers cannot be empty.", nameof(selectableRolesForPlayers));
+            throw new ArgumentException("PlayersForAssignment cannot be empty.", nameof(playersForAssignment));
         }
 
-        // Validate that each player has at least one assignable role
-        foreach (var kvp in selectableRolesForPlayers)
+        RolesForAssignment = rolesForAssignment ?? throw new ArgumentNullException(nameof(rolesForAssignment));
+
+        if (rolesForAssignment.Count == 0)
         {
-            if (kvp.Value == null || kvp.Value.Count == 0)
-            {
-                throw new ArgumentException($"Player {kvp.Key} must have at least one assignable role.");
-            }
+            throw new ArgumentException("RolesForAssignment cannot be empty.", nameof(rolesForAssignment));
+		}
+
+        if (playersForAssignment.Count > rolesForAssignment.Count)
+        {
+            throw new InvalidOperationException("Not enough roles available for assignment.");
         }
     }
 
@@ -75,16 +81,29 @@ public record AssignRolesInstruction : ModeratorInstruction
             throw new ArgumentNullException(nameof(assignments));
         }
 
-        // Check that all assigned players are in the selectable list
-        foreach (var assignment in assignments)
+        var assignedRoles = assignments.Values.ToList();
+
+		// Check that the assigned role count does not exceed the allowed quota for each role
+        foreach (var role in RolesForAssignment.Distinct())
         {
-            if (!SelectableRolesForPlayers.ContainsKey(assignment.Key))
+            int allowedCount = RolesForAssignment.Count(r => r == role);
+            int assignedCount = assignedRoles.Count(r => r == role);
+            if (assignedCount > allowedCount)
+            {
+                throw new ArgumentException($"Role {role} has been assigned {assignedCount} times, exceeding the allowed count of {allowedCount}.");
+            }
+		}
+
+
+		// Check that all assigned players are in the selectable list
+		foreach (var assignment in assignments)
+        {
+            if (!PlayersForAssignment.Contains(assignment.Key))
             {
                 throw new ArgumentException($"Player {assignment.Key} is not in the list of players that can be assigned roles.");
             }
 
-            var availableRoles = SelectableRolesForPlayers[assignment.Key];
-            if (!availableRoles.Contains(assignment.Value))
+            if (!RolesForAssignment.Contains(assignment.Value))
             {
                 throw new ArgumentException($"MainRole {assignment.Value} is not in the list of assignable roles for player {assignment.Key}.");
             }

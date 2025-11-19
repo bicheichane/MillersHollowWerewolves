@@ -4,6 +4,7 @@ using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
+using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 
 namespace Werewolves.GameLogic.Models.GameHookListeners;
@@ -111,7 +112,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 		return HookListenerActionResult<T>.NeedInput(
 			new SelectPlayersInstruction(
 				playersWithoutRole,
-				SelectionConstraint.Exact(roleCount),
+				SelectionCountConstraint.Exact(roleCount),
 				publicText
 			),
 			WokenUpStateEnum);

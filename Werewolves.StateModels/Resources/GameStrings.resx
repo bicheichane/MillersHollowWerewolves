@@ -174,11 +174,11 @@
   <data name="ResolveNightPrompt" xml:space="preserve">
     <value>Night phase complete. Proceed to resolve night actions.</value>
   </data>
-  <data name="VictimEliminatedAnnounce" xml:space="preserve">
+  <data name="SingleVictimEliminatedAnnounce" xml:space="preserve">
     <value>Player {0} was eliminated during the night.</value>
   </data>
-  <data name="RevealRolePrompt" xml:space="preserve">
-    <value>Reveal the role of the eliminated player ({0})?</value>
+  <data name="MultipleVictimEliminatedAnnounce" xml:space="preserve">
+    <value>The following players were eliminated during the night: \n{0}</value>
   </data>
   <data name="RevealRolePromptSpecify" xml:space="preserve">
     <value>Specify the roles of the deceased.</value>
@@ -192,7 +192,7 @@
   <data name="DebateStartsPrompt" xml:space="preserve">
     <value>Daytime debate begins. When finished, confirm to proceed to vote.</value>
   </data>
-  <data name="VoteStartsPrompt" xml:space="preserve">
+  <data name="VoteStartsPublicInstruction" xml:space="preserve">
     <value>Voting phase. Determine the outcome and report the eliminated player or if it was a tie.</value>
   </data>
   <data name="VoteOutcomeSelectionPrompt" xml:space="preserve">
@@ -276,7 +276,7 @@
     <value>{0}'s role was {1}. Proceed to debate?</value>
     <comment>{0} = Player Name, {1} = MainRoleType</comment>
   </data>
-  <data name="VotePhaseStartPrompt" xml:space="preserve">
+  <data name="VoteStartsModeratorInstruction" xml:space="preserve">
     <value>Day vote phase. Please determine the outcome and report the single player eliminated (or report a tie).</value>
   </data>
   <data name="VoteOutcomeInvalidSelection" xml:space="preserve">
@@ -330,5 +330,8 @@
   </data>
   <data name="RoleMultipleIdentificationPrompt" xml:space="preserve">
     <value>Please identify the players who are {0}.</value>
+  </data>
+  <data name="DebateModeratorInstructions" xml:space="preserve">
+    <value>Try to moderate and ensure everyone has a chance to speak and intervene. Confirm once the debate has finished.</value>
   </data>
 </root>

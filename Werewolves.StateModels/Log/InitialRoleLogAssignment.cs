@@ -5,7 +5,10 @@ namespace Werewolves.StateModels.Log;
 
 
 /// <summary>
-/// Logs the initial assignment of a specific role to a player during setup (Night 1).
+/// Logs the assignment of a specific main role to a player, either during setup (Night 1)
+/// or due to player elimination. This represents moderator knowledge, not necessarily public knowledge
+/// (i.e. the executioner or the devoted servant may be the only players that knows
+/// which role belonged to the lynched player, but the moderator will always know regardless)
 /// </summary>
 public record AssignRoleLogEntry : GameLogEntryBase
 {
@@ -19,21 +22,11 @@ public record AssignRoleLogEntry : GameLogEntryBase
 	/// </summary>
 	public required MainRoleType AssignedMainRole { get; init; }
 
-	// Potential future additions:
-	// public MainRoleType? DiscardedRole { get; init; } // For Thief
-	// public List<Guid>? AssociatedPlayerIds { get; init; } // For Cupid's Lovers
-	// public Guid? ModelPlayerId { get; init; } // For Wild Child
-
-    
-	/// <summary>
-	/// Applies the initial role assignment to the game state.
-	/// Note: This doesn't set the actual role instance as that's handled by the GameLogic layer.
-	/// The log entry records the assignment for historical purposes.
-	/// </summary>
 	internal override void Apply(GameSession.IStateMutator mutator)
 	{
-		// Initial role assignment doesn't directly set the role instance here
-		// The GameLogic layer handles the actual role instantiation
-		// This could potentially set role assignment flags if needed in future
+		foreach (var player in PlayerIds)
+		{
+			mutator.SetPlayerRole(player, AssignedMainRole);
+		}
 	}
 }
