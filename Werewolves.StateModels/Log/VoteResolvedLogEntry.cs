@@ -6,7 +6,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Logs the final calculated result of a voting phase.
 /// </summary>
-public record VoteResolvedLogEntry : GameLogEntryBase
+internal record VoteResolvedLogEntry : GameLogEntryBase
 {
     public Guid? EliminatedPlayerId { get; init; } // Null if tie or no elimination
     public bool WasTie { get; init; }
@@ -16,11 +16,13 @@ public record VoteResolvedLogEntry : GameLogEntryBase
     /// <summary>
     /// Applies the final vote resolution to the game state.
     /// </summary>
-    internal override void Apply(ISessionMutator mutator)
+    protected override GameLogEntryBase InnerApply(ISessionMutator mutator)
     {
         if (EliminatedPlayerId.HasValue && !WasTie)
         {
             mutator.SetPlayerHealth(EliminatedPlayerId.Value, PlayerHealth.Dead);
         }
+
+        return this;
     }
 }

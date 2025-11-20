@@ -6,14 +6,16 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Logs a transition between game phases.
 /// </summary>
-public record PhaseTransitionLogEntry : GameLogEntryBase
+internal record PhaseTransitionLogEntry : GameLogEntryBase
 {
     public required GamePhase PreviousPhase { get; init; }
     /// <summary>
     /// Applies the phase transition to the game state.
     /// </summary>
-    internal override void Apply(ISessionMutator mutator)
+    protected override GameLogEntryBase InnerApply(ISessionMutator mutator)
     {
-        mutator.SetCurrentPhase(CurrentPhase);
-	}
+	    mutator.SetCurrentPhase(CurrentPhase);
+		//current turn number may have changed if we transitioned from Day to Night
+		return this with {TurnNumber = mutator.CurrentTurnNumber};
+    }
 }

@@ -3,14 +3,14 @@ using Werewolves.StateModels.Enums;
 
 namespace Werewolves.StateModels.Log;
 
-public record StatusEffectLogEntry : GameLogEntryBase
+internal record StatusEffectLogEntry : GameLogEntryBase
 {
 	public required StatusEffectTypes EffectType { get; init; }
 	public required Guid PlayerId { get; init; }
 	/// <summary>
 	/// Applies the status effect to the game state.
 	/// </summary>
-	internal override void Apply(ISessionMutator mutator)
+	protected override GameLogEntryBase InnerApply(ISessionMutator mutator)
 	{
 		switch (EffectType)
 		{
@@ -26,5 +26,7 @@ public record StatusEffectLogEntry : GameLogEntryBase
 			default:
 				throw new ArgumentOutOfRangeException($"Unhandled status effect type: {EffectType}");
 		}
+
+		return this;
 	}
 }

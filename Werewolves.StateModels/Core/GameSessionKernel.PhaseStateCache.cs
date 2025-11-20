@@ -65,7 +65,7 @@ internal partial class GameSessionKernel
 
 		#region Internal State Mutators
 
-		internal void TransitionMainPhase(GamePhase phase)
+		internal void TransitionMainPhase(SessionMutator.IStateMutatorKey key, GamePhase phase)
 		{
 			if (_currentPhase != phase)
 			{

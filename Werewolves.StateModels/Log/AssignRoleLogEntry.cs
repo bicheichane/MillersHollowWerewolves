@@ -10,7 +10,7 @@ namespace Werewolves.StateModels.Log;
 /// (i.e. the executioner or the devoted servant may be the only players that knows
 /// which role belonged to the lynched player, but the moderator will always know regardless)
 /// </summary>
-public record AssignRoleLogEntry : GameLogEntryBase
+internal record AssignRoleLogEntry : GameLogEntryBase
 {
 	/// <summary>
 	/// The ID of the player assigned the role.
@@ -22,11 +22,13 @@ public record AssignRoleLogEntry : GameLogEntryBase
 	/// </summary>
 	public required MainRoleType AssignedMainRole { get; init; }
 
-	internal override void Apply(ISessionMutator mutator)
+	protected override GameLogEntryBase InnerApply(ISessionMutator mutator)
 	{
 		foreach (var player in PlayerIds)
 		{
 			mutator.SetPlayerRole(player, AssignedMainRole);
 		}
+
+		return this;
 	}
 }

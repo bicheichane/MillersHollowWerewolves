@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
@@ -9,20 +9,60 @@ using Werewolves.StateModels.Resources;
 
 namespace Werewolves.StateModels.Core
 {
-	internal partial class GameSessionKernel
+	internal sealed partial class GameSessionKernel
 	{
+		private class GameLogManager
+		{
+			private readonly List<GameLogEntryBase> _logEntries = new();
+			internal void AddLogEntry(SessionMutator.IStateMutatorKey key, GameLogEntryBase entry)
+			{
+				_logEntries.Add(entry);
+			}
+
+			/// <summary>
+			/// Searches the game history log for entries of a specific type, with optional filters.
+			/// </summary>
+			internal IEnumerable<TLogEntry> FindLogEntries<TLogEntry>(NumberRangeConstraint turnIntervalConstraint, GamePhase? phase = null,
+				Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase
+			{
+				IEnumerable<TLogEntry> query = _logEntries.OfType<TLogEntry>();
+
+				var turnsAgo = turnIntervalConstraint;
+				if (turnsAgo.Minimum < 0 || turnsAgo.Maximum < 0)
+					throw new ArgumentOutOfRangeException(nameof(turnIntervalConstraint), "turnsAgo cannot be negative.");
+
+				query = query.Where(log =>
+					log.TurnNumber >= turnsAgo.Minimum &&
+					log.TurnNumber <= turnsAgo.Maximum);
+
+				if (phase.HasValue)
+				{
+					query = query.Where(log => log.CurrentPhase == phase.Value);
+				}
+
+				if (filter != null)
+				{
+					query = query.Where(filter);
+				}
+
+				return query;
+			}
+		}
+
 		private readonly Dictionary<Guid, Player> _players = new();
 		private readonly List<Guid> _playerSeatingOrder = new();
 		private readonly List<MainRoleType> _rolesInPlay = new();
 
 		// Private canonical state - the single source of truth
-		private readonly List<GameLogEntryBase> _gameHistoryLog = new();
+		private readonly GameLogManager _gameHistoryLog = new();
 		// Transient execution state
 		private GamePhaseStateCache _phaseStateCache = new();
 
 		public IGamePhaseStateCache PhaseStateCache => _phaseStateCache;
 
-		public IReadOnlyList<GameLogEntryBase> GetLogs() => _gameHistoryLog.AsReadOnly();
+		internal IEnumerable<TLogEntry> FindLogEntries<TLogEntry>
+			(NumberRangeConstraint? turnIntervalConstraint = null, GamePhase? phase = null, Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase 
+			=> _gameHistoryLog.FindLogEntries(turnIntervalConstraint ?? NumberRangeConstraint.Any, phase, filter);
 		public IReadOnlyList<Guid> GetPlayerSeatingOrder() => _playerSeatingOrder.AsReadOnly();
 		public IReadOnlyList<MainRoleType> GetRolesInPlay() => _rolesInPlay.AsReadOnly();
 
@@ -70,13 +110,6 @@ namespace Werewolves.StateModels.Core
 		internal void AddEntryAndUpdateState(GameLogEntryBase entry)
 		{
 			entry.Apply(new SessionMutator(this));
-
-			//todo: can we make this go away?
-			//hack to ensure that if TurnNumber changed during Apply, the log reflects the new value
-			if (entry is PhaseTransitionLogEntry phaseEntry)
-				entry = entry with { TurnNumber = this.TurnNumber };
-
-			_gameHistoryLog.Add(entry);
 		}
 
 		internal void TransitionSubPhase(Enum subPhase) =>
@@ -105,6 +138,6 @@ namespace Werewolves.StateModels.Core
 			return player;
 		}
 
-		private PlayerState GetPlayerStateInternal(Guid playerId) => GetPlayerInternal(playerId).State;
+		private PlayerState GetMutablePlayerState(SessionMutator.IStateMutatorKey key, Guid playerId) => GetPlayerInternal(playerId).GetMutableState(key);
 	}
 }

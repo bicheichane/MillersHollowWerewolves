@@ -142,7 +142,8 @@ internal class GameSession : IGameSession
     internal IEnumerable<IPlayer> GetPlayersTargetedLastNight(NightActionType actionType,
         NumberRangeConstraint countConstraint, NumberRangeConstraint? turnsAgoConstraint = null)
     {
-        var logEntries = FindLogEntries<NightActionLogEntry>(NumberRangeConstraint.Exact(0), GamePhase.Night, log => log.ActionType == actionType);
+        var turnNumber = _gameSessionKernel.TurnNumber;
+		var logEntries = _gameSessionKernel.FindLogEntries<NightActionLogEntry>(NumberRangeConstraint.Exact(turnNumber), GamePhase.Night, log => log.ActionType == actionType);
 
         var playerList = logEntries.SelectMany(log => log.TargetIds ?? new()).ToList();
 
@@ -156,7 +157,8 @@ internal class GameSession : IGameSession
 
     internal IEnumerable<IPlayer> GetPlayersEliminatedLastDawn()
     {
-        var logEntries = FindLogEntries<PlayerEliminatedLogEntry>(phase: GamePhase.Dawn);
+	    var turnNumber = _gameSessionKernel.TurnNumber;
+		var logEntries = _gameSessionKernel.FindLogEntries<PlayerEliminatedLogEntry>(NumberRangeConstraint.Exact(turnNumber), phase: GamePhase.Dawn);
 
 		var playerList = logEntries.Select(log => log.PlayerId).ToList();
 
@@ -165,10 +167,11 @@ internal class GameSession : IGameSession
 
     internal Guid GetPlayerEliminatedLastVote()
     {
-        var logEntries = FindLogEntries<PlayerEliminatedLogEntry>(phase: GamePhase.Day,
+	    var turnNumber = _gameSessionKernel.TurnNumber;
+		var logEntries = _gameSessionKernel.FindLogEntries<PlayerEliminatedLogEntry>(NumberRangeConstraint.Exact(turnNumber), phase: GamePhase.Day,
             filter: log => log.Reason == EliminationReason.DayVote);
 
-        var playerId = logEntries.Select(log => log.PlayerId).Single();
+        var playerId = logEntries.Select(log => log.PlayerId).Last();
 
         return playerId;
     }
@@ -294,39 +297,7 @@ internal class GameSession : IGameSession
 		_gameSessionKernel.AddEntryAndUpdateState(entry);
 	}
 
-    /// <summary>
-    /// Searches the game history log for entries of a specific type, with optional filters.
-    /// </summary>
-	private IEnumerable<TLogEntry> FindLogEntries<TLogEntry>(NumberRangeConstraint? turnsAgoConstraint = null, GamePhase? phase = null,
-        Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase
-    {
-        IEnumerable<TLogEntry> query = _gameHistoryLog.OfType<TLogEntry>();
-
-        if (turnsAgoConstraint.HasValue)
-        {
-            var turnsAgo = turnsAgoConstraint.Value;
-            if (turnsAgo.Minimum < 0 || turnsAgo.Maximum < 0)
-                throw new ArgumentOutOfRangeException(nameof(turnsAgoConstraint), "turnsAgo cannot be negative.");
-
-            int lowerTurnNumberLimit = this.TurnNumber - turnsAgo.Maximum;
-            int upperTurnNumberLimit = this.TurnNumber - turnsAgo.Minimum;
-            query = query.Where(log => 
-                log.TurnNumber > lowerTurnNumberLimit && 
-                log.TurnNumber < upperTurnNumberLimit);
-        }
-
-        if (phase.HasValue)
-        {
-            query = query.Where(log => log.CurrentPhase == phase.Value);
-        }
-
-        if (filter != null)
-        {
-            query = query.Where(filter);
-        }
-
-        return query;
-    }
+    
 
     #endregion
 

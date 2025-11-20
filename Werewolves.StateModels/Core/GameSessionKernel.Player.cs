@@ -55,8 +55,15 @@ internal partial class GameSessionKernel
 
 		public Guid Id { get; } = Guid.NewGuid();
 		public string Name { get; init; }
-		internal PlayerState State { get; } = new();
+		private PlayerState State { get; } = new();
 		IPlayerState IPlayer.State => State;
+
+		/// <summary>
+		/// Ensure only the SessionMutator can get a mutable reference to the PlayerState.
+		/// </summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
+		public PlayerState GetMutableState(SessionMutator.IStateMutatorKey key) => State;
 	}
 
 	/// <summary>

@@ -8,27 +8,28 @@ namespace Werewolves.StateModels.Models;
 public readonly record struct NumberRangeConstraint(int Minimum, int Maximum)
 {
     /// <summary>
-    /// Creates a constraint for exact selection of N players.
+    /// Creates a number constraint for an exact count.
     /// </summary>
     public static NumberRangeConstraint Exact(int count) => new(count, count);
     
     /// <summary>
-    /// Creates a constraint for selecting between minimum and maximum players.
+    /// Creates a number interval constraint.
     /// </summary>
     public static NumberRangeConstraint Range(int minimum, int maximum) => new(minimum, maximum);
     
     /// <summary>
-    /// Creates a constraint for optional selection (0 or 1 players).
+    /// Creates a number constraint for either 0 or 1.
     /// Commonly used for vote outcomes with ties or optional actions.
     /// </summary>
-    public static NumberRangeConstraint Optional => new(0, 1);
+    public static NumberRangeConstraint Optional => Range(0, 1);
 
 	/// <summary>
-	/// Creates a constraint for single player selection.
+	/// Creates a constraint for an exact count of 1.
 	/// </summary>
-	public static NumberRangeConstraint Single => new(1, 1);
+	public static NumberRangeConstraint Single => Exact(1);
+    public static NumberRangeConstraint Any => Range(0, int.MaxValue);
 
-    public static void EnforceConstraint<T>(ICollection<T> value, NumberRangeConstraint countConstraint)
+	public static void EnforceConstraint<T>(ICollection<T> value, NumberRangeConstraint countConstraint)
     {
         if (value.Count < countConstraint.Minimum)
         {
