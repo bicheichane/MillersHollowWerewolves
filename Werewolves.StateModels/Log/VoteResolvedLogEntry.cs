@@ -16,12 +16,11 @@ public record VoteResolvedLogEntry : GameLogEntryBase
     /// <summary>
     /// Applies the final vote resolution to the game state.
     /// </summary>
-    internal override void Apply(GameSession.IStateMutator mutator)
+    internal override void Apply(ISessionMutator mutator)
     {
         if (EliminatedPlayerId.HasValue && !WasTie)
         {
             mutator.SetPlayerHealth(EliminatedPlayerId.Value, PlayerHealth.Dead);
         }
-        mutator.SetPendingVoteOutcome(null);
     }
 }

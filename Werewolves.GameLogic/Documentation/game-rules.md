@@ -72,7 +72,7 @@ The game alternates between Night and Day phases. The helper app guides the Mode
     *   **Poison Potion:** Can eliminate one player during the night.
     *   Can use one or both potions in the same night after being informed of the Werewolves' victim.
 *   **Hunter:** When eliminated (by vote or night attack), must immediately choose another player to eliminate with a final shot.
-*   **Little Girl:** Can discreetly try to spy (peek) during the Werewolves' turn at night. If caught by the Werewolves, she is immediately eliminated *instead* of their chosen victim (Moderator signals this silently).
+*   **Little Girl:** Can discreetly try to spy (peek) during the Werewolves' turn at night. Cannot be targetted by the Defender.
 *   **Defender:** Each night, chooses one player to protect from the Werewolves' attack for that night only. Cannot protect the same player two nights in a row. Can protect self. Protection does not work against Witch's poison, Hunter's shot, Piper's charm, or Wolf-Father's infection.
 *   **Elder:** Survives the first Werewolf attack against them (Moderator doesn't reveal card). Is eliminated by the second Werewolf attack, or the first time by village vote, Hunter's shot, or Witch's poison. If the Elder is eliminated by the village vote, all Villagers lose their special powers for the rest of the game. Not affected by Wolf-Father infection on the first attempt.
 *   **Scapegoat:** If the day's vote results in a tie, the Scapegoat is eliminated instead of the tied players. If eliminated, the Scapegoat chooses which player(s) may or may not vote the following day.

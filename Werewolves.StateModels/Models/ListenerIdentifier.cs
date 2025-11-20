@@ -1,5 +1,5 @@
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Interfaces;
+
 using static Werewolves.StateModels.Enums.GameHookListenerType;
 
 namespace Werewolves.StateModels.Models;

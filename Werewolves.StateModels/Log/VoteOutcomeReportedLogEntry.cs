@@ -16,8 +16,8 @@ public record VoteOutcomeReportedLogEntry : GameLogEntryBase
     /// <summary>
     /// Applies the vote outcome to the game state.
     /// </summary>
-    internal override void Apply(GameSession.IStateMutator mutator)
+    internal override void Apply(ISessionMutator mutator)
     {
-        mutator.SetPendingVoteOutcome(ReportedOutcomePlayerId);
-    }
+		//logging only; no state change
+	}
 }

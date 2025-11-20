@@ -22,7 +22,7 @@ public record AssignRoleLogEntry : GameLogEntryBase
 	/// </summary>
 	public required MainRoleType AssignedMainRole { get; init; }
 
-	internal override void Apply(GameSession.IStateMutator mutator)
+	internal override void Apply(ISessionMutator mutator)
 	{
 		foreach (var player in PlayerIds)
 		{

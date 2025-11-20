@@ -55,7 +55,8 @@ public enum MainRoleType
 [Flags]
 public enum SecondaryRoleType
 {
-    Lovers,
+    None = 0,
+	Lovers,
     Charmed,
     TownCrier,
 }

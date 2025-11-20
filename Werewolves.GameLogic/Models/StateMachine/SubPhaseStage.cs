@@ -31,8 +31,7 @@ internal abstract class SubPhaseStage
     }
 
     public string Id { get; }
-    private Action<GameSession>? _validateCachedInputRequirements = null;
-    private Action<GameSession, PhaseHandlerResult?>? _validateCachedOutputRequirements = null;
+    private Action<ModeratorResponse>? _validateInputRequirements = null;
 
 	/// <summary>
 	/// This tries to execute the sub-phase stage, returning true if it was executed, 
@@ -57,17 +56,28 @@ internal abstract class SubPhaseStage
 
     protected PhaseHandlerResult Execute(GameSession session, ModeratorResponse input)
     {
-        _validateCachedInputRequirements?.Invoke(session);
+        _validateInputRequirements?.Invoke(input);
 
         var result = InnerExecute(session, input);
-
-        _validateCachedOutputRequirements?.Invoke(session, result);
 
 		return result;
     }
 
 	protected abstract PhaseHandlerResult InnerExecute(GameSession session, ModeratorResponse input);
 
+    internal SubPhaseStage RequiresInputType(ExpectedInputType expectedInputType)
+    {
+        _validateInputRequirements = (moderatorResponse) =>
+        {
+            if (moderatorResponse.Type != expectedInputType)
+            {
+                throw new InvalidOperationException(
+                    $"Sub-phase stage {Id} expected moderator input of type {expectedInputType}, " +
+                    $"but the last instruction sent to the moderator expected input of type {moderatorResponse.Type}.");
+            }
+        };
+        return this;
+	}
 }
 
 /// <summary>
@@ -190,18 +200,13 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
     private readonly GameHook _hook;
     private readonly Func<GameSession, ModeratorResponse, PhaseHandlerResult> _onComplete;
 
-    internal static SubPhaseStage HookStage(GameHook gameHook, Func<GameSession, ModeratorResponse, ModeratorInstruction?> onComplete) 
-        => new HookSubPhaseStage(gameHook, onComplete);
+    internal static SubPhaseStage HookStage(GameHook gameHook) 
+        => new HookSubPhaseStage(gameHook);
 
-private HookSubPhaseStage(GameHook hook, Func<GameSession, ModeratorResponse, ModeratorInstruction?> onComplete)
-        : base(hook)
+    private HookSubPhaseStage(GameHook hook) : base(hook)
     {
         _hook = hook;
-        _onComplete = (gameSession, moderatorResponse) =>
-        {
-            var instruction = onComplete(gameSession, moderatorResponse);
-			return StayInSubPhase(instruction);
-        };
+        _onComplete = (gameSession, moderatorResponse) => StayInSubPhase(null);
     }
 
     protected override PhaseHandlerResult InnerExecute(GameSession session, ModeratorResponse input) =>

@@ -1,57 +1,66 @@
 using System.Diagnostics.CodeAnalysis;
 using Werewolves.GameLogic.Models;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Interfaces;
+using Werewolves.StateModels.Extensions;
 using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 
 namespace Werewolves.StateModels.Core;
 
+public interface IGameSession
+{
+    public Guid Id { get; }
+    public GamePhase GetCurrentPhase();
+    public int TurnNumber { get; }
+    public IPlayer GetPlayer(Guid playerId);
+    public IPlayerState GetPlayerState(Guid playerId);
+    public IEnumerable<IPlayer> GetPlayers();
+    public int RoleInPlayCount(MainRoleType type);
+}
+
 /// <summary>
 /// Represents the tracked state of a single ongoing game.
 /// This class encapsulates all game state and provides a controlled API for state mutations.
 /// The GameHistoryLog is the single source of truth for all non-deterministic game events.
 /// </summary>
-internal partial class GameSession : IGameSession
+internal class GameSession : IGameSession
 {
     #region Private Fields
 
     // Core immutable properties
-    private readonly Dictionary<Guid, Player> _players;
-    private readonly List<Guid> _playerSeatingOrder;
-    private readonly List<MainRoleType> _rolesInPlay;
 
-    // Private canonical state - the single source of truth
-    private readonly List<GameLogEntryBase> _gameHistoryLog = new();
-
-    // Transient execution state
-    private GamePhaseStateCache PhaseStateCache { get; }
+    private readonly GameSessionKernel _gameSessionKernel;
+    private IReadOnlyList<GameLogEntryBase> _gameHistoryLog => _gameSessionKernel.GetLogs();
 
 	#endregion
 
 
 	#region Public Game Cache read-access
 
-	public GamePhase GetCurrentPhase() => PhaseStateCache.GetCurrentPhase();
+	public GamePhase GetCurrentPhase() => _gameSessionKernel.CurrentPhase;
+    public int TurnNumber => _gameSessionKernel.TurnNumber;
+    public ModeratorInstruction? PendingModeratorInstruction => _gameSessionKernel.PendingModeratorInstruction;
+    public void SetPendingModeratorInstruction(ModeratorInstruction instruction) =>
+        _gameSessionKernel.SetPendingModeratorInstruction(instruction);
 
 	#endregion
 
 	#region Internal Game Cache read-access
-	internal T? GetSubPhase<T>() where T : struct, Enum => PhaseStateCache.GetSubPhase<T>();
-    internal ListenerIdentifier? GetCurrentListener() => PhaseStateCache.GetCurrentListener();
+	internal T? GetSubPhase<T>() where T : struct, Enum => _gameSessionKernel.PhaseStateCache.GetSubPhase<T>();
+    internal ListenerIdentifier? GetCurrentListener() => _gameSessionKernel.PhaseStateCache.GetCurrentListener();
 
     internal T? GetCurrentListenerState<T>(ListenerIdentifier listener) where T : struct, Enum =>
-        PhaseStateCache.GetCurrentListenerState<T>(listener);
+        _gameSessionKernel.PhaseStateCache.GetCurrentListenerState<T>(listener);
 	#endregion
 
 	#region Internal Game Cache write-access
 
     internal void TransitionSubPhase(Enum subPhase) =>
-        PhaseStateCache.TransitionSubPhase(subPhase);
+        _gameSessionKernel.TransitionSubPhase(subPhase);
 
     internal bool TryGetActiveGameHook(out GameHook hook) =>
-        Enum.TryParse<GameHook>(PhaseStateCache.GetActiveSubPhaseStage(), out hook);
+        Enum.TryParse(_gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage(), out hook);
 
 	/// <summary>
 	/// Checks if the specified sub-phase stage can be entered,
@@ -61,7 +70,7 @@ internal partial class GameSession : IGameSession
 	/// <returns></returns>
 	internal bool TryEnterSubPhaseStage(string subPhaseStageId)
     {
-        var currentSubPhaseStage = PhaseStateCache.GetActiveSubPhaseStage();
+        var currentSubPhaseStage = _gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage();
 
 		// If already in a different sub-phase stage, cannot enter
 		if (currentSubPhaseStage != null && currentSubPhaseStage != subPhaseStageId)
@@ -73,14 +82,14 @@ internal partial class GameSession : IGameSession
         if (currentSubPhaseStage == null)
         {
 			// If this sub-phase stage has already been completed, cannot enter
-			if (PhaseStateCache.HasSubPhaseStageCompleted(subPhaseStageId))
+			if (_gameSessionKernel.PhaseStateCache.HasSubPhaseStageCompleted(subPhaseStageId))
             {
                 return false;
             }
 			// Otherwise, enter the sub-phase stage
 			else
 			{
-				PhaseStateCache.StartSubPhaseStage(subPhaseStageId);
+				_gameSessionKernel.StartSubPhaseStage(subPhaseStageId);
 			}
         }
 
@@ -89,103 +98,61 @@ internal partial class GameSession : IGameSession
     }
 
     internal void CompleteSubPhaseStage() =>
-        PhaseStateCache.CompleteSubPhaseStage();
+        _gameSessionKernel.CompleteSubPhaseStage();
 
 	internal void TransitionListenerState<T>(ListenerIdentifier listener, T state) where T : struct, Enum =>
-        PhaseStateCache.TransitionListenerAndState<T>(listener, state);
+        _gameSessionKernel.TransitionListenerAndState(listener, state);
 
     #endregion
 
 
     public Guid Id { get; } = Guid.NewGuid();
 
-    // Derived cached state (computed from log, mutated only by Apply methods)
-    public int TurnNumber { get; private set; }
-    public Team? WinningTeam { get; private set; }
-
-    public Guid? PendingVoteOutcome { get; private set; }
-
-    public ModeratorInstruction? PendingModeratorInstruction { get; internal set; } = null;
-
-    internal GameSession(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay,
-        List<string>? eventCardIdsInDeck = null)
+    internal GameSession(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
     {
-        ArgumentNullException.ThrowIfNull(playerNamesInOrder);
-        ArgumentNullException.ThrowIfNull(rolesInPlay);
-        if (!playerNamesInOrder.Any())
-        {
-            throw new ArgumentException(GameStrings.PlayerListCannotBeEmpty, nameof(playerNamesInOrder));
-        }
-
-        if (!rolesInPlay.Any())
-        {
-            throw new ArgumentException(GameStrings.RoleListCannotBeEmpty, nameof(rolesInPlay));
-        }
-
-        var players = new Dictionary<Guid, Player>();
-        var seatingOrder = new List<Guid>();
-
-        foreach (var name in playerNamesInOrder)
-        {
-            var player = new Player(name);
-            players.Add(player.Id, player);
-            seatingOrder.Add(player.Id);
-        }
-
-        _players = players;
-        _playerSeatingOrder = seatingOrder;
-        _rolesInPlay = rolesInPlay;
-        TurnNumber = 0;
-        PhaseStateCache = new GamePhaseStateCache(GamePhase.Setup);
-    }
+        _gameSessionKernel = new GameSessionKernel(playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
+	}
 
 
     // Public API for state queries
 
     #region Public Query API
 
-    public IPlayer GetPlayer(Guid playerId)
-    {
-        return GetPlayerInternal(playerId);
-    }
+    public IPlayer GetPlayer(Guid playerId) => _gameSessionKernel.GetPlayer(playerId);
 
-    public IPlayerState GetPlayerState(Guid playerId)
-    {
-        return GetPlayer(playerId).State;
-    }
+    public IPlayerState GetPlayerState(Guid playerId) => GetPlayer(playerId).State;
 
-    public IEnumerable<IPlayer> GetPlayers()
-    {
-        var playerList = _players.Values.Select(p => (IPlayer)p);
+    public IEnumerable<IPlayer> GetPlayers() => _gameSessionKernel.GetPlayers();
 
-        return playerList;
-    }
-
-    public int RoleInPlayCount(MainRoleType type) => _rolesInPlay.Count(r => r == type);
+    public int RoleInPlayCount(MainRoleType type) => _gameSessionKernel.GetRolesInPlay().Count(r => r == type);
 
 	#endregion
 
 	#region Internal Command API
 
-	internal void PerformNightActionNoTarget(NightActionType type, object? actionOutcome = null) 
-        => PerformNightActionCore(type, null, actionOutcome);
+	internal void PerformNightActionNoTarget(NightActionType type) 
+        => PerformNightActionCore(type, null);
 
-    internal void PerformNightAction(NightActionType type, Guid targetId, object? actionOutcome = null) 
-        => PerformNightActionCore(type, [targetId], actionOutcome);
+    internal void PerformNightAction(NightActionType type, Guid targetId) 
+        => PerformNightActionCore(type, [targetId]);
 
-    internal void PerformNightAction(NightActionType type, List<Guid> targetIds, object? actionOutcome = null)
-        => PerformNightActionCore(type, targetIds, actionOutcome);
+    internal void PerformNightAction(NightActionType type, List<Guid> targetIds)
+        => PerformNightActionCore(type, targetIds);
 
-    internal IEnumerable<IPlayer> GetPlayersTargetedByNightAction(NightActionType actionType, SelectionCountConstraint countConstraint, int turnsAgo = 0)
+    internal IEnumerable<IPlayer> GetPlayersTargetedLastNight(NightActionType actionType,
+        NumberRangeConstraint countConstraint, NumberRangeConstraint? turnsAgoConstraint = null)
     {
-        var logEntries = FindLogEntries<NightActionLogEntry>(0, GamePhase.Night, log => log.ActionType == actionType);
+        var logEntries = FindLogEntries<NightActionLogEntry>(NumberRangeConstraint.Exact(0), GamePhase.Night, log => log.ActionType == actionType);
 
         var playerList = logEntries.SelectMany(log => log.TargetIds ?? new()).ToList();
 
-        SelectionCountConstraint.EnforceConstraint(playerList, countConstraint);
+        countConstraint.Enforce(playerList);
 
         return playerList.Select(GetPlayer);
-    }
+	}
+
+
+	
 
     internal IEnumerable<IPlayer> GetPlayersEliminatedLastDawn()
     {
@@ -208,12 +175,12 @@ internal partial class GameSession : IGameSession
 
     internal List<MainRoleType> GetUnassignedRoles()
     {
-        var assignedRoles = _players.Values
+        var assignedRoles = _gameSessionKernel.GetPlayers()
             .Select(p => p.State.MainRole)
             .Where(r => r.HasValue)
             .Select(r => r!.Value)
             .ToList();
-        var unassignedRoles = new List<MainRoleType>(_rolesInPlay);
+        var unassignedRoles = _gameSessionKernel.GetRolesInPlay().ToList();
         foreach (var role in assignedRoles)
         {
             unassignedRoles.Remove(role);
@@ -227,13 +194,12 @@ internal partial class GameSession : IGameSession
         {
             Timestamp = DateTimeOffset.UtcNow,
             TurnNumber = TurnNumber,
-            CurrentPhase = PhaseStateCache.GetCurrentPhase(),
+            CurrentPhase = _gameSessionKernel.PhaseStateCache.GetCurrentPhase(),
             PlayerId = playerId,
             Reason = reason,
         };
 
-        _gameHistoryLog.Add(entry);
-        entry.Apply(new StateMutator(this));
+        _gameSessionKernel.AddEntryAndUpdateState(entry);
     }
 
     internal void AssignRole(Guid playerId, MainRoleType mainRoleType) =>
@@ -246,27 +212,38 @@ internal partial class GameSession : IGameSession
         {
             Timestamp = DateTimeOffset.UtcNow,
             TurnNumber = TurnNumber,
-            CurrentPhase = PhaseStateCache.GetCurrentPhase(),
+            CurrentPhase = _gameSessionKernel.PhaseStateCache.GetCurrentPhase(),
             PlayerIds = playerIds,
             AssignedMainRole = mainRoleType
         };
 
-        _gameHistoryLog.Add(entry);
-        entry.Apply(new StateMutator(this));
+        _gameSessionKernel.AddEntryAndUpdateState(entry);
     }
 
-    internal void PerformDayVote(Guid reportedOutcomePlayerId)
+    internal void ApplyStatusEffect(StatusEffectTypes effectType, Guid playerId)
+    {
+        var entry = new StatusEffectLogEntry
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            TurnNumber = TurnNumber,
+            CurrentPhase = _gameSessionKernel.PhaseStateCache.GetCurrentPhase(),
+            PlayerId = playerId,
+            EffectType = effectType
+        };
+        _gameSessionKernel.AddEntryAndUpdateState(entry);
+	}
+
+	internal void PerformDayVote(Guid? reportedOutcomePlayerId)
     {
         var entry = new VoteOutcomeReportedLogEntry
         {
             Timestamp = DateTimeOffset.UtcNow,
             TurnNumber = TurnNumber,
-            CurrentPhase = PhaseStateCache.GetCurrentPhase(),
-            ReportedOutcomePlayerId = reportedOutcomePlayerId
+            CurrentPhase = _gameSessionKernel.PhaseStateCache.GetCurrentPhase(),
+            ReportedOutcomePlayerId = reportedOutcomePlayerId ?? Guid.Empty
         };
 
-        _gameHistoryLog.Add(entry);
-        entry.Apply(new StateMutator(this));
+        _gameSessionKernel.AddEntryAndUpdateState(entry);
     }
 
     internal void TransitionMainPhase(GamePhase newPhase)
@@ -281,13 +258,7 @@ internal partial class GameSession : IGameSession
             CurrentPhase = newPhase,
         };
 
-        entry.Apply(new StateMutator(this));
-
-        //todo: can we make this go away?
-        //hack to ensure that if TurnNumber changed during Apply, the log reflects the new value
-        entry = entry with { TurnNumber = TurnNumber };
-
-        _gameHistoryLog.Add(entry);
+        _gameSessionKernel.AddEntryAndUpdateState(entry);
 
     }
 
@@ -297,57 +268,51 @@ internal partial class GameSession : IGameSession
         {
             Timestamp = DateTimeOffset.UtcNow,
             TurnNumber = TurnNumber,
-            CurrentPhase = PhaseStateCache.GetCurrentPhase(),
+            CurrentPhase = _gameSessionKernel.PhaseStateCache.GetCurrentPhase(),
             WinningTeam = winningTeam,
             ConditionDescription = description
         };
 
-        _gameHistoryLog.Add(entry);
-        entry.Apply(new StateMutator(this));
-    }
+		_gameSessionKernel.AddEntryAndUpdateState(entry);
+	}
 
-    #endregion
+	#endregion
 
-    #region Private helpers
+	#region Private helpers
 
-    private Player GetPlayerInternal(Guid playerId)
-    {
-        if (!_players.TryGetValue(playerId, out var player))
-        {
-            throw new KeyNotFoundException($"Player with ID {playerId} not found.");
-        }
-
-        return player;
-    }
-
-    private void PerformNightActionCore(NightActionType type, List<Guid>? targetIds, object? immediateActionOutcome)
+    private void PerformNightActionCore(NightActionType type, List<Guid>? targetIds)
     {
         var entry = new NightActionLogEntry
         {
             Timestamp = DateTimeOffset.UtcNow,
             TurnNumber = TurnNumber,
-            CurrentPhase = PhaseStateCache.GetCurrentPhase(),
+            CurrentPhase = _gameSessionKernel.PhaseStateCache.GetCurrentPhase(),
             ActionType = type,
             TargetIds = targetIds,
-            ImmediateActionOutcome = immediateActionOutcome
         };
 
-        _gameHistoryLog.Add(entry);
-        entry.Apply(new StateMutator(this));
-    }
+		_gameSessionKernel.AddEntryAndUpdateState(entry);
+	}
 
-    private IEnumerable<TLogEntry> FindLogEntries<TLogEntry>(int? turnsAgo = null, GamePhase? phase = null,
+    /// <summary>
+    /// Searches the game history log for entries of a specific type, with optional filters.
+    /// </summary>
+	private IEnumerable<TLogEntry> FindLogEntries<TLogEntry>(NumberRangeConstraint? turnsAgoConstraint = null, GamePhase? phase = null,
         Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase
     {
         IEnumerable<TLogEntry> query = _gameHistoryLog.OfType<TLogEntry>();
 
-        if (turnsAgo.HasValue)
+        if (turnsAgoConstraint.HasValue)
         {
-            if (turnsAgo < 0)
-                throw new ArgumentOutOfRangeException(nameof(turnsAgo), "turnsAgo cannot be negative.");
+            var turnsAgo = turnsAgoConstraint.Value;
+            if (turnsAgo.Minimum < 0 || turnsAgo.Maximum < 0)
+                throw new ArgumentOutOfRangeException(nameof(turnsAgoConstraint), "turnsAgo cannot be negative.");
 
-            int targetTurnNumber = this.TurnNumber - turnsAgo.Value;
-            query = query.Where(log => log.TurnNumber == targetTurnNumber);
+            int lowerTurnNumberLimit = this.TurnNumber - turnsAgo.Maximum;
+            int upperTurnNumberLimit = this.TurnNumber - turnsAgo.Minimum;
+            query = query.Where(log => 
+                log.TurnNumber > lowerTurnNumberLimit && 
+                log.TurnNumber < upperTurnNumberLimit);
         }
 
         if (phase.HasValue)
@@ -365,61 +330,4 @@ internal partial class GameSession : IGameSession
 
     #endregion
 
-    /// <summary>
-    /// Searches the game history log for entries of a specific type, with optional filters.
-    /// </summary>
-
-
-    // State Mutator Pattern Implementation
-    internal interface IStateMutator
-    {
-        void SetPlayerHealth(Guid playerId, PlayerHealth health);
-        void SetPlayerRole(Guid playerId, MainRoleType role);
-        void SetWinningTeam(Team? winningTeam);
-        void SetPendingVoteOutcome(Guid? pendingVoteOutcome);
-        void SetCurrentPhase(GamePhase newPhase);
-    }
-
-    protected class StateMutator : IStateMutator
-    {
-        private readonly GameSession _session;
-
-        internal StateMutator(GameSession session)
-        {
-            _session = session;
-        }
-
-        public void SetPlayerHealth(Guid playerId, PlayerHealth health)
-        {
-            var player = _session.GetPlayerInternal(playerId);
-            player.State.Health = health;
-
-        }
-
-        public void SetPlayerRole(Guid playerId, MainRoleType role)
-        {
-            var player = _session.GetPlayerInternal(playerId);
-            player.State.MainRole = role;
-        }
-
-        public void SetWinningTeam(Team? winningTeam)
-        {
-            _session.WinningTeam = winningTeam;
-        }
-
-        public void SetPendingVoteOutcome(Guid? pendingVoteOutcome)
-        {
-            _session.PendingVoteOutcome = pendingVoteOutcome;
-        }
-
-        public void SetCurrentPhase(GamePhase newPhase)
-        {
-            _session.PhaseStateCache.TransitionMainPhase(newPhase);
-
-            if (newPhase == GamePhase.Night)
-            {
-                _session.TurnNumber += 1;
-            }
-        }
-    }
 }

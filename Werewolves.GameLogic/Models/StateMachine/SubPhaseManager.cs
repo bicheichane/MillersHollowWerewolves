@@ -4,7 +4,7 @@ using Werewolves.StateModels.Core;
 namespace Werewolves.GameLogic.Models.StateMachine;
 
 /// <summary>
-/// Defines a single, validated stage within a main game phase's state machine.
+/// Defines a single, validated sub phase within a main game phase's state machine.
 /// </summary>
 /// <typeparam name="TSubPhase">The enum type defining the sub-phases for the parent phase.</typeparam>
 internal record SubPhaseManager<TSubPhase> where TSubPhase : struct, Enum

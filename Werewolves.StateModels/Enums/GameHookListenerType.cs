@@ -14,7 +14,7 @@ public enum GameHookListenerType
     /// <summary>
     /// An event card-based listener (e.g., Retribution, Backfire).
     /// </summary>
-    Event,
+    SpiritCard,
 
     /// <summary>
     /// A secondary role-based listener. Can stack on top of main roles (i.e. sheriff, lovers, etc.)

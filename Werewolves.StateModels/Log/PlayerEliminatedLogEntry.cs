@@ -13,7 +13,7 @@ public record PlayerEliminatedLogEntry : GameLogEntryBase
 	/// <summary>
 	/// Applies the player elimination to the game state.
 	/// </summary>
-	internal override void Apply(GameSession.IStateMutator mutator)
+	internal override void Apply(ISessionMutator mutator)
     {
         mutator.SetPlayerHealth(PlayerId, PlayerHealth.Dead);
     }

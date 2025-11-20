@@ -4,8 +4,6 @@ using Werewolves.GameLogic.Models.Instructions;
 using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Interfaces;
-using Werewolves.StateModels.LogEntries;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 using static Werewolves.StateModels.Enums.PlayerHealth;
@@ -18,7 +16,7 @@ namespace Werewolves.GameLogic.Roles.MainRoles;
 /// </summary>
 internal class SeerRole : StandardNightRoleHookListener
 {
-    public override ListenerIdentifier Role => ListenerIdentifier.Listener(MainRoleType.Seer);
+    public override ListenerIdentifier Id => ListenerIdentifier.Listener(MainRoleType.Seer);
     internal override string PublicName => GameStrings.SeerRoleName;
     protected override bool HasNightPowers => true;
 
@@ -34,7 +32,7 @@ internal class SeerRole : StandardNightRoleHookListener
 
         return new SelectPlayersInstruction(
             publicAnnouncement: GameStrings.SeerNightActionPrompt,
-            countConstraint: SelectionCountConstraint.Single, 
+            countConstraint: NumberRangeConstraint.Single, 
             selectablePlayerIds: potentialTargets,
             affectedPlayerIds: new List<Guid> { seerPlayer.Id }
         );
@@ -47,32 +45,11 @@ internal class SeerRole : StandardNightRoleHookListener
         var targetId = input.SelectedPlayerIds!.First();
         var targetPlayer = session.GetPlayer(targetId);
 
-        // Perform the Seer's check
-        
-        //TODO: in the future, migrate this call into a GameSession method that goes through game logs to determine which team the player belongs to
-        bool targetWakesWithWerewolves = DoesPlayerWakeWithWerewolves(targetPlayer, session);
+        bool targetWakesWithWerewolves = targetPlayer.State.Team == Team.Werewolves;
         
         string privateFeedback = targetWakesWithWerewolves ?
             GameStrings.SeerResultWerewolfTeam : GameStrings.SeerResultNotWerewolfTeam;
 
-        session.PerformNightAction(NightActionType.SeerCheck, targetId, privateFeedback);
-    }
-
-    private bool DoesPlayerWakeWithWerewolves(IPlayer player, GameSession session)
-    {
-        // TODO: Add checks for Wild Child, Wolf Hound, Events in later phases
-        // TODO: Check PlayerState.IsInfected when implemented
-
-        if (player.State.MainRole != null)
-        {
-            return player.State.MainRole switch
-            {
-                MainRoleType.SimpleWerewolf => true,
-                // TODO: Add other werewolf types when implemented
-                _ => false
-            };
-        }
-
-        return false;
+        session.PerformNightAction(NightActionType.SeerCheck, targetId);
     }
 }

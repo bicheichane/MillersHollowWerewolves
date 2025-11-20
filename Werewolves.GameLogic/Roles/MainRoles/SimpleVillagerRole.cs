@@ -16,7 +16,7 @@ namespace Werewolves.GameLogic.Roles.MainRoles;
 internal class SimpleVillagerRole : RoleHookListener
 {
     internal override string PublicName => GameStrings.SimpleVillagerRoleName;
-    public override ListenerIdentifier Role => ListenerIdentifier.Listener(MainRoleType.SimpleVillager);
+    public override ListenerIdentifier Id => ListenerIdentifier.Listener(MainRoleType.SimpleVillager);
 
 	protected override HookListenerActionResult AdvanceCoreStateMachine(GameSession session, ModeratorResponse input)
     {

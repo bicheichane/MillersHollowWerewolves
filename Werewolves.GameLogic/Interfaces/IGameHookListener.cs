@@ -23,5 +23,5 @@ internal interface IGameHookListener
     /// <returns>A HookListenerActionResult indicating the outcome of the state machine advancement.</returns>
     HookListenerActionResult AdvanceStateMachine(GameSession session, ModeratorResponse input);
 
-    ListenerIdentifier Role { get; }
+    ListenerIdentifier Id { get; }
 }

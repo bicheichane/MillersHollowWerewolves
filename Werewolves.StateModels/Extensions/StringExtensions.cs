@@ -1,6 +1,7 @@
 ﻿using System.Data;
+using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Interfaces;
+
 
 namespace Werewolves.StateModels.Extensions
 {
@@ -21,14 +22,8 @@ namespace Werewolves.StateModels.Extensions
 		public static IEnumerable<IPlayer> WithHealth(this Dictionary<Guid, IPlayer> players, PlayerHealth health) =>
 			PlayerExtensionHelpers.WithHealth(players.Values, health);
 
-		public static IEnumerable<IPlayer> WhereRevealed(this IEnumerable<IPlayer> players, bool isRevealed) =>
-			PlayerExtensionHelpers.WhereRevealed(players, isRevealed);
-
 		public static IEnumerable<IPlayer> WithRole(this Dictionary<Guid, IPlayer> players, MainRoleType mainRoleType) =>
 			PlayerExtensionHelpers.WithRole(players.Values, mainRoleType);
-
-		public static IEnumerable<IPlayer> WhereRevealed(this Dictionary<Guid, IPlayer> players, bool isRevealed) =>
-			PlayerExtensionHelpers.WhereRevealed(players.Values, isRevealed);
 
 		public static List<Guid> ToIdList(this Dictionary<Guid, IPlayer> players) =>
 			players.Select(p => p.Key).ToList();
@@ -48,13 +43,10 @@ namespace Werewolves.StateModels.Extensions
 		internal static IEnumerable<T> WithSecondaryRole<T>(this IEnumerable<T> players, SecondaryRoleType? roleType)
 			where T : IPlayer =>
 			players.Where(p =>
-				p.State.SecondaryRoles.HasValue && (p.State.SecondaryRoles.Value & roleType) == roleType);
+				(p.State.SecondaryRoles & roleType) == roleType);
 
 		internal static IEnumerable<T> WithHealth<T>(this IEnumerable<T> players, PlayerHealth health) where T : IPlayer =>
 			players.Where(p => p.State.Health == health);
-
-		internal static IEnumerable<T> WhereRevealed<T>(this IEnumerable<T> players, bool isRevealed) where T : IPlayer =>
-			players.Where(p => p.State.IsMainRoleRevealed == isRevealed);
 	}
 
 	/*

@@ -18,7 +18,7 @@ internal class SimpleWerewolfRole : StandardNightRoleHookListener
 {
     
     internal override string PublicName => GameStrings.SimpleWerewolfRoleName;
-    public override ListenerIdentifier Role => ListenerIdentifier.Listener(MainRoleType.SimpleWerewolf);
+    public override ListenerIdentifier Id => ListenerIdentifier.Listener(MainRoleType.SimpleWerewolf);
     protected override bool HasNightPowers => true;
 
     protected override ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input)
@@ -35,7 +35,7 @@ internal class SimpleWerewolfRole : StandardNightRoleHookListener
             publicAnnouncement: GameStrings.WerewolvesChooseVictimPrompt,
             selectablePlayerIds: potentialTargets,
             affectedPlayerIds: werewolves.Select(w => w.Id).ToList(),
-            countConstraint: SelectionCountConstraint.Single
+            countConstraint: NumberRangeConstraint.Single
         );
     }
 

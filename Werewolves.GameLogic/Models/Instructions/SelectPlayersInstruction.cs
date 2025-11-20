@@ -17,7 +17,7 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// <summary>
     /// The constraint defining how many players must be selected.
     /// </summary>
-    public SelectionCountConstraint CountConstraint { get; }
+    public NumberRangeConstraint CountConstraint { get; }
 
     /// <summary>
     /// Initializes a new instance of SelectPlayersInstruction.
@@ -29,7 +29,7 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
     public SelectPlayersInstruction(
         IReadOnlyList<Guid> selectablePlayerIds,
-        SelectionCountConstraint countConstraint,
+        NumberRangeConstraint countConstraint,
         string? publicAnnouncement = null,
         string? privateInstruction = null,
         IReadOnlyList<Guid>? affectedPlayerIds = null)
@@ -76,7 +76,7 @@ public record SelectPlayersInstruction : ModeratorInstruction
 
         var count = selectedPlayerIds.Count;
 
-        SelectionCountConstraint.EnforceConstraint(selectedPlayerIds.ToList(), CountConstraint);
+        CountConstraint.Enforce(selectedPlayerIds.ToList());
 
         // Check that all selected players are in the selectable list
         foreach (var playerId in selectedPlayerIds)

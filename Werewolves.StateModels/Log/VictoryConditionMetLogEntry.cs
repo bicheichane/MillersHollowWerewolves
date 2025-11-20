@@ -15,8 +15,8 @@ public record VictoryConditionMetLogEntry : GameLogEntryBase
     /// <summary>
     /// Applies the victory condition to the game state.
     /// </summary>
-    internal override void Apply(GameSession.IStateMutator mutator)
+    internal override void Apply(ISessionMutator mutator)
     {
-        mutator.SetWinningTeam(WinningTeam);
-    }
+		//logging only, no state change
+	}
 }

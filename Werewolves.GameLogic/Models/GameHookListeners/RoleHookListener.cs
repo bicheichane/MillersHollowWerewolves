@@ -4,7 +4,7 @@ using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
-using Werewolves.StateModels.Interfaces;
+
 using Werewolves.StateModels.Models;
 using static Werewolves.StateModels.Enums.PlayerHealth;
 
@@ -19,7 +19,7 @@ internal abstract class RoleHookListener : IGameHookListener
 {
 	internal abstract string PublicName { get; }
 	
-	public abstract ListenerIdentifier Role { get; }
+	public abstract ListenerIdentifier Id { get; }
 
 	public virtual HookListenerActionResult AdvanceStateMachine(GameSession session, ModeratorResponse input)
 	{
@@ -42,7 +42,7 @@ internal abstract class RoleHookListener : IGameHookListener
 	#region MainRole Helper functions
 
 	protected List<IPlayer>? GetAliveRolePlayers(GameSession session) =>
-		session.GetPlayers().WithRole(Role).WithHealth(Alive).ToList();
+		session.GetPlayers().WithRole(Id).WithHealth(Alive).ToList();
 
 	protected List<Guid> GetPotentialTargets(GameSession session, bool canTargetSelf)
 	{
@@ -50,13 +50,13 @@ internal abstract class RoleHookListener : IGameHookListener
 			.WithHealth(Alive);
 
 		if (canTargetSelf == false)
-			potentialTargets = potentialTargets.WithoutRole(Role);
+			potentialTargets = potentialTargets.WithoutRole(Id);
 
 		var list = potentialTargets.ToIdList();
 
 		if (!list.Any())
 		{
-			throw new InvalidOperationException($"No valid targets available for {Role} to select.");
+			throw new InvalidOperationException($"No valid targets available for {Id} to select.");
 		}
 
 		return list;
@@ -89,7 +89,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		if (session.TryGetActiveGameHook(out var currentHook) == false)
 		{
 			throw new InvalidOperationException(
-				$"{Role}: Tried to advance role state machine without an active game hook");
+				$"{Id}: Tried to advance role state machine without an active game hook");
 		}
 		var currentState = GetCurrentListenerState(session);
 
@@ -116,7 +116,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		if (stageToExecute == null)
 		{
 			throw new InvalidOperationException(
-				$"{Role}: machine state stuck, cannot advance from {currentHook}:{currentState}");
+				$"{Id}: machine state stuck, cannot advance from {currentHook}:{currentState}");
 		}
 
 		//execute the stage
@@ -139,7 +139,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 				    InitialStateMachineStages.ContainsKey(stage.GameHook))
 				{
 					throw new InvalidOperationException(
-						$"{Role}: Illegal overwrite of initial stage handler for {stage.GameHook} game hook");
+						$"{Id}: Illegal overwrite of initial stage handler for {stage.GameHook} game hook");
 				}
 
 				InitialStateMachineStages[stage.GameHook] = stage;
@@ -157,7 +157,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 				    StateMachineStagesDictionary[stage.GameHook].ContainsKey(startStage))
 				{
 					throw new InvalidOperationException(
-						$"{Role}: Illegal overwrite of {startStage} stage handler");
+						$"{Id}: Illegal overwrite of {startStage} stage handler");
 				}
 				
 
@@ -170,7 +170,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 
 	protected TRoleStateEnum? GetCurrentListenerState(GameSession session)
 	{
-		return session.GetCurrentListenerState<TRoleStateEnum>(this.Role);
+		return session.GetCurrentListenerState<TRoleStateEnum>(this.Id);
 	}
 
 	#region RoleStateMachineStage Wrappers
@@ -182,7 +182,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		bool shouldOverwriteStartStage = false
 		)
 		=> new(
-			Role,
+			Id,
 			gameHook,
 			startStage,
 			actionToPerform,
@@ -199,7 +199,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		bool shouldOverwriteStartStage = false
 		)
 		=> new(
-			Role,
+			Id,
 			gameHook,
 			startStage,
 			actionToPerform,
@@ -223,7 +223,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		bool shouldOverwriteStartStage = false
 		)
 		=> new(
-			Role,
+			Id,
 			gameHook,
 			startStage,
 			actionToPerform,
@@ -247,7 +247,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		bool shouldOverwriteStartStage = false
 	)
 		=> new(
-			Role,
+			Id,
 			gameHook,
 			startStage,
 			actionToPerform,

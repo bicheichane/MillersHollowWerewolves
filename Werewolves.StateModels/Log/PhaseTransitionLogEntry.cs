@@ -12,7 +12,7 @@ public record PhaseTransitionLogEntry : GameLogEntryBase
     /// <summary>
     /// Applies the phase transition to the game state.
     /// </summary>
-    internal override void Apply(GameSession.IStateMutator mutator)
+    internal override void Apply(ISessionMutator mutator)
     {
         mutator.SetCurrentPhase(CurrentPhase);
 	}

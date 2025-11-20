@@ -48,14 +48,17 @@ internal static class GameFlowManager
             Listener(Lovers),              //first night only
             Listener(Fox),
             Listener(StutteringJudge),      //first night only
+            Listener(Elder),                //first night only, required to enable disregarding wolf infection
             Listener(TwoSisters),
             Listener(ThreeBrothers),
             Listener(WildChild),            //first night only
             Listener(BearTamer),            //first night only
             Listener(Defender),
+            Listener(WolfHound),            //first night only
 			Listener(SimpleWerewolf),
             Listener(AccursedWolfFather),
             Listener(BigBadWolf),
+            Listener(WhiteWerewolf),
 			Listener(Seer),
             Listener(Witch),
             Listener(Gypsy),
@@ -63,7 +66,13 @@ internal static class GameFlowManager
             Listener(Charmed)
 		],
 
-        [DayBreakAfterVictims] =
+        [DayBreakBeforeVictims] =
+        [
+            Listener(Elder),
+
+        ],
+
+        [DayBreakAfterVictimsAnnounced] =
         [
             Listener(BearTamer),
             Listener(Gypsy),
@@ -107,8 +116,8 @@ internal static class GameFlowManager
                 subPhase: NightSubPhases.Start,
                 subPhaseStages: [ 
                     LogicStage(NightSubPhaseStage.NightStart, HandleNightStart),
-                    HookStage(NightActionLoop, HandleNightActionStop),
-                    NavigationEndStageSilent(GamePhase.Dawn)
+                    HookStage(NightActionLoop),
+                    NavigationEndStage(NightSubPhaseStage.NightEnd, HandleNightActionLoopFinish)
                 ],
                 possibleNextMainPhaseTransitions:
                 [ new (GamePhase.Dawn) ]
@@ -129,7 +138,8 @@ internal static class GameFlowManager
                 subPhase : DawnSubPhases.AnnounceVictims,
                 subPhaseStages: [
                     LogicStage(DawnSubPhaseStage.AnnounceVictims, HandleVictimsAnnounceAndRoleRequest),
-                    LogicStage(DawnSubPhaseStage.DawnRoleReveals, HandleVictimsAnnounceAndRoleResponse),
+                    LogicStage(DawnSubPhaseStage.DawnRoleReveals, HandleVictimsAnnounceAndRoleResponse)
+                        .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
                     NavigationEndStageSilent(DawnSubPhases.Finalize)
 					],
                 possibleNextSubPhases: [DawnSubPhases.Finalize]
@@ -160,7 +170,8 @@ internal static class GameFlowManager
                 subPhase: DaySubPhases.NormalVoting,
                 subPhaseStages: [ 
                     LogicStage(DaySubPhaseStage.StartNormalVote, HandleDayNormalVoteOutcomeRequest),
-                    NavigationEndStage(DaySubPhaseStage.ProcessVote, HandleDayNormalVoteOutcomeResponse)],
+                    NavigationEndStage(DaySubPhaseStage.ProcessVote, HandleDayNormalVoteOutcomeResponse)
+                        .RequiresInputType(ExpectedInputType.PlayerSelection)],
                 possibleNextSubPhases:
                     [ DaySubPhases.ProcessVoteRoleReveal, DaySubPhases.Finalize ]
 			),
@@ -169,7 +180,8 @@ internal static class GameFlowManager
                 subPhase: DaySubPhases.ProcessVoteRoleReveal,
                 subPhaseStages: [ 
                     LogicStage(DaySubPhaseStage.VoteRoleRevealRequest, HandleDayVoteRoleRevealRequest),
-                    LogicStage(DaySubPhaseStage.VoteRoleRevealResponse, HandleDayVoteRoleRevealResponse),
+                    LogicStage(DaySubPhaseStage.VoteRoleRevealResponse, HandleDayVoteRoleRevealResponse)
+                        .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
                     NavigationEndStageSilent(DaySubPhases.Finalize)
 				],
                 possibleNextSubPhases:
@@ -208,10 +220,9 @@ internal static class GameFlowManager
             throw new InvalidOperationException("HandleInput: null nextInstructionToSend");
         }
 
-		// --- Update Pending Instruction ---
-		session.PendingModeratorInstruction = nextInstructionToSend;
+        // --- Update Pending Instruction ---
+		session.SetPendingModeratorInstruction(nextInstructionToSend);
 
-		
 		return ProcessResult.Success(nextInstructionToSend);
     }
 
@@ -303,13 +314,13 @@ internal static class GameFlowManager
         return instruction;
     }
 
-    private static ModeratorInstruction HandleNightActionStop(GameSession session, ModeratorResponse input)
+    private static MainPhaseHandlerResult HandleNightActionLoopFinish(GameSession session, ModeratorResponse input)
     {
         var instruction = new ConfirmationInstruction(
             publicAnnouncement: "Night actions complete. Village wakes up."
         );
 
-        return instruction;
+        return TransitionPhase(instruction, GamePhase.Dawn);
 	}
 
     #endregion
@@ -324,22 +335,130 @@ internal static class GameFlowManager
 		// - Calculate final list of eliminated players
 		// - Transition to AnnounceVictims if there are any victims, otherwise transition to Finalize
 
-		DawnSubPhases nextSubPhase = DawnSubPhases.Finalize;
+        var victimsExist = false;
 
-        var victimList = new List<Guid>();
-        
-        var werewolfSelection = session.GetPlayersTargetedByNightAction(NightActionType.WerewolfVictimSelection, SelectionCountConstraint.Single).Single();
+		// Offensive actions
+		Dictionary<NightActionType, IPlayer> offensiveSelections = new();
 
-        session.EliminatePlayer(werewolfSelection.Id, EliminationReason.WerewolfAttack);
+        AddAttackIfNotNull(NightActionType.WerewolfVictimSelection);
+        AddAttackIfNotNull(NightActionType.AccursedWolfFatherInfection);
+        AddAttackIfNotNull(NightActionType.BigBadWolfVictimSelection);
+        AddAttackIfNotNull(NightActionType.WhiteWerewolfVictimSelection);
+        AddAttackIfNotNull(NightActionType.WitchKill);
+        AddAttackIfNotNull(NightActionType.RustySword);
 
-        victimList.Add(werewolfSelection.Id);
+		// Defensive actions
+        Dictionary<NightActionType, IPlayer> defensiveSelections = new();
 
-        if (victimList.Count > 0)
+        AddDefenseIfNotNull(NightActionType.DefenderProtect);
+        AddDefenseIfNotNull(NightActionType.WitchSave);
+
+		foreach (var offensiveSelection in offensiveSelections)
         {
-            nextSubPhase = DawnSubPhases.AnnounceVictims;
-		}
+            var attackedPlayer = offensiveSelection.Value;
+            var attackType = offensiveSelection.Key;
+            switch (attackType)
+            {
+                //already handled by the werewolf victim selection handler
+                case NightActionType.AccursedWolfFatherInfection:
+					break;
+
+                case NightActionType.WerewolfVictimSelection:
+					// if the accursed wolf father infected the werewolf victim, skip the kill
+                    if (offensiveSelections.ContainsKey(NightActionType.AccursedWolfFatherInfection))
+                    {
+                        // if the attacked player is the elder with extra life, they are immune
+                        //otherwise, infect them
+                        if (attackedPlayer.State is not { MainRole: Elder, HasElderExtraLife: true })
+                        {
+                            session.ApplyStatusEffect(StatusEffectTypes.LycanthropyInfection, attackedPlayer.Id);
+                        }
+						//skip the kill
+						continue;
+                    }
+					// otherwise carry on with a normal werewolf attack
+					else
+					{
+                        goto case NightActionType.BigBadWolfVictimSelection;
+                    }
+
+
+                case NightActionType.BigBadWolfVictimSelection:
+					//if the attacked player is protected by defender, skip
+					if (defensiveSelections.TryGetValue(NightActionType.DefenderProtect, out var protectedPlayer) &&
+                        protectedPlayer.Equals(attackedPlayer) &&
+                        protectedPlayer.State.MainRole != LittleGirl) //unless it's the little girl
+                    {
+                        //skip the kill
+                        continue;
+                    }
+
+                    // if the attacked player is the elder with extra life, wound instead of kill
+                    // and then skip
+                    if (attackedPlayer.State is { MainRole: Elder, HasElderExtraLife: true })
+                    {
+                        session.ApplyStatusEffect(StatusEffectTypes.ElderProtectionLost, attackedPlayer.Id);
+
+                        //skip the kill
+						continue;
+                    }
+
+					// if the attacked player is healed by witch, skip
+					// the witch's potion can only prevent actual deaths
+					// so it doesn't prevent the elder from being wounded
+					if (defensiveSelections.TryGetValue(NightActionType.WitchSave, out var healedPlayer) && healedPlayer.Equals(attackedPlayer))
+                    {
+                        //skip the kill
+						continue;
+                    }
+
+					//otherwise, eliminate the player
+                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.WerewolfAttack);
+                    break;
+
+				case NightActionType.WhiteWerewolfVictimSelection:
+                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.WerewolfAttack);
+                    break;
+
+				case NightActionType.WitchKill:
+                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.WitchKill);
+					break;
+                case NightActionType.RustySword:
+                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.RustySword);
+					break;
+
+                default:
+                    throw new InvalidOperationException($"Unhandled offensive action type: {attackType}");
+			}
+
+            victimsExist = true;
+        }
+
+        var nextSubPhase = victimsExist ? DawnSubPhases.AnnounceVictims : DawnSubPhases.Finalize;
 
 		return TransitionSubPhaseSilent(nextSubPhase);
+
+        void AddAttackIfNotNull(NightActionType actionType)
+        {
+            var player = session
+                .GetPlayersTargetedLastNight(actionType,
+                    NumberRangeConstraint.Optional).SingleOrDefault();
+            if (player != null)
+            {
+                offensiveSelections.Add(actionType, player);
+            }
+        }
+
+        void AddDefenseIfNotNull(NightActionType actionType)
+        {
+            var player = session
+                .GetPlayersTargetedLastNight(actionType,
+                    NumberRangeConstraint.Optional).SingleOrDefault();
+            if (player != null)
+            {
+                defensiveSelections.Add(actionType, player);
+            }
+        }
 	}
 
     private static ModeratorInstruction HandleVictimsAnnounceAndRoleRequest(GameSession session, ModeratorResponse input)
@@ -396,7 +515,7 @@ internal static class GameFlowManager
 
         var selectPlayerInstruction = new SelectPlayersInstruction(
             alivePlayers.ToIdList(),
-            SelectionCountConstraint.Optional,
+            NumberRangeConstraint.Optional,
             publicAnnouncement: GameStrings.VoteStartsPublicInstruction,
             privateInstruction: GameStrings.VoteStartsModeratorInstruction);
 
@@ -412,11 +531,13 @@ internal static class GameFlowManager
 
 		if (selectedPlayer.Count == 0) //tie
         {
+            session.PerformDayVote(null);
             return TransitionSubPhaseSilent(DaySubPhases.Finalize);
 		}
         else
         {
             var playerId = selectedPlayer[0];
+            session.PerformDayVote(playerId);
             session.EliminatePlayer(playerId, EliminationReason.DayVote);
 			return TransitionSubPhaseSilent(DaySubPhases.ProcessVoteRoleReveal);
         }

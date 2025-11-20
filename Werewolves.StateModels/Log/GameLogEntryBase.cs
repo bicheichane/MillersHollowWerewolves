@@ -19,5 +19,5 @@ public abstract record GameLogEntryBase
     /// This method is internal to ensure state mutations only happen through the log-driven pattern.
     /// </summary>
     /// <param name="mutator">The state mutator interface for applying changes</param>
-    internal abstract void Apply(GameSession.IStateMutator mutator);
+    internal abstract void Apply(ISessionMutator mutator);
 }

@@ -99,7 +99,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 		var publicText = defaultInstruction.Instruction!.PublicAnnouncement!;
 		var privateInstruction = "";
 
-		var roleCount = session.RoleInPlayCount(Role);
+		var roleCount = session.RoleInPlayCount(Id);
 		if (roleCount == 1)
 		{
 			privateInstruction = GameStrings.RoleSingleIdentificationPrompt.Format(PublicName);
@@ -112,7 +112,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 		return HookListenerActionResult<T>.NeedInput(
 			new SelectPlayersInstruction(
 				playersWithoutRole,
-				SelectionCountConstraint.Exact(roleCount),
+				NumberRangeConstraint.Exact(roleCount),
 				publicText
 			),
 			WokenUpStateEnum);
@@ -120,7 +120,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 
 	protected virtual void ProcessRoleIdentification(GameSession session, ModeratorResponse input)
 	{
-		session.AssignRole(input.SelectedPlayerIds!, Role);
+		session.AssignRole(input.SelectedPlayerIds!, Id);
 	}
 
 

@@ -11,7 +11,6 @@ using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Interfaces;
 using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;

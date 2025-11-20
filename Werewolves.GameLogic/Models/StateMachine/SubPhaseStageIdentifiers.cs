@@ -7,7 +7,8 @@ internal enum SetupSubPhaseStage
 
 internal enum NightSubPhaseStage
 {
-    NightStart
+    NightStart,
+    NightEnd
 }
 
 internal enum DawnSubPhaseStage

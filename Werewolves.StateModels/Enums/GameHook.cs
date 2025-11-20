@@ -16,7 +16,7 @@ public enum GameHook
     
     // Day phase hooks
     DayBreakBeforeVictims,               // Fired at the start of the day before announcing victims
-    DayBreakAfterVictims,               // Fired at the start of the day after announcing victims
+    DayBreakAfterVictimsAnnounced,               // Fired at the start of the day after announcing victims
 	DayVoteStarted,                     // Fired when voting phase begins
     NightResolutionStarted,             // Fired when night resolution begins
 }

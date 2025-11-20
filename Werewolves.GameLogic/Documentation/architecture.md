@@ -18,7 +18,7 @@ To ensure maintainability, localization capabilities, and type safety:
 
 This architecture employs a log-driven, encapsulated state management approach with compiler-enforced separation: 
 
-*   **Canonical State Source:** The `GameSession.GameHistoryLog` is the **single, canonical source of truth** for all **persistent, non-deterministic** game events. This append-only event store drives all state mutations through the State Mutator Pattern. 
+*   **Canonical State Source:** The `GameSession.GameHistoryLog` is the **single, canonical source of truth** for all **state-altering** game events. This includes both **non-deterministic inputs** (moderator choices) and **deterministic consequences** (rule resolutions like infection) that must be preserved historically independent of future rule logic changes. This append-only event store drives all state mutations through the State Mutator Pattern. 
 *   **Derived Cached State:** All in-memory representations of persistent state (e.g., `Player.Status`, `Player.State` properties, `TurnNumber`) are treated as **assembly-scoped derived state caches** that are mutated **exclusively** by applying events from the log. The primary concern here is **architectural integrity** - ensuring single source of truth, controlled mutation through the State Mutator Pattern, compiler-enforced separation between assemblies, and event-driven state reconstruction for correctness and maintainability.
 *   **Transient Execution State:** The `GamePhaseStateCache` provides a single source of truth for the game's current execution point, tracking the active phase, sub-phase, hook, and any listener that is paused awaiting input. This cache acts as a transient "program counter" and is automatically cleared between main phases to prevent state leakage. 
 
@@ -44,10 +44,10 @@ The architecture is split into two separate library projects to achieve compiler
 
 Represents the tracked state of a single ongoing game. 
 
-*   **Canonical State Source:** The `_gameHistoryLog` is the **single, canonical source of truth** for all **persistent, non-deterministic** game events. This append-only event store drives all state mutations through the State Mutator Pattern. 
+*   **Canonical State Source:** The `_gameHistoryLog` is the **single, canonical source of truth** for all **state-altering** game events. This includes both **non-deterministic inputs** (moderator choices) and **deterministic consequences** (rule resolutions like infection) that must be preserved historically independent of future rule logic changes. This append-only event store drives all state mutations through the State Mutator Pattern. 
 *   **Derived Cached State:** All in-memory representations of persistent state (e.g., `Player.Status`, `Player.State` properties, `TurnNumber`) are treated as **assembly-scoped derived state caches** that are mutated **exclusively** by applying events from the log. The primary concern here is **architectural integrity** - ensuring single source of truth, controlled mutation through the State Mutator Pattern, compiler-enforced separation between assemblies, and event-driven state reconstruction for correctness and maintainability.
 *   **Transient Execution State:** The `GamePhaseStateCache` provides a single source of truth for the game's current execution point, tracking the active phase, sub-phase, hook, and any listener that is paused awaiting input. This cache acts as a transient "program counter" and is automatically cleared between main phases to prevent state leakage. 
-*   **Encapsulated Public API:** `GameSession` provides a curated public API for state queries (e.g., `GetPlayerState(Guid)`) and controlled state mutations (e.g., `EliminatePlayer(Guid, EliminationReason)`). All state changes must go through log entries and their `Apply` methods. 
+*   **Encapsulated Public API:** `GameSession` provides a curated public API for state queries (e.g., `GetPlayerState(Guid)`) and controlled state mutations. It exposes a curated, generic API for unary state modifications (`ApplyStatusEffect`) rather than specific methods for every possible state flag. This maintains a stable interface while allowing the `StatusEffectType` enum to expand. All state changes must go through log entries and their `Apply` methods. 
 *   **State Mutator Pattern:** `GameLogEntryBase` defines an `internal abstract Apply(GameSession.IStateMutator mutator)` method. `GameSession` defines an `internal IStateMutator` interface and a `private nested` implementation class that has privileged access to `internal` setters of other classes in the same assembly. This ensures that only log entries can modify state. 
 *   `Id` (Guid): Unique identifier for the game session. 
 *   `Players` (Dictionary<Guid, Player>): Collection of all players in the game, keyed by their unique ID. Tracks player information provided by the moderator. 
@@ -156,10 +156,10 @@ Wrapper class holding all dynamic state information for a `Player`. **Implemente
     *   `WildChildModelId` (Guid?): Stores the ID of the player chosen as the model by the Wild Child. Used to determine when/if the Wild Child transforms. 
     *   `WolfHoundChoice` (Team?): Stores the alignment (Villagers or Werewolves) chosen by the Wolf Hound on Night 1. 
     *   `TimesAttackedByWerewolves` (int): Counter for how many times this player has been the primary target of the Werewolves' night attack. Used specifically for the Elder's survival ability. *(Reset if Devoted Servant takes role).* 
-    *   `IsTransformedToWerewolf` (bool): Indicates whether the Wild Child has transformed into a Werewolf due to their model being eliminated. *Causal Log: Any log leading to the elimination of the Wild Child's model.* 
+    *   `IsTransformedToWerewolf` (bool): Indicates whether the Wild Child has transformed into a Werewolf due to their model being eliminated. *Causal Log: `PlayerStatusEffectLogEntry` (WildChildTransformation).* 
 
 *Note on Devoted Servant:* When the Devoted Servant swaps roles, the responsible hook listener must explicitly reset any role-specific usage flags or counters (marked with *(Reset if...)* above) on the Servant's `PlayerState` to their default values.* 
- 
+
 ## `EventCard` Abstract Class
 
 Base for New Moon event cards (represents the *rules* of the event). Implements `IGameHookListener`. 
@@ -430,13 +430,13 @@ Polymorphic instruction system for communication TO the moderator.
 
 # Game Logs 
 
-**Core Principle:** The `GameHistoryLog` serves as the single, canonical source of truth, containing an append-only record of events that cannot be deterministically calculated from prior states. All other game state is treated as derived and either cached or computed on-the-fly.
+**Core Principle:** The `GameHistoryLog` serves as the single, canonical source of truth, containing an append-only record of events that determine the game state. All other game state is treated as derived and either cached or computed on-the-fly.
 
 The chosen approach is an abstract base class (`GameLogEntryBase`) providing universal properties (`Timestamp`, `TurnNumber`, `Phase`) combined with distinct concrete derived types (preferably records) for each specific loggable event. This flat hierarchy significantly reduces boilerplate for universal fields via the base class while maintaining strong type safety, clarity, and maintainability through specific derived types.
 
 ## Non-Deterministic Event Logs (Canonical Source of Truth)
 
-These entries represent the canonical source of truth for the game and cannot be deterministically calculated from prior states.
+These entries represent the canonical source of truth for the game.
 
 ### Setup & Initial State Logs
 
@@ -456,25 +456,31 @@ These entries represent the canonical source of truth for the game and cannot be
 
 5.  **Devoted Servant Swap Executed:** Logs the Servant's ID, the ID of the player they saved from reveal, and the (hidden) role the Servant adopted. *Represents: A non-deterministic player decision.* 
 
+### Consequential State Logs (Deterministic Resolutions)
+
+These entries record the **result** of a rule resolution. While technically deterministic based on the logic at the time of execution, they are logged to explicitly freeze the state change and decouple history from logic versions.
+
+6.  **Player Status Effect (`PlayerStatusEffectLogEntry`):** Records the application of a unary state mutation (defined by `StatusEffectType`) to a specific player. Used for persistent effects like `ElderProtectionLost`, `LycanthropyInfection`, `WildChildTransformation`, etc. *Represents: The frozen consequence of a rule resolution.*
+
 ### Event & Vote Logs
 
-6.  **Event Card Drawn:** Logs the specific New Moon Event Card ID and Name drawn at the start of the day. *Represents: A random event reported by the moderator.* 
+7.  **Event Card Drawn:** Logs the specific New Moon Event Card ID and Name drawn at the start of the day. *Represents: A random event reported by the moderator.* 
 
-7.  **Gypsy Question Asked & Answered:** Logs the text of the Spiritualism question asked by the Medium and the "Yes" or "No" answer provided by the Moderator (as the spirit). *Represents: A non-deterministic player choice and moderator response.* 
+8.  **Gypsy Question Asked & Answered:** Logs the text of the Spiritualism question asked by the Medium and the "Yes" or "No" answer provided by the Moderator (as the spirit). *Represents: A non-deterministic player choice and moderator response.* 
 
-8.  **Town Crier Event Played:** Logs the specific Event Card ID and Name played by the Town Crier from their hand. *Represents: A non-deterministic player decision.* 
+9.  **Town Crier Event Played:** Logs the specific Event Card ID and Name played by the Town Crier from their hand. *Represents: A non-deterministic player decision.* 
 
-9.  **Sheriff Appointed:** Logs the ID of the player who became Sheriff, the reason (Initial Election, Successor Appointment, Event), and the ID of the predecessor (if any). *Represents: A non-deterministic outcome of a player vote or a predecessor's choice.* 
+10. **Sheriff Appointed:** Logs the ID of the player who became Sheriff, the reason (Initial Election, Successor Appointment, Event), and the ID of the predecessor (if any). *Represents: A non-deterministic outcome of a player vote or a predecessor's choice.* 
 
-10. **Stuttering Judge Signaled Second Vote:** Logs that the Judge used their one-time ability to trigger a second vote this day. *Represents: A non-deterministic player decision.* 
+11. **Stuttering Judge Signaled Second Vote:** Logs that the Judge used their one-time ability to trigger a second vote this day. *Represents: A non-deterministic player decision.* 
 
-11. **Vote Outcome Reported (`VoteOutcomeReportedLogEntry`):** The core moderator input for any vote resolution. This generic entry consolidates the outcomes for standard votes, Nightmare accusations, Great Distrust, and Punishment events. Logs the raw outcome (eliminated player ID or `Guid.Empty` for tie) reported by the Moderator. *Represents: The core moderator input for vote resolution.* 
+12. **Vote Outcome Reported (`VoteOutcomeReportedLogEntry`):** The core moderator input for any vote resolution. This generic entry consolidates the outcomes for standard votes, Nightmare accusations, Great Distrust, and Punishment events. Logs the raw outcome (eliminated player ID or `Guid.Empty` for tie) reported by the Moderator. *Represents: The core moderator input for vote resolution.* 
 
-12. **Scapegoat Voting Restrictions Set:** Logs the decision made by an eliminated Scapegoat regarding who can/cannot vote the following day. *Represents: A non-deterministic player decision.* 
+13. **Scapegoat Voting Restrictions Set:** Logs the decision made by an eliminated Scapegoat regarding who can/cannot vote the following day. *Represents: A non-deterministic player decision.* 
 
 ### Game End Log
 
-13. **Victory Condition Met (`VictoryConditionMetLogEntry`):** Logs the determined winning team/player(s) and a brief description of the condition met (e.g., "All Werewolves eliminated," "Werewolves equal Villagers," "All survivors charmed," "Angel eliminated early"). *Represents: While technically a deterministic outcome, this log serves as the explicit, terminal event of the game, which is valuable for auditing and clearly defining the end of the event stream.* 
+14. **Victory Condition Met (`VictoryConditionMetLogEntry`):** Logs the determined winning team/player(s) and a brief description of the condition met (e.g., "All Werewolves eliminated," "Werewolves equal Villagers," "All survivors charmed," "Angel eliminated early"). *Represents: While technically a deterministic outcome, this log serves as the explicit, terminal event of the game, which is valuable for auditing and clearly defining the end of the event stream.* 
  
 # Victory Condition Checking:
  
