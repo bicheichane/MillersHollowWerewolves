@@ -286,7 +286,7 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Specify the roles of the deceased..
+        ///   Looks up a localized string similar to Specify the roles of the deceased in secret. Do not reveal them publicly at this stage..
         /// </summary>
         public static string RevealRolePromptSpecify {
             get {

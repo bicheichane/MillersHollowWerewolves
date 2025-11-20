@@ -31,7 +31,6 @@ internal class GameSession : IGameSession
     // Core immutable properties
 
     private readonly GameSessionKernel _gameSessionKernel;
-    private IReadOnlyList<GameLogEntryBase> _gameHistoryLog => _gameSessionKernel.GetLogs();
 
 	#endregion
 
