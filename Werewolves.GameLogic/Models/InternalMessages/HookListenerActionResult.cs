@@ -74,7 +74,6 @@ internal class HookListenerActionResult<T> : HookListenerActionResult where T : 
 	}
 
 	/// <summary>
-	/// Creates a Complete result with an optional instruction.
 	/// </summary>
 	/// <param name="instruction">Optional instruction to show to the moderator.</param>
 	/// <returns>A HookListenerActionResult indicating completion.</returns>
@@ -82,25 +81,4 @@ internal class HookListenerActionResult<T> : HookListenerActionResult where T : 
 	{
 		return new HookListenerActionResult<T>(HookListenerOutcome.Complete, nextListenerPhase: nextListenerPhase);
 	}
-}
-
-
-public class HookHandlerResult
-{
-    public HookHandlerOutcome Outcome { get; }
-    public ModeratorInstruction? Instruction { get; }
-    private HookHandlerResult(HookHandlerOutcome outcome, ModeratorInstruction? instruction = null)
-    {
-        Outcome = outcome;
-        Instruction = instruction;
-    }
-
-    public static HookHandlerResult NeedInput(ModeratorInstruction? instruction = null)
-    {
-        return new HookHandlerResult(HookHandlerOutcome.NeedInput, instruction: instruction);
-    }
-    public static HookHandlerResult Complete()
-    {
-        return new HookHandlerResult(HookHandlerOutcome.Complete);
-    }
 }

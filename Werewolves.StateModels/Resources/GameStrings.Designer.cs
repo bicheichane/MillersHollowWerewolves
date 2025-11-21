@@ -61,15 +61,6 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Action ({0}) not valid in phase {1}..
-        /// </summary>
-        public static string ActionNotInPhase {
-            get {
-                return ResourceManager.GetString("ActionNotInPhase", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Confirm everyone is asleep and there is silence.
         /// </summary>
         public static string ConfirmNightStarted {
@@ -106,65 +97,11 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to You must select exactly one player..
-        /// </summary>
-        public static string ExactlyOnePlayerMustBeSelected {
-            get {
-                return ResourceManager.GetString("ExactlyOnePlayerMustBeSelected", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Game session not found..
-        /// </summary>
-        public static string GameNotFound {
-            get {
-                return ResourceManager.GetString("GameNotFound", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Game Over! {0}.
         /// </summary>
         public static string GameOverMessage {
             get {
                 return ResourceManager.GetString("GameOverMessage", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Identify {0} werewolf players.
-        /// </summary>
-        public static string IdentifyWerewolvesPrompt {
-            get {
-                return ResourceManager.GetString("IdentifyWerewolvesPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The provided input type does not match the expected input type..
-        /// </summary>
-        public static string InputTypeMismatch {
-            get {
-                return ResourceManager.GetString("InputTypeMismatch", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to An unexpected internal error occurred..
-        /// </summary>
-        public static string InternalError {
-            get {
-                return ResourceManager.GetString("InternalError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Invalid vote outcome reported..
-        /// </summary>
-        public static string InvalidVoteOutcome {
-            get {
-                return ResourceManager.GetString("InvalidVoteOutcome", resourceCulture);
             }
         }
         
@@ -187,101 +124,11 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to No one was eliminated during the night..
-        /// </summary>
-        public static string NoOneEliminatedAnnouncement {
-            get {
-                return ResourceManager.GetString("NoOneEliminatedAnnouncement", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Phase {0} logic is not yet implemented..
-        /// </summary>
-        public static string PhaseLogicNotImplemented {
-            get {
-                return ResourceManager.GetString("PhaseLogicNotImplemented", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to {0} was eliminated by the vote. Please reveal their role..
-        /// </summary>
-        public static string PlayerEliminatedByVoteRevealRole {
-            get {
-                return ResourceManager.GetString("PlayerEliminatedByVoteRevealRole", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Player ID {0} not found in this game..
-        /// </summary>
-        public static string PlayerIdNotFound {
-            get {
-                return ResourceManager.GetString("PlayerIdNotFound", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Player list cannot be empty..
         /// </summary>
         public static string PlayerListCannotBeEmpty {
             get {
                 return ResourceManager.GetString("PlayerListCannotBeEmpty", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The following players were eliminated: {0}..
-        /// </summary>
-        public static string PlayersEliminatedAnnouncement {
-            get {
-                return ResourceManager.GetString("PlayersEliminatedAnnouncement", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Proceed to the day&apos;s debate?.
-        /// </summary>
-        public static string ProceedToDebatePrompt {
-            get {
-                return ResourceManager.GetString("ProceedToDebatePrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Proceed to the next night?.
-        /// </summary>
-        public static string ProceedToNightPrompt {
-            get {
-                return ResourceManager.GetString("ProceedToNightPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Proceed to the daytime debate and vote?.
-        /// </summary>
-        public static string ProceedToVotePrompt {
-            get {
-                return ResourceManager.GetString("ProceedToVotePrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Night phase complete. Proceed to resolve night actions..
-        /// </summary>
-        public static string ResolveNightPrompt {
-            get {
-                return ResourceManager.GetString("ResolveNightPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Proceed to resolve the vote outcome..
-        /// </summary>
-        public static string ResolveVotePrompt {
-            get {
-                return ResourceManager.GetString("ResolveVotePrompt", resourceCulture);
             }
         }
         
@@ -295,47 +142,11 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Could not find the player target for role reveal..
-        /// </summary>
-        public static string RevealTargetNotFoundError {
-            get {
-                return ResourceManager.GetString("RevealTargetNotFoundError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Successfully assigned the {1} role to player {0}..
-        /// </summary>
-        public static string RoleAssignmentSuccess {
-            get {
-                return ResourceManager.GetString("RoleAssignmentSuccess", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to {0} go to sleep..
-        /// </summary>
-        public static string RoleGoesToSleepMultiple {
-            get {
-                return ResourceManager.GetString("RoleGoesToSleepMultiple", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to {0} goes to sleep..
         /// </summary>
         public static string RoleGoesToSleepSingle {
             get {
                 return ResourceManager.GetString("RoleGoesToSleepSingle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Internal error: MainRole implementation not found for {0}..
-        /// </summary>
-        public static string RoleImplementationNotFound {
-            get {
-                return ResourceManager.GetString("RoleImplementationNotFound", resourceCulture);
             }
         }
         
@@ -354,33 +165,6 @@ namespace Werewolves.StateModels.Resources {
         public static string RoleMultipleIdentificationPrompt {
             get {
                 return ResourceManager.GetString("RoleMultipleIdentificationPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to No role was selected..
-        /// </summary>
-        public static string RoleNotSelectedError {
-            get {
-                return ResourceManager.GetString("RoleNotSelectedError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to {0} was revealed to be a {1}..
-        /// </summary>
-        public static string RoleRevealedLogMessage {
-            get {
-                return ResourceManager.GetString("RoleRevealedLogMessage", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to {0}&apos;s role was {1}. Proceed to debate?.
-        /// </summary>
-        public static string RoleRevealedProceedToDebate {
-            get {
-                return ResourceManager.GetString("RoleRevealedProceedToDebate", resourceCulture);
             }
         }
         
@@ -412,15 +196,6 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to There are no valid players remaining for the Seer to check..
-        /// </summary>
-        public static string SeerNoTargetsAvailable {
-            get {
-                return ResourceManager.GetString("SeerNoTargetsAvailable", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Target {0} is NOT affiliated with the Werewolves (Thumbs Down)..
         /// </summary>
         public static string SeerResultNotWerewolfTeam {
@@ -435,15 +210,6 @@ namespace Werewolves.StateModels.Resources {
         public static string SeerResultWerewolfTeam {
             get {
                 return ResourceManager.GetString("SeerResultWerewolfTeam", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Each night, the Seer may discover if a player is currently with the werewolves..
-        /// </summary>
-        public static string SeerRoleDescription {
-            get {
-                return ResourceManager.GetString("SeerRoleDescription", resourceCulture);
             }
         }
         
@@ -466,29 +232,11 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to A standard villager with no special abilities..
-        /// </summary>
-        public static string SimpleVillagerRoleDescription {
-            get {
-                return ResourceManager.GetString("SimpleVillagerRoleDescription", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Simple Villager.
         /// </summary>
         public static string SimpleVillagerRoleName {
             get {
                 return ResourceManager.GetString("SimpleVillagerRoleName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to A standard werewolf. Wakes with other werewolves to choose a victim..
-        /// </summary>
-        public static string SimpleWerewolfRoleDescription {
-            get {
-                return ResourceManager.GetString("SimpleWerewolfRoleDescription", resourceCulture);
             }
         }
         
@@ -511,42 +259,6 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cannot target {0} because they are an ally (Werewolf)..
-        /// </summary>
-        public static string TargetIsAllyError {
-            get {
-                return ResourceManager.GetString("TargetIsAllyError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cannot target {0} because they are already dead..
-        /// </summary>
-        public static string TargetIsDeadError {
-            get {
-                return ResourceManager.GetString("TargetIsDeadError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to You cannot target yourself..
-        /// </summary>
-        public static string TargetIsSelfError {
-            get {
-                return ResourceManager.GetString("TargetIsSelfError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Received input when no instruction was pending..
-        /// </summary>
-        public static string UnexpectedInput {
-            get {
-                return ResourceManager.GetString("UnexpectedInput", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to All werewolves eliminated..
         /// </summary>
         public static string VictoryConditionAllWerewolvesEliminated {
@@ -556,83 +268,11 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Villagers Win! (All Werewolves eliminated).
-        /// </summary>
-        public static string VictoryConditionVillagersWin {
-            get {
-                return ResourceManager.GetString("VictoryConditionVillagersWin", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Werewolves equal or outnumber villagers..
         /// </summary>
         public static string VictoryConditionWerewolvesOutnumber {
             get {
                 return ResourceManager.GetString("VictoryConditionWerewolvesOutnumber", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Werewolves Win! (Werewolf count &gt;= Villager count).
-        /// </summary>
-        public static string VictoryConditionWerewolvesWin {
-            get {
-                return ResourceManager.GetString("VictoryConditionWerewolvesWin", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Player {0} was eliminated by the vote..
-        /// </summary>
-        public static string VoteEliminatedAnnounce {
-            get {
-                return ResourceManager.GetString("VoteEliminatedAnnounce", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Please select exactly one player who was eliminated, or select no one to indicate a tie..
-        /// </summary>
-        public static string VoteOutcomeInvalidSelection {
-            get {
-                return ResourceManager.GetString("VoteOutcomeInvalidSelection", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Internal error: Vote outcome was expected but not found..
-        /// </summary>
-        public static string VoteOutcomeMissingError {
-            get {
-                return ResourceManager.GetString("VoteOutcomeMissingError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Report the outcome of the vote. Select the eliminated player or choose &apos;Tie&apos;..
-        /// </summary>
-        public static string VoteOutcomeSelectionPrompt {
-            get {
-                return ResourceManager.GetString("VoteOutcomeSelectionPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Tie.
-        /// </summary>
-        public static string VoteOutcomeTie {
-            get {
-                return ResourceManager.GetString("VoteOutcomeTie", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The vote resulted in a tie. Proceed to the next night?.
-        /// </summary>
-        public static string VoteResultTieProceedToNight {
-            get {
-                return ResourceManager.GetString("VoteResultTieProceedToNight", resourceCulture);
             }
         }
         
@@ -651,42 +291,6 @@ namespace Werewolves.StateModels.Resources {
         public static string VoteStartsPublicInstruction {
             get {
                 return ResourceManager.GetString("VoteStartsPublicInstruction", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The vote resulted in a tie. No one is eliminated..
-        /// </summary>
-        public static string VoteTieAnnounce {
-            get {
-                return ResourceManager.GetString("VoteTieAnnounce", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Invalid number of players selected for Werewolf identification. Expected {0}, but got {1}..
-        /// </summary>
-        public static string WerewolfIdentifyInvalidPlayerCount {
-            get {
-                return ResourceManager.GetString("WerewolfIdentifyInvalidPlayerCount", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Player {0} already has a role assigned during Night 1 identification..
-        /// </summary>
-        public static string WerewolfIdentifyPlayerAlreadyHasRole {
-            get {
-                return ResourceManager.GetString("WerewolfIdentifyPlayerAlreadyHasRole", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Werewolves chose {0}. Night action recorded..
-        /// </summary>
-        public static string WerewolvesChoiceRecorded {
-            get {
-                return ResourceManager.GetString("WerewolvesChoiceRecorded", resourceCulture);
             }
         }
         

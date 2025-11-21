@@ -142,6 +142,8 @@ public class GameService
     {
         return instruction switch
         {
+            StartGameConfirmationInstruction => response.Type == Confirmation,
+            FinishedGameConfirmationInstruction => response.Type is FinishedGame or Confirmation,
             ConfirmationInstruction => response.Type == Confirmation,
             SelectPlayersInstruction => response.Type == PlayerSelection,
             AssignRolesInstruction => response.Type == AssignPlayerRoles,
