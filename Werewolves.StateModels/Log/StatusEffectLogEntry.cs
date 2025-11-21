@@ -23,7 +23,7 @@ public record StatusEffectLogEntry : GameLogEntryBase
 			case StatusEffectTypes.WildChildChanged:
 				mutator.SetPlayerRole(PlayerId, MainRoleType.SimpleWerewolf);
 				break;
-            case StatusEffectTypes.VillageIdiotImmunityUsed:
+            case StatusEffectTypes.LynchingImmunityUsed:
                 mutator.SetVillageIdiotImmunityUsed(PlayerId, true);
                 break;
 			default:

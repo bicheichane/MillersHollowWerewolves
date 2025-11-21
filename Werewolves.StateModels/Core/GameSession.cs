@@ -1,10 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
-using Werewolves.GameLogic.Models;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Extensions;
 using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Resources;
 
 namespace Werewolves.StateModels.Core;
 
@@ -139,6 +135,10 @@ internal class GameSession : IGameSession
     internal void PerformNightAction(NightActionType type, List<Guid> targetIds)
         => PerformNightActionCore(type, targetIds);
 
+    #endregion
+
+    #region Internal Query API
+
     internal IEnumerable<IPlayer> GetPlayersTargetedLastNight(NightActionType actionType,
         NumberRangeConstraint countConstraint, NumberRangeConstraint? turnsAgoConstraint = null)
     {
@@ -167,6 +167,18 @@ internal class GameSession : IGameSession
         return _gameSessionKernel.FindLogEntries<VoteOutcomeReportedLogEntry>(
             NumberRangeConstraint.Range(1, turnNumber - 1), 
             filter: log => log.ReportedOutcomePlayerId == playerId).Any();
+    }
+
+    internal bool ShouldVoteRepeat()
+    {
+        var hasJudgeVoted  = _gameSessionKernel.FindLogEntries<DayActionLogEntry>(
+            NumberRangeConstraint.Exact(_gameSessionKernel.TurnNumber),
+            filter: log => log.ActionType == DayPowerType.JudgeExtraVote).Any();
+
+        var currentTurnVoteCount = _gameSessionKernel.FindLogEntries<VoteOutcomeReportedLogEntry>(
+            NumberRangeConstraint.Exact(_gameSessionKernel.TurnNumber)).Count();
+
+        return hasJudgeVoted && currentTurnVoteCount == 1;
     }
 	
 

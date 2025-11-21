@@ -1,4 +1,3 @@
-using System;
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.GameLogic.Services;
 using Werewolves.StateModels.Core;

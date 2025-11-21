@@ -1,4 +1,3 @@
-using Werewolves.GameLogic.Models;
 using Werewolves.StateModels.Models;
 
 // Log namespace might contain ModeratorInstruction

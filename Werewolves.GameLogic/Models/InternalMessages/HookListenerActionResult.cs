@@ -1,4 +1,3 @@
-using Werewolves.GameLogic.Models;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
 

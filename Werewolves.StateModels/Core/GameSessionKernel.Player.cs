@@ -25,7 +25,20 @@ public interface IPlayerState
 	public bool IsInfected { get; }
 	public bool IsSheriff { get; }
 	public bool HasUsedElderExtraLife { get; }
-    public bool HasVillageIdiotUsedImmunity { get; }
+    public bool IsImmuneToLynching { get; }
+
+    // Returns null if not immune, or the specific localized string if they are.
+    public string? LynchingImmunityAnnouncement 
+    {
+        get
+        {
+            if (MainRole == MainRoleType.VillageIdiot && IsImmuneToLynching)
+            {
+                return "The Village Idiot is saved by their foolishness! They survive, but lose their vote for the rest of the game.";
+            }
+            return null;
+        }
+    }
 
 	public Team Team
 	{
@@ -88,5 +101,7 @@ internal partial class GameSessionKernel
 		public bool IsSheriff { get; internal set; } = false;
 		public bool HasUsedElderExtraLife { get; internal set; } = false;
         public bool HasVillageIdiotUsedImmunity { get; internal set; } = false;
-	}
+
+        public bool IsImmuneToLynching => MainRole == MainRoleType.VillageIdiot && !HasVillageIdiotUsedImmunity;
+    }
 }

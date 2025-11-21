@@ -1,12 +1,10 @@
 using Werewolves.GameLogic.Models;
 using Werewolves.GameLogic.Models.GameHookListeners;
 using Werewolves.GameLogic.Models.Instructions;
-using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
-using static Werewolves.StateModels.Enums.PlayerHealth;
 
 namespace Werewolves.GameLogic.Roles.MainRoles;
 

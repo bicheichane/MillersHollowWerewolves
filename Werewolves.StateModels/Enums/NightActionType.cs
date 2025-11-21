@@ -51,5 +51,5 @@ public enum StatusEffectTypes
     ElderProtectionLost, // Elder's extra life has been used
     LycanthropyInfection, // Player has been infected by the wolf father
     WildChildChanged, // Wild Child has changed their role
-    VillageIdiotImmunityUsed // Village Idiot has used their immunity
+    LynchingImmunityUsed // Village Idiot has used their immunity
 }

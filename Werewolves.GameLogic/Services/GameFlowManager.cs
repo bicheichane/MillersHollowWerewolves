@@ -1,26 +1,20 @@
 using System.Collections.Immutable;
 using Werewolves.GameLogic.Interfaces;
 using Werewolves.GameLogic.Models;
-using Werewolves.GameLogic.Models.GameHookListeners;
 using Werewolves.GameLogic.Models.Instructions;
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.GameLogic.Models.StateMachine;
-using Werewolves.GameLogic.Roles;
 using Werewolves.GameLogic.Roles.MainRoles;
-using Werewolves.StateModels;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
-using static Werewolves.GameLogic.Models.InternalMessages.PhaseHandlerResult;
-using static Werewolves.GameLogic.Models.InternalMessages.StayInSubPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.StateMachine.NavigationSubPhaseStage;
 using static Werewolves.GameLogic.Models.StateMachine.HookSubPhaseStage;
 using static Werewolves.GameLogic.Models.StateMachine.LogicSubPhaseStage;
-using static Werewolves.GameLogic.Models.StateMachine.SubPhaseStage;
 using static Werewolves.StateModels.Enums.GameHook;
 using static Werewolves.StateModels.Enums.MainRoleType;
 using static Werewolves.StateModels.Enums.SecondaryRoleType;
@@ -323,8 +317,8 @@ internal static class GameFlowManager
     private static (Team WinningTeam, string Description)? CheckVictoryConditions(GameSession session)
     {
         // Phase 1: Basic checks using assigned/revealed roles
-        var aliveWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).WithRole(SimpleWerewolf).Count();
-        int aliveNonWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).WithoutRole(SimpleWerewolf).Count();
+        var aliveWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).FromTeam(Team.Werewolves).Count();
+        int aliveNonWerewolves = session.GetPlayers().WithHealth(PlayerHealth.Alive).FromTeam(Team.Villagers).Count();
 
 		// Villager win
 		if (aliveWerewolves == 0 && aliveNonWerewolves > 0)
@@ -390,133 +384,17 @@ internal static class GameFlowManager
     /// </summary>
     private static MajorNavigationPhaseHandlerResult HandleDawnCalculateVictims(GameSession session, ModeratorResponse input)
     {
-		// - Calculate final list of eliminated players
-		// - Transition to AnnounceVictims if there are any victims, otherwise transition to Finalize
+        // 1. Delegate the heavy lifting to the static resolver
+        // The Resolver loops through players, checks logs, and applies Eliminate/Status effects.
+        NightInteractionResolver.ResolveNightPhase(session);
 
-        var victimsExist = false;
-
-		// Offensive actions
-		Dictionary<NightActionType, IPlayer> offensiveSelections = new();
-
-        AddAttackIfNotNull(NightActionType.WerewolfVictimSelection);
-        AddAttackIfNotNull(NightActionType.AccursedWolfFatherInfection);
-        AddAttackIfNotNull(NightActionType.BigBadWolfVictimSelection);
-        AddAttackIfNotNull(NightActionType.WhiteWerewolfVictimSelection);
-        AddAttackIfNotNull(NightActionType.WitchKill);
-        AddAttackIfNotNull(NightActionType.RustySword);
-
-		// Defensive actions
-        Dictionary<NightActionType, IPlayer> defensiveSelections = new();
-
-        AddDefenseIfNotNull(NightActionType.DefenderProtect);
-        AddDefenseIfNotNull(NightActionType.WitchSave);
-
-		foreach (var offensiveSelection in offensiveSelections)
-        {
-            var attackedPlayer = offensiveSelection.Value;
-            var attackType = offensiveSelection.Key;
-            switch (attackType)
-            {
-                //already handled by the werewolf victim selection handler
-                case NightActionType.AccursedWolfFatherInfection:
-					break;
-
-                case NightActionType.WerewolfVictimSelection:
-					// if the accursed wolf father infected the werewolf victim, skip the kill
-                    if (offensiveSelections.ContainsKey(NightActionType.AccursedWolfFatherInfection))
-                    {
-                        // if the attacked player is the elder with extra life, they are immune
-                        //otherwise, infect them
-                        if (attackedPlayer.State is not { MainRole: Elder, HasUsedElderExtraLife: true })
-                        {
-                            session.ApplyStatusEffect(StatusEffectTypes.LycanthropyInfection, attackedPlayer.Id);
-                        }
-						//skip the kill
-						continue;
-                    }
-					// otherwise carry on with a normal werewolf attack
-					else
-					{
-                        goto case NightActionType.BigBadWolfVictimSelection;
-                    }
-
-
-                case NightActionType.BigBadWolfVictimSelection:
-					//if the attacked player is protected by defender, skip
-					if (defensiveSelections.TryGetValue(NightActionType.DefenderProtect, out var protectedPlayer) &&
-                        protectedPlayer.Equals(attackedPlayer) &&
-                        protectedPlayer.State.MainRole != LittleGirl) //unless it's the little girl
-                    {
-                        //skip the kill
-                        continue;
-                    }
-
-                    // if the attacked player is the elder with extra life, wound instead of kill
-                    // and then skip
-                    if (attackedPlayer.State is { MainRole: Elder, HasUsedElderExtraLife: false })
-                    {
-                        session.ApplyStatusEffect(StatusEffectTypes.ElderProtectionLost, attackedPlayer.Id);
-
-                        //skip the kill
-						continue;
-                    }
-
-					// if the attacked player is healed by witch, skip
-					// the witch's potion can only prevent actual deaths
-					// so it doesn't prevent the elder from being wounded
-					if (defensiveSelections.TryGetValue(NightActionType.WitchSave, out var healedPlayer) && healedPlayer.Equals(attackedPlayer))
-                    {
-                        //skip the kill
-						continue;
-                    }
-
-					//otherwise, eliminate the player
-                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.WerewolfAttack);
-                    break;
-
-				case NightActionType.WhiteWerewolfVictimSelection:
-                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.WerewolfAttack);
-                    break;
-
-				case NightActionType.WitchKill:
-                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.WitchKill);
-					break;
-                case NightActionType.RustySword:
-                    session.EliminatePlayer(attackedPlayer.Id, EliminationReason.RustySword);
-					break;
-
-                default:
-                    throw new InvalidOperationException($"Unhandled offensive action type: {attackType}");
-			}
-
-            victimsExist = true;
-        }
-
+        // 2. Check the consequences (The Manager only cares about the RESULT, not the logic)
+        var victimsExist = session.GetPlayersEliminatedThisDawn().Any();
+        
+        // 3. Route accordingly
         var nextSubPhase = victimsExist ? DawnSubPhases.AnnounceVictims : DawnSubPhases.Finalize;
 
-		return TransitionSubPhaseSilent(nextSubPhase);
-
-        void AddAttackIfNotNull(NightActionType actionType)
-        {
-            var player = session
-                .GetPlayersTargetedLastNight(actionType,
-                    NumberRangeConstraint.Optional).SingleOrDefault();
-            if (player != null)
-            {
-                offensiveSelections.Add(actionType, player);
-            }
-        }
-
-        void AddDefenseIfNotNull(NightActionType actionType)
-        {
-            var player = session
-                .GetPlayersTargetedLastNight(actionType,
-                    NumberRangeConstraint.Optional).SingleOrDefault();
-            if (player != null)
-            {
-                defensiveSelections.Add(actionType, player);
-            }
-        }
+        return TransitionSubPhaseSilent(nextSubPhase);
 	}
 
     private static ModeratorInstruction HandleVictimsAnnounceAndRoleRequest(GameSession session, ModeratorResponse input)
@@ -628,11 +506,13 @@ internal static class GameFlowManager
             session.AssignRole(lynchedPlayerId, lynchedPlayerRole);
         }
 
-        if(lynchedPlayerRole == VillageIdiot && lynchedPlayerState.HasVillageIdiotUsedImmunity == false)
+        if(lynchedPlayerState.IsImmuneToLynching)
         {        
-            session.ApplyStatusEffect(StatusEffectTypes.VillageIdiotImmunityUsed, lynchedPlayerId);
+            var announcement = lynchedPlayerState.LynchingImmunityAnnouncement;
+            var instruction = new ConfirmationInstruction(publicAnnouncement: announcement!);
+            
+            session.ApplyStatusEffect(StatusEffectTypes.LynchingImmunityUsed, lynchedPlayerId);
 
-            var instruction = new ConfirmationInstruction(publicAnnouncement: "The Village Idiot has been voted for but avoids lynching this time!");
             return TransitionSubPhase(instruction, DaySubPhases.ProcessVoteOutcome);
         }
         else
@@ -653,9 +533,9 @@ internal static class GameFlowManager
         //if players were eliminated, go to HandleVoteDeathLoop
         //otherwise go to Finalize
 
-        var stutteringJudgeTriggered = session.WasDayAbilityTriggeredThisTurn(DayPowerType.JudgeExtraVote);
+        var shouldVoteRepeat = session.ShouldVoteRepeat();
 
-        if (stutteringJudgeTriggered)
+        if (shouldVoteRepeat)
         {
             return TransitionSubPhaseSilent(DaySubPhases.NormalVoting);
         }
