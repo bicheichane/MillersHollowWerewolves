@@ -10,6 +10,7 @@ namespace Werewolves.StateModels.Core;
 
 public interface IGameSession
 {
+    public IEnumerable<GameLogEntryBase> GameHistoryLog { get; }
     public Guid Id { get; }
     public GamePhase GetCurrentPhase();
     public int TurnNumber { get; }
@@ -26,11 +27,19 @@ public interface IGameSession
 /// </summary>
 internal class GameSession : IGameSession
 {
-    #region Private Fields
+	public Guid Id { get; } = Guid.NewGuid();
+	public IEnumerable<GameLogEntryBase> GameHistoryLog => _gameSessionKernel.GetAllLogEntries();
 
-    // Core immutable properties
+	internal GameSession(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
+	{
+		_gameSessionKernel = new GameSessionKernel(playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
+	}
 
-    private readonly GameSessionKernel _gameSessionKernel;
+	#region Private Fields
+
+	// Core immutable properties
+
+	private readonly GameSessionKernel _gameSessionKernel;
 
 	#endregion
 
@@ -39,13 +48,13 @@ internal class GameSession : IGameSession
 
 	public GamePhase GetCurrentPhase() => _gameSessionKernel.CurrentPhase;
     public int TurnNumber => _gameSessionKernel.TurnNumber;
-    public ModeratorInstruction? PendingModeratorInstruction => _gameSessionKernel.PendingModeratorInstruction;
-    public void SetPendingModeratorInstruction(ModeratorInstruction instruction) =>
-        _gameSessionKernel.SetPendingModeratorInstruction(instruction);
-
+    
 	#endregion
 
 	#region Internal Game Cache read-access
+    internal ModeratorInstruction? PendingModeratorInstruction => _gameSessionKernel.PendingModeratorInstruction;
+    internal void SetPendingModeratorInstruction(ModeratorInstruction instruction) =>
+        _gameSessionKernel.SetPendingModeratorInstruction(instruction);
 	internal T? GetSubPhase<T>() where T : struct, Enum => _gameSessionKernel.PhaseStateCache.GetSubPhase<T>();
     internal ListenerIdentifier? GetCurrentListener() => _gameSessionKernel.PhaseStateCache.GetCurrentListener();
 
@@ -105,14 +114,6 @@ internal class GameSession : IGameSession
     #endregion
 
 
-    public Guid Id { get; } = Guid.NewGuid();
-
-    internal GameSession(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
-    {
-        _gameSessionKernel = new GameSessionKernel(playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
-	}
-
-
     // Public API for state queries
 
     #region Public Query API
@@ -151,10 +152,25 @@ internal class GameSession : IGameSession
         return playerList.Select(GetPlayer);
 	}
 
+    internal bool WasDayAbilityTriggeredThisTurn(DayPowerType powerType)
+    {
+        var turnNumber = _gameSessionKernel.TurnNumber;
 
+        return _gameSessionKernel.FindLogEntries<DayActionLogEntry>(
+            NumberRangeConstraint.Exact(turnNumber), 
+            filter: log => log.ActionType == powerType).Any();
+    }
+
+    internal bool HasPlayerBeenVotedForPreviously(Guid playerId)
+    {
+        var turnNumber = _gameSessionKernel.TurnNumber;
+        return _gameSessionKernel.FindLogEntries<VoteOutcomeReportedLogEntry>(
+            NumberRangeConstraint.Range(1, turnNumber - 1), 
+            filter: log => log.ReportedOutcomePlayerId == playerId).Any();
+    }
 	
 
-    internal IEnumerable<IPlayer> GetPlayersEliminatedLastDawn()
+    internal IEnumerable<IPlayer> GetPlayersEliminatedThisDawn()
     {
 	    var turnNumber = _gameSessionKernel.TurnNumber;
 		var logEntries = _gameSessionKernel.FindLogEntries<PlayerEliminatedLogEntry>(NumberRangeConstraint.Exact(turnNumber), phase: GamePhase.Dawn);
@@ -164,15 +180,19 @@ internal class GameSession : IGameSession
         return playerList.Select(GetPlayer);
     }
 
-    internal Guid GetPlayerEliminatedLastVote()
+	/// <summary>
+	/// This actually checks for all players eliminated during the Day phase of the current turn,
+	/// including those eliminated during the voting process, but also the Scapegoat or death loop eliminations.
+	/// </summary>
+	/// <returns></returns>
+	internal IEnumerable<Guid> GetPlayerEliminatedThisVote()
     {
 	    var turnNumber = _gameSessionKernel.TurnNumber;
-		var logEntries = _gameSessionKernel.FindLogEntries<PlayerEliminatedLogEntry>(NumberRangeConstraint.Exact(turnNumber), phase: GamePhase.Day,
-            filter: log => log.Reason == EliminationReason.DayVote);
+		var logEntries = _gameSessionKernel.FindLogEntries<PlayerEliminatedLogEntry>(NumberRangeConstraint.Exact(turnNumber), phase: GamePhase.Day);
 
-        var playerId = logEntries.Select(log => log.PlayerId).Last();
+        IEnumerable<Guid> playerIds = logEntries.Select(log => log.PlayerId);
 
-        return playerId;
+        return playerIds;
     }
 
     internal List<MainRoleType> GetUnassignedRoles()

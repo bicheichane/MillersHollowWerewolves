@@ -7,7 +7,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Logs when a victory condition is met.
 /// </summary>
-internal record VictoryConditionMetLogEntry : GameLogEntryBase
+public record VictoryConditionMetLogEntry : GameLogEntryBase
 {
     public required Team WinningTeam { get; init; }
     public string ConditionDescription { get; init; } = GameStrings.DefaultLogValue;

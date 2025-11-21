@@ -21,7 +21,7 @@ internal record SubPhaseManager<TSubPhase> where TSubPhase : struct, Enum
 				$"Attempted to create subphase stages with duplicate id's for subphase {subPhase.GetType().Name}:{subPhase}");
 		}
 
-		if (subPhaseStages.Last() is not EndNavigationSubPhaseStage)
+		if (subPhaseStages.Last() is not NavigationSubPhaseStage)
 		{
 			throw new InvalidOperationException(
 				$"Subphase {subPhase.GetType().Name}:{subPhase} has no navigation end stage");

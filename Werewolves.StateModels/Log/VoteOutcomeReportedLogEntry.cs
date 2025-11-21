@@ -5,7 +5,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Logs the raw outcome of a vote as reported by the moderator.
 /// </summary>
-internal record VoteOutcomeReportedLogEntry : GameLogEntryBase
+public record VoteOutcomeReportedLogEntry : GameLogEntryBase
 {
     // Guid.Empty represents a reported tie.
     // A specific PlayerId represents player reported as eliminated.

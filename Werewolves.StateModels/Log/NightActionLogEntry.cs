@@ -7,7 +7,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Represents a generic night action taken by a player/role.
 /// </summary>
-internal record NightActionLogEntry : GameLogEntryBase
+public record NightActionLogEntry : GameLogEntryBase
 {
     public List<Guid>? TargetIds { get; init; } // ID of the player targeted, if applicable
 

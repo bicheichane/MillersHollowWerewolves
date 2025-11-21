@@ -49,10 +49,13 @@ public enum DawnSubPhases
 public enum DaySubPhases
 {
     Debate,            // Moderator confirms debate is complete
+    DetermineVoteType,  // Determine type of vote to be held
     NormalVoting,
     AccusationVoting,
     FriendVoting,
-    ProcessVoteRoleReveal,
+    HandleNonTieVote,
+    ProcessVoteOutcome,
+    ProcessVoteDeathLoop,
     Finalize
 }
 

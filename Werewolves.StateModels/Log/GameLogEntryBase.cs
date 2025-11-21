@@ -8,7 +8,7 @@ namespace Werewolves.StateModels.Log;
 /// Provides common properties like timestamp, turn number, and game phase.
 /// Based on Roadmap Phase 0 and Architecture doc log structure.
 /// </summary>
-internal abstract record GameLogEntryBase
+public abstract record GameLogEntryBase
 {
     public required DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
     public required int TurnNumber { get; init; }

@@ -20,7 +20,7 @@ This architecture employs a **Kernel-Facade Pattern** with **Event Sourcing** to
 
 *   **Canonical State Source:** The `GameSessionKernel.GameHistoryLog` is the **single, canonical source of truth** for all **state-altering** game events. This includes both **non-deterministic inputs** (moderator choices) and **deterministic consequences** (rule resolutions like infection). This append-only event store drives all state mutations.
 *   **The Kernel (Core):** The `GameSessionKernel` is the **sole owner of mutable memory**. It encapsulates the `GameHistoryLog`, `GamePhaseStateCache`, `Players`, `SeatingOrder`, and `RolesInPlay`. It is an internal, hermetically sealed component that cannot be accessed directly by the UI or external consumers.
-*   **The Facade (Read-Only Projection):** The `GameSession` class acts as a **read-only projection** of the Kernel. It implements `IGameSession` and exposes state via immutable interfaces (e.g., `IPlayer`, `IPlayerState`). It delegates all property access to the underlying Kernel.
+*   **The Facade (Read-Only Projection & Mutation Gatekeeper):** The `GameSession` class acts as a **read-only projection** of the Kernel for the public API (via `IGameSession`). However, for the `Werewolves.GameLogic` assembly (via `internal` access), it acts as the **Mutation Gatekeeper**, exposing the methods necessary to dispatch commands to the Kernel.
 *   **Transactional Mutation:** State mutation follows a strict transactional flow:
     1.  **Command Dispatch:** The Facade constructs a `GameLogEntryBase` (the command) and passes it to the Kernel.
     2.  **Proxy Mutator:** The Kernel creates a temporary `SessionMutator` (a private nested class implementing `ISessionMutator`) that has privileged access to the internal mutable state.
@@ -41,7 +41,7 @@ The architecture uses a declarative hook-based system where the `GameFlowManager
 The architecture is split into two separate library projects to achieve compiler-enforced encapsulation: 
 
 *   **`Werewolves.StateModels`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state and its mutation mechanisms. 
-*   **`Werewolves.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.StateModels` and can only interact with its `public` API. 
+*   **`Werewolves.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.StateModels`. **Crucially, `Werewolves.StateModels` grants `[InternalsVisibleTo("Werewolves.GameLogic")]`.** This allows the Rules Engine to access the `internal` concrete `GameSession` and its mutation methods, while external consumers (UI) are restricted to the `public` read-only interfaces. 
 
 # Core Components
 
@@ -64,15 +64,19 @@ The hermetically sealed kernel that owns the game's mutable memory. It is not vi
 *   **Transactional Apply Flow:** The Kernel exposes a single entry point for mutation: `RegisterLogEntry(GameLogEntryBase entry)`. This method instantiates a `SessionMutator`, calls `entry.Apply(mutator)`, and if successful, adds the entry to the log.
 
 **`GameSession` (Facade):**
-A lightweight, stateless wrapper that implements `IGameSession` and delegates all operations to an internal `_gameSessionKernel` instance.
+A lightweight, stateless wrapper that implements `IGameSession` and delegates all operations to an internal `_gameSessionKernel` instance. **This class is marked `internal` (or exposes its mutation API as `internal`), making it accessible only to the `Werewolves.GameLogic` assembly.**
 
-*   **Read-Only Projection:** `GameSession` does not hold state itself. It forwards all property accesses to the Kernel.
+*   **Three-Tier Visibility:**
+    1.  **Private (Kernel):** The `GameSessionKernel` is completely hidden.
+    2.  **Internal (Logic):** The concrete `GameSession` class and its **Internal Command API** (e.g., `AddLogEntry`) are visible to the GameLogic assembly.
+    3.  **Public (UI):** External consumers interact exclusively via the `IGameSession` interface, which exposes only read-only properties.
+*   **Read-Only Projection (Public):** `GameSession` does not hold state itself. It forwards all property accesses to the Kernel.
     *   `Players`: Returns `IEnumerable<IPlayer>` (projected from Kernel's private players).
     *   `SeatingOrder`: Delegated to Kernel.
     *   `RolesInPlay`: Delegated to Kernel.
     *   `TurnNumber`: Delegated to Kernel.
     *   `GameHistoryLog`: Returns `IEnumerable<GameLogEntryBase>` from the Kernel.
-*   **Command Dispatch:** `GameSession` provides methods to perform actions (e.g., `AddLogEntry`). These methods do not modify state directly; they pass the request to the Kernel's `RegisterLogEntry` method.
+*   **Internal Command API:** `GameSession` provides methods to perform actions (e.g., `AddLogEntry`). These methods do not modify state directly; they pass the request to the Kernel's `RegisterLogEntry` method.
 *   **API Surface:**
     *   `Id` (Guid): Unique identifier.
     *   `GamePhaseStateCache` (IGamePhaseStateCache): Exposes the Kernel's cache for reading execution state.
@@ -86,7 +90,7 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
 
 Represents a participant and their core identity information. 
 
-*   **Interface-Based Architecture:** The system uses an `IPlayer` interface with a `private nested Player` implementation within `GameSessionKernel` to provide clean abstraction, support testing, and strict encapsulation.
+*   **Interface-Based Architecture:** The system uses a `public IPlayer` interface with a `private nested Player` implementation within `GameSessionKernel`. The `GameSession` exposes these instances as `IPlayer` to the UI (read-only). The `Werewolves.GameLogic` assembly cannot interact with `internal` members if necessary as it lacks access to the `private nested PlayerState` class.
 *   **Enhanced Encapsulation through Nesting:** The `Player` class is implemented as a `private nested class` within `GameSessionKernel`, ensuring that only `GameSessionKernel` and its `SessionMutator` can directly access and modify player instances.
 *   **`Player` Class Properties:**
     *   `Id` (Guid): Unique identifier. 
@@ -248,7 +252,7 @@ Orchestrates the game flow based on moderator input and tracked state. **Delegat
         *   The `GameFlowManager` handles all state machine logic, validation, and transition management. 
         *   Returns the `ProcessResult` from the state machine containing the next instruction or error. 
     *   `GetCurrentInstruction(Guid gameId)` (ModeratorInstruction): Retrieves the `PendingModeratorInstruction`. 
-    *   `GetGameStateView(Guid gameId)` (object): Returns a read-only view/DTO of the tracked game state. 
+    *   `GetGameStateView(Guid gameId)` (IGameSession): Returns the game state via the read-only `IGameSession` interface. This hides the internal mutation methods present on the concrete object, ensuring the UI cannot modify state. 
 *   **Internal Logic:** 
     *   Relies on `GameFlowManager` for all state machine operations, phase transitions, and validation. 
     *   Provides hook listener implementations to `GameFlowManager` via dependency injection. 

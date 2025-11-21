@@ -33,7 +33,7 @@ public enum NightActionType
 public enum DayPowerType
 {
 	Unknown = 0,            // Default/unspecified
-    JudgeReVote,            // Judge's ability to force a re-vote
+    JudgeExtraVote,         // Judge's ability to force a re-vote
     DevotedServantSwap,     // Devoted Servant's ability to swap roles with another player
     TownCrierCardReveal,    // Town Crier's ability to reveal an event card
 }
@@ -51,4 +51,5 @@ public enum StatusEffectTypes
     ElderProtectionLost, // Elder's extra life has been used
     LycanthropyInfection, // Player has been infected by the wolf father
     WildChildChanged, // Wild Child has changed their role
+    VillageIdiotImmunityUsed // Village Idiot has used their immunity
 }

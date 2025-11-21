@@ -59,4 +59,6 @@ public enum SecondaryRoleType
 	Lovers,
     Charmed,
     TownCrier,
+    Executioner,
+    Sheriff,
 }

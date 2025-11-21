@@ -6,7 +6,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Logs when a player is eliminated from the game.
 /// </summary>
-internal record PlayerEliminatedLogEntry : GameLogEntryBase
+public record PlayerEliminatedLogEntry : GameLogEntryBase
 {
     public required Guid PlayerId { get; init; }
     public required EliminationReason Reason { get; init; }

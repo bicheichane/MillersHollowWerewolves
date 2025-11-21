@@ -17,11 +17,11 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 
 	protected override List<RoleStateMachineStage> DefineStateMachineStages() =>
 	[
-		CreateStage(GameHook.NightActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
-		CreateStage(GameHook.NightActionLoop, WokenUpStateEnum, AwaitingTargetSelectionEnum, HandleNightPowerUse_AndId),
-		CreateStage(GameHook.NightActionLoop, AwaitingTargetSelectionEnum, AsleepStateEnum, HandleParseNightPowerConsequences),
-		CreateStage(GameHook.NightActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
-		CreateEndStage(GameHook.NightActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
+		CreateStage(GameHook.NightMainActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
+		CreateStage(GameHook.NightMainActionLoop, WokenUpStateEnum, AwaitingTargetSelectionEnum, HandleNightPowerUse_AndId),
+		CreateStage(GameHook.NightMainActionLoop, AwaitingTargetSelectionEnum, AsleepStateEnum, HandleParseNightPowerConsequences),
+		CreateStage(GameHook.NightMainActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
+		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
 	];
 
 	protected abstract ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input);

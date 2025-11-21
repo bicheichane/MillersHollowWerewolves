@@ -3,7 +3,7 @@ using Werewolves.StateModels.Enums;
 
 namespace Werewolves.StateModels.Log;
 
-internal record StatusEffectLogEntry : GameLogEntryBase
+public record StatusEffectLogEntry : GameLogEntryBase
 {
 	public required StatusEffectTypes EffectType { get; init; }
 	public required Guid PlayerId { get; init; }
@@ -15,7 +15,7 @@ internal record StatusEffectLogEntry : GameLogEntryBase
 		switch (EffectType)
 		{
 			case StatusEffectTypes.ElderProtectionLost:
-				mutator.SetElderExtraLife(PlayerId, false);
+				mutator.SetElderExtraLifeUsed(PlayerId, true);
 				break;
 			case StatusEffectTypes.LycanthropyInfection:
 				mutator.SetPlayerInfected(PlayerId, true);
@@ -23,6 +23,9 @@ internal record StatusEffectLogEntry : GameLogEntryBase
 			case StatusEffectTypes.WildChildChanged:
 				mutator.SetPlayerRole(PlayerId, MainRoleType.SimpleWerewolf);
 				break;
+            case StatusEffectTypes.VillageIdiotImmunityUsed:
+                mutator.SetVillageIdiotImmunityUsed(PlayerId, true);
+                break;
 			default:
 				throw new ArgumentOutOfRangeException($"Unhandled status effect type: {EffectType}");
 		}

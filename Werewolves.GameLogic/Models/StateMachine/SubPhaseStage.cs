@@ -83,14 +83,13 @@ internal abstract class SubPhaseStage
 /// <summary>
 /// Models a sub-phase stage that represents a navigation point within the sub-phase.
 /// THIS IS THE ONLY SUB-PHASE STAGE THAT CAN NAVIGATE OUT OF THE SUB-PHASE.
-/// It may or may not exist at any point in the sub-phase's stage sequence, one or multiple times,
-/// but it MUST exist at the end of the sub-phase's stage sequence to allow for proper navigation out of the sub-phase.
+/// MUST be used at the end of the sub-phase's stage sequence. Cannot exist elsewhere.
 /// </summary>
-internal abstract class NavigationSubPhaseStage : SubPhaseStage
+internal class NavigationSubPhaseStage : SubPhaseStage
 {
     private readonly Func<GameSession, ModeratorResponse, PhaseHandlerResult> _handler;
 
-    private protected NavigationSubPhaseStage(Enum idEnum, Func<GameSession, ModeratorResponse, PhaseHandlerResult> handler)
+    private NavigationSubPhaseStage(Enum idEnum, Func<GameSession, ModeratorResponse, PhaseHandlerResult> handler)
         : base(idEnum)
     {
         _handler = handler;
@@ -98,48 +97,24 @@ internal abstract class NavigationSubPhaseStage : SubPhaseStage
 
     protected override PhaseHandlerResult InnerExecute(GameSession session, ModeratorResponse input)
         => _handler(session, input);
-}
-
-/// <summary>
-/// Can be used anywhere in the sub-phase's stage sequence, except at the end.
-/// It's allowed to fall-through and continue to the next stage in the sequence.
-/// </summary>
-internal sealed class MidNavigationSubPhaseStage : NavigationSubPhaseStage
-{
-    private MidNavigationSubPhaseStage(Enum idEnum, Func<GameSession, ModeratorResponse, PhaseHandlerResult> handler)
-        : base(idEnum, handler) { }
-
-    internal static SubPhaseStage MidNavigationStage<TEnum>(
-        TEnum idEnum,
-        Func<GameSession, ModeratorResponse, PhaseHandlerResult> handler) where TEnum : struct, Enum
-        => new MidNavigationSubPhaseStage(idEnum, handler);
-}
-
-/// <summary>
-/// MUST be used at the end of the sub-phase's stage sequence.
-/// </summary>
-internal class EndNavigationSubPhaseStage : NavigationSubPhaseStage
-{
-    private EndNavigationSubPhaseStage(Enum idEnum, Func<GameSession, ModeratorResponse, PhaseHandlerResult> handler)
-        : base(idEnum, handler) { }
 
     internal static SubPhaseStage NavigationEndStage<TEnum>(
         TEnum idEnum, Func<GameSession, ModeratorResponse, MajorNavigationPhaseHandlerResult> handler) where TEnum : struct, Enum
-        => new EndNavigationSubPhaseStage(idEnum, handler);
+        => new NavigationSubPhaseStage(idEnum, handler);
 
     internal static SubPhaseStage NavigationEndStageSilent<T>(T phaseEnum) where T : struct, Enum
-        => new EndNavigationSubPhaseStage(phaseEnum,
+        => new NavigationSubPhaseStage(phaseEnum,
             (_, _) => new SubPhaseHandlerResult(null, phaseEnum));
 
-	/// <summary>
-	/// Use this when you just want to navigate to a specific main-phase without any custom logic,
-	/// AND you don't need to send any instruction to the moderator.
-	/// </summary>
-	/// <param name="phaseEnum">Main-phase enum that will be navigated to</param>
-	/// <returns></returns>
-internal static SubPhaseStage NavigationEndStageSilent(GamePhase phaseEnum)
-        => new EndNavigationSubPhaseStage(phaseEnum,
-            (_, _) => new MainPhaseHandlerResult(null, phaseEnum));
+        /// <summary>
+        /// Use this when you just want to navigate to a specific main-phase without any custom logic,
+        /// AND you don't need to send any instruction to the moderator.
+        /// </summary>
+        /// <param name="phaseEnum">Main-phase enum that will be navigated to</param>
+        /// <returns></returns>
+    internal static SubPhaseStage NavigationEndStageSilent(GamePhase phaseEnum)
+            => new NavigationSubPhaseStage(phaseEnum,
+                (_, _) => new MainPhaseHandlerResult(null, phaseEnum));
 }
 
 /// <summary>

@@ -17,10 +17,9 @@ using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult
 using static Werewolves.GameLogic.Models.InternalMessages.PhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.StayInSubPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
-using static Werewolves.GameLogic.Models.StateMachine.EndNavigationSubPhaseStage;
+using static Werewolves.GameLogic.Models.StateMachine.NavigationSubPhaseStage;
 using static Werewolves.GameLogic.Models.StateMachine.HookSubPhaseStage;
 using static Werewolves.GameLogic.Models.StateMachine.LogicSubPhaseStage;
-using static Werewolves.GameLogic.Models.StateMachine.MidNavigationSubPhaseStage;
 using static Werewolves.GameLogic.Models.StateMachine.SubPhaseStage;
 using static Werewolves.StateModels.Enums.GameHook;
 using static Werewolves.StateModels.Enums.MainRoleType;
@@ -39,7 +38,7 @@ internal static class GameFlowManager
     {
         // Define hook-to-listener mappings here.
         // ORDER MATTERS!!!!
-        [NightActionLoop] = 
+        [NightMainActionLoop] = 
         [
             Listener(Thief),                //first night only
             Listener(Actor),
@@ -63,32 +62,56 @@ internal static class GameFlowManager
             Listener(Witch),
             Listener(Gypsy),
             Listener(Piper),
-            Listener(Charmed)
+            Listener(Charmed),
+            Listener(KnightWithRustySword)  //should not wake the player, just check if the knight was killed the previous day by werewolves
+                                            //and applies the effect if so
 		],
 
-        [DayBreakBeforeVictims] =
+        // To manage "death chains" (where one elimination triggers another, e.g., Hunter or Lovers) within a linear hook execution,
+        // we utilize "Loop Unrolling" by duplicating the listener list. This ensures that upstream dependencies are resolved; 
+        // for example, if a Hunter shoots a target at the end of the first pass, the second pass allows reactive roles (like Lovers) 
+        // to process that new death.
+        //
+        // Two iterations are mathematically sufficient for the current ruleset because the "Single Hunter" constraint limits the 
+        // maximum causal depth. A chain cannot extend beyond a secondary reaction (e.g., Hunter shoots Lover -> Partner dies, 
+        // or Lover drags down Hunter -> Hunter shoots). The final victim in any such chain cannot trigger a third lethal event 
+        // (as they cannot be a second Hunter), rendering a third iteration unnecessary.
+		[PlayerRoleAssignedOnElimination] =
         [
-            Listener(Elder),
+            
+                        // --- ITERATION 1 (Catches Primary Deaths) ---
+            // allow the devoted servant to intercept role assignments before anything else happens, even before hunter.
+            // they are able to swap roles with hunter before hunter's ability triggers
+            Listener(DevotedServant),   
+            Listener(Lovers),           // Kills partner if applicable
+            Listener(Hunter),           // Shoots if dead
+            Listener(WildChild),        // Transforms if Model died
+            Listener(Elder),            // Lose lives/die
+            Listener(Sheriff),          // Appoint successor
+            Listener(Executioner),      // Nominate successor
 
+            // --- ITERATION 2 (Catches Consequential Deaths) ---
+            Listener(DevotedServant),
+            Listener(Lovers),           // Catch partner if Hunter shot a Lover in Iter 1
+            Listener(Hunter),           // Catch shot if Lover dragged Hunter down in Iter 1
+            Listener(WildChild),        // Catch model death from Iter 1 shot
+            Listener(Elder),
+            Listener(Sheriff),          // Catch successor appointment from Iter 1 shot
+            Listener(Executioner),
         ],
 
-        [DayBreakAfterVictimsAnnounced] =
+        [DawnMainActionLoop] =
         [
             Listener(BearTamer),
             Listener(Gypsy),
             Listener(TownCrier),
         ],
 
-        [OnFirstVoteConcluded] =
+        [OnVoteConcluded] =
         [
-            Listener(StutteringJudge),
-		],
-
-        [OnPlayerEliminationFinalized] =
-        [
-            Listener(Hunter),
-            Listener(Lovers)
-		]
+            Listener(Scapegoat),            // in case of a tie, scapegoat ability triggers
+            Listener(StutteringJudge),      // power can only trigger once per game
+        ],
 	};
 
     internal static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
@@ -102,31 +125,34 @@ internal static class GameFlowManager
     internal static readonly Dictionary<GamePhase, IPhaseDefinition> PhaseDefinitions = new()
     {
         [GamePhase.Setup] = new PhaseManager<SetupSubPhases>(
-        [
+        entrySubPhase: SetupSubPhases.Confirm,
+        subPhaseList: [
             new(subPhase: SetupSubPhases.Confirm, //Handler = HandleSetupConfirmation,
                 subPhaseStages: 
                     [NavigationEndStage(SetupSubPhaseStage.ConfirmSetup, HandleSetupPhase)], 
                 possibleNextMainPhaseTransitions: 
                     [new(GamePhase.Night)])
-        ], entrySubPhase: SetupSubPhases.Confirm),
+        ]),
 
         [GamePhase.Night] = new PhaseManager<NightSubPhases>(
-        [
+        entrySubPhase: NightSubPhases.Start,
+        subPhaseList: [
             new(
                 subPhase: NightSubPhases.Start,
                 subPhaseStages: [ 
                     LogicStage(NightSubPhaseStage.NightStart, HandleNightStart),
-                    HookStage(NightActionLoop),
+                    HookStage(NightMainActionLoop),
                     NavigationEndStage(NightSubPhaseStage.NightEnd, HandleNightActionLoopFinish)
                 ],
                 possibleNextMainPhaseTransitions:
                 [ new (GamePhase.Dawn) ]
 			)
-        ], entrySubPhase: NightSubPhases.Start),
+        ]),
 
         
         [GamePhase.Dawn] = new PhaseManager<DawnSubPhases>(
-        [
+        entrySubPhase: DawnSubPhases.CalculateVictims,
+        subPhaseList: [
             new(
                 subPhase : DawnSubPhases.CalculateVictims,
                 subPhaseStages: [
@@ -137,9 +163,10 @@ internal static class GameFlowManager
             new(
                 subPhase : DawnSubPhases.AnnounceVictims,
                 subPhaseStages: [
-                    LogicStage(DawnSubPhaseStage.AnnounceVictims, HandleVictimsAnnounceAndRoleRequest),
-                    LogicStage(DawnSubPhaseStage.DawnRoleReveals, HandleVictimsAnnounceAndRoleResponse)
+					LogicStage(DawnSubPhaseStage.AnnounceVictimsAndRequestRoles, HandleVictimsAnnounceAndRoleRequest),
+					LogicStage(DawnSubPhaseStage.AssignVictimRoles, HandleVictimsAnnounceAndRoleResponse)
                         .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
+                    HookStage(PlayerRoleAssignedOnElimination),
                     NavigationEndStageSilent(DawnSubPhases.Finalize)
 					],
                 possibleNextSubPhases: [DawnSubPhases.Finalize]
@@ -147,41 +174,72 @@ internal static class GameFlowManager
             new(
                 subPhase: DawnSubPhases.Finalize,
                 subPhaseStages: [
+                    HookStage(DawnMainActionLoop),
                     NavigationEndStageSilent(GamePhase.Day)
                 ],
                 possibleNextMainPhaseTransitions: [
                     new(GamePhase.Day),
                 ]
 			)
-        ], entrySubPhase: DawnSubPhases.CalculateVictims),
+        ]),
 
         [GamePhase.Day] = new PhaseManager<DaySubPhases>(
-        [
+        entrySubPhase: DaySubPhases.Debate,
+        subPhaseList: [
             new(
                 subPhase: DaySubPhases.Debate,
-                subPhaseStages: 
-                    [ NavigationEndStage(DaySubPhaseStage.Debate, HandleDebate)],
+                subPhaseStages: [ NavigationEndStage(DaySubPhaseStage.Debate, HandleDebate)],
+                possibleNextSubPhases: [ DaySubPhases.DetermineVoteType ]
+			),
+            new(
+                subPhase: DaySubPhases.DetermineVoteType,
+                subPhaseStages: [ NavigationEndStage(DaySubPhases.DetermineVoteType, HandleVoteTypeSelection) ],
                 possibleNextSubPhases:
-                    [ DaySubPhases.NormalVoting,
+                    [ DaySubPhases.NormalVoting 
                         //Additional voting sub-phases to be added here
                     ]
-			),
+            ),
             new(
                 subPhase: DaySubPhases.NormalVoting,
                 subPhaseStages: [ 
-                    LogicStage(DaySubPhaseStage.StartNormalVote, HandleDayNormalVoteOutcomeRequest),
-                    NavigationEndStage(DaySubPhaseStage.ProcessVote, HandleDayNormalVoteOutcomeResponse)
-                        .RequiresInputType(ExpectedInputType.PlayerSelection)],
-                possibleNextSubPhases:
-                    [ DaySubPhases.ProcessVoteRoleReveal, DaySubPhases.Finalize ]
+                    LogicStage(DaySubPhaseStage.RequestVote, HandleDayNormalVoteOutcomeRequest),
+                    NavigationEndStage(DaySubPhaseStage.HandleVoteResponse, HandleDayNormalVoteOutcomeResponse)
+                        .RequiresInputType(ExpectedInputType.PlayerSelection),
+                    
+                    ],
+                    
+                possibleNextSubPhases: [
+                    DaySubPhases.HandleNonTieVote,
+                    DaySubPhases.ProcessVoteOutcome
+                ]
 			),
             // Additional sub-phases (AccusationVoting, FriendVoting) can be added here
             new(
-                subPhase: DaySubPhases.ProcessVoteRoleReveal,
+                subPhase: DaySubPhases.HandleNonTieVote,
                 subPhaseStages: [ 
-                    LogicStage(DaySubPhaseStage.VoteRoleRevealRequest, HandleDayVoteRoleRevealRequest),
-                    LogicStage(DaySubPhaseStage.VoteRoleRevealResponse, HandleDayVoteRoleRevealResponse)
+                    NavigationEndStage(DaySubPhaseStage.VerifyLynchingOcurred, AssignRoleAndVerifyIfLynchingOcurred)
                         .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
+                ],
+                possibleNextSubPhases:
+                    [ DaySubPhases.ProcessVoteOutcome ]
+            ),
+            new(
+                subPhase: DaySubPhases.ProcessVoteOutcome,
+                subPhaseStages: [ 
+                    
+                    HookStage(OnVoteConcluded),
+                    NavigationEndStage(DaySubPhaseStage.VoteOutcomeNavigation, AfterVoteConcludedNavigation)
+                ],
+                possibleNextSubPhases: [
+                    DaySubPhases.DetermineVoteType,     // loops if stuttering judge triggers
+                    DaySubPhases.ProcessVoteDeathLoop,   // if players were eliminated, we need to fire the on death trigger
+                    DaySubPhases.Finalize               // proceed to finalize if no eliminations
+                ]
+            ),
+            new(
+                subPhase: DaySubPhases.ProcessVoteDeathLoop,
+                subPhaseStages: [ 
+                    HookStage(PlayerRoleAssignedOnElimination),
                     NavigationEndStageSilent(DaySubPhases.Finalize)
 				],
                 possibleNextSubPhases:
@@ -194,7 +252,7 @@ internal static class GameFlowManager
                 possibleNextMainPhaseTransitions:
                     [ new(GamePhase.Night) ]
             )
-        ], entrySubPhase: DaySubPhases.Debate),
+        ]),
 
     };
     #endregion
@@ -369,7 +427,7 @@ internal static class GameFlowManager
                     {
                         // if the attacked player is the elder with extra life, they are immune
                         //otherwise, infect them
-                        if (attackedPlayer.State is not { MainRole: Elder, HasElderExtraLife: true })
+                        if (attackedPlayer.State is not { MainRole: Elder, HasUsedElderExtraLife: true })
                         {
                             session.ApplyStatusEffect(StatusEffectTypes.LycanthropyInfection, attackedPlayer.Id);
                         }
@@ -395,7 +453,7 @@ internal static class GameFlowManager
 
                     // if the attacked player is the elder with extra life, wound instead of kill
                     // and then skip
-                    if (attackedPlayer.State is { MainRole: Elder, HasElderExtraLife: true })
+                    if (attackedPlayer.State is { MainRole: Elder, HasUsedElderExtraLife: false })
                     {
                         session.ApplyStatusEffect(StatusEffectTypes.ElderProtectionLost, attackedPlayer.Id);
 
@@ -463,7 +521,7 @@ internal static class GameFlowManager
 
     private static ModeratorInstruction HandleVictimsAnnounceAndRoleRequest(GameSession session, ModeratorResponse input)
     {
-        var victimList = session.GetPlayersEliminatedLastDawn().ToImmutableHashSet();
+        var victimList = session.GetPlayersEliminatedThisDawn().ToImmutableHashSet();
 
         var victimNameList = string.Join(Environment.NewLine, victimList.Select(p => p.Name));
 
@@ -503,10 +561,14 @@ internal static class GameFlowManager
             publicAnnouncement: GameStrings.DebateStartsPrompt,
             privateInstruction: GameStrings.DebateModeratorInstructions
         );
-
-        //TODO: add conditional logic to check which voting style should be performed
         
-        return TransitionSubPhase(voteInstruction, DaySubPhaseStage.StartNormalVote);
+        return TransitionSubPhase(voteInstruction, DaySubPhases.DetermineVoteType);
+    }
+
+    private static SubPhaseHandlerResult HandleVoteTypeSelection(GameSession session, ModeratorResponse input)
+    {
+        // Currently only normal voting is implemented.
+        return TransitionSubPhaseSilent(DaySubPhases.NormalVoting);
     }
 
     private static ModeratorInstruction HandleDayNormalVoteOutcomeRequest(GameSession session, ModeratorResponse input)
@@ -525,41 +587,87 @@ internal static class GameFlowManager
     /// <summary>
     /// Handles the DayVote.ProcessOutcome sub-phase: process vote outcome reported by moderator.
     /// </summary>
-    private static MajorNavigationPhaseHandlerResult HandleDayNormalVoteOutcomeResponse(GameSession session, ModeratorResponse input)
+    private static SubPhaseHandlerResult HandleDayNormalVoteOutcomeResponse(GameSession session, ModeratorResponse input)
     {
         var selectedPlayer = input.SelectedPlayerIds!;
 
 		if (selectedPlayer.Count == 0) //tie
         {
             session.PerformDayVote(null);
-            return TransitionSubPhaseSilent(DaySubPhases.Finalize);
+
+            return TransitionSubPhaseSilent(DaySubPhases.ProcessVoteOutcome);
 		}
         else
         {
             var playerId = selectedPlayer[0];
             session.PerformDayVote(playerId);
-            session.EliminatePlayer(playerId, EliminationReason.DayVote);
-			return TransitionSubPhaseSilent(DaySubPhases.ProcessVoteRoleReveal);
+
+            var availableRoles = session.GetUnassignedRoles();
+            var instruction = new AssignRolesInstruction(
+                [playerId],
+                availableRoles,
+                privateInstruction: GameStrings.RevealRolePromptSpecify
+            );
+            
+			return TransitionSubPhase(instruction, DaySubPhases.HandleNonTieVote);
         }
     }
 
-    private static ModeratorInstruction HandleDayVoteRoleRevealRequest(GameSession gameSession, ModeratorResponse input)
-    {
-        var votedPlayer = gameSession.GetPlayerEliminatedLastVote();
-        var availableRoles = gameSession.GetUnassignedRoles();
-
-        return new AssignRolesInstruction(
-            [votedPlayer],
-            availableRoles,
-            privateInstruction: GameStrings.RevealRolePromptSpecify
-        );
-    }
-
-    private static void HandleDayVoteRoleRevealResponse(GameSession session, ModeratorResponse input)
+    private static SubPhaseHandlerResult AssignRoleAndVerifyIfLynchingOcurred(GameSession session, ModeratorResponse input)
     {
         var entry = input.AssignedPlayerRoles!.Single();
-        session.AssignRole(entry.Key, entry.Value);
-	}
+        var lynchedPlayerId = entry.Key;
+        var lynchedPlayerRole = entry.Value;
+        
+        var lynchedPlayer = session.GetPlayer(lynchedPlayerId);
+        var lynchedPlayerState = lynchedPlayer.State;
+
+        // only assign role if not already identified
+        if(lynchedPlayerState.MainRole == null)
+        {
+            session.AssignRole(lynchedPlayerId, lynchedPlayerRole);
+        }
+
+        if(lynchedPlayerRole == VillageIdiot && lynchedPlayerState.HasVillageIdiotUsedImmunity == false)
+        {        
+            session.ApplyStatusEffect(StatusEffectTypes.VillageIdiotImmunityUsed, lynchedPlayerId);
+
+            var instruction = new ConfirmationInstruction(publicAnnouncement: "The Village Idiot has been voted for but avoids lynching this time!");
+            return TransitionSubPhase(instruction, DaySubPhases.ProcessVoteOutcome);
+        }
+        else
+        {
+            session.EliminatePlayer(lynchedPlayerId, EliminationReason.DayVote);
+            
+            var instruction = new ConfirmationInstruction(publicAnnouncement: GameStrings.SingleVictimEliminatedAnnounce.Format(lynchedPlayer.Name));
+            return TransitionSubPhase(instruction, DaySubPhases.ProcessVoteOutcome);
+        }
+
+        
+    }
+
+    private static SubPhaseHandlerResult AfterVoteConcludedNavigation(GameSession session, ModeratorResponse input)
+    {
+        //if stuttering judge triggered, loop back to voting
+        //else, check if players were eliminated
+        //if players were eliminated, go to HandleVoteDeathLoop
+        //otherwise go to Finalize
+
+        var stutteringJudgeTriggered = session.WasDayAbilityTriggeredThisTurn(DayPowerType.JudgeExtraVote);
+
+        if (stutteringJudgeTriggered)
+        {
+            return TransitionSubPhaseSilent(DaySubPhases.NormalVoting);
+        }
+        else if (session.GetPlayerEliminatedThisVote().Any())
+        {
+            return TransitionSubPhaseSilent(DaySubPhases.ProcessVoteDeathLoop);
+        }
+        else
+        {
+            return TransitionSubPhaseSilent(DaySubPhases.Finalize);
+        }
+    }
 
     #endregion
 }

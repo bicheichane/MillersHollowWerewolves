@@ -6,7 +6,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Represents a generic power used by a player/role that's not constrained to be used at night.
 /// </summary>
-internal record DayActionLogEntry : GameLogEntryBase
+public record DayActionLogEntry : GameLogEntryBase
 {
 	public List<Guid>? TargetIds { get; init; } // ID of the player targeted, if applicable
 

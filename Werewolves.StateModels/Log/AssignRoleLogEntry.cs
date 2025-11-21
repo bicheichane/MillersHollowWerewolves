@@ -10,7 +10,7 @@ namespace Werewolves.StateModels.Log;
 /// (i.e. the executioner or the devoted servant may be the only players that knows
 /// which role belonged to the lynched player, but the moderator will always know regardless)
 /// </summary>
-internal record AssignRoleLogEntry : GameLogEntryBase
+public record AssignRoleLogEntry : GameLogEntryBase
 {
 	/// <summary>
 	/// The ID of the player assigned the role.

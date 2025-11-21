@@ -6,7 +6,7 @@ namespace Werewolves.StateModels.Log;
 /// <summary>
 /// Logs a transition between game phases.
 /// </summary>
-internal record PhaseTransitionLogEntry : GameLogEntryBase
+public record PhaseTransitionLogEntry : GameLogEntryBase
 {
     public required GamePhase PreviousPhase { get; init; }
     /// <summary>

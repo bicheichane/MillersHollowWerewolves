@@ -14,15 +14,15 @@ internal enum NightSubPhaseStage
 internal enum DawnSubPhaseStage
 {
     CheckForVictims,
-    AnnounceVictims,
-    DawnRoleReveals
+    AnnounceVictimsAndRequestRoles,
+    AssignVictimRoles
 }
 
 internal enum DaySubPhaseStage
 {
     Debate,
-    StartNormalVote,
-    ProcessVote,
-    VoteRoleRevealRequest,
-    VoteRoleRevealResponse
+    RequestVote,
+    HandleVoteResponse,
+    VerifyLynchingOcurred,
+    VoteOutcomeNavigation
 }

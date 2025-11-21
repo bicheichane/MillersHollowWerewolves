@@ -24,7 +24,8 @@ public interface IPlayerState
 	public PlayerHealth Health { get; }
 	public bool IsInfected { get; }
 	public bool IsSheriff { get; }
-	public bool HasElderExtraLife { get; }
+	public bool HasUsedElderExtraLife { get; }
+    public bool HasVillageIdiotUsedImmunity { get; }
 
 	public Team Team
 	{
@@ -85,6 +86,7 @@ internal partial class GameSessionKernel
 
 		public bool IsInfected { get; internal set; } = false;
 		public bool IsSheriff { get; internal set; } = false;
-		public bool HasElderExtraLife { get; internal set; } = false;
+		public bool HasUsedElderExtraLife { get; internal set; } = false;
+        public bool HasVillageIdiotUsedImmunity { get; internal set; } = false;
 	}
 }

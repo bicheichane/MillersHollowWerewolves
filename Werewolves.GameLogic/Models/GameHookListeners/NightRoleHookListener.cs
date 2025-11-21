@@ -22,10 +22,10 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 
 	protected override List<RoleStateMachineStage> DefineStateMachineStages() => 
 	[
-		CreateStage(GameHook.NightActionLoop, null, [WokenUpStateEnum, AsleepStateEnum], HandleRoleWakeupAndId),
-		CreateOpenEndedStage(GameHook.NightActionLoop, WokenUpStateEnum, HandleNightPowerUse_AndId),
-		CreateStage(GameHook.NightActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
-		CreateEndStage(GameHook.NightActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
+		CreateStage(GameHook.NightMainActionLoop, null, [WokenUpStateEnum, AsleepStateEnum], HandleRoleWakeupAndId),
+		CreateOpenEndedStage(GameHook.NightMainActionLoop, WokenUpStateEnum, HandleNightPowerUse_AndId),
+		CreateStage(GameHook.NightMainActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
+		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
 	];
 
 	/// <summary>

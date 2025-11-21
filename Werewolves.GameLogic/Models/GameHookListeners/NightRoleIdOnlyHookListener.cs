@@ -21,9 +21,9 @@ internal abstract class NightRoleIdOnlyHookListener : NightRoleHookListener<Nigh
 
 	protected override List<RoleStateMachineStage> DefineStateMachineStages() =>
 	[
-		CreateStage(GameHook.NightActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
-		CreateStage(GameHook.NightActionLoop, WokenUpStateEnum, AsleepStateEnum, HandleNightPowerUse_AndId),
-		CreateEndStage(GameHook.NightActionLoop, AsleepStateEnum, (_, _) => Complete(AsleepStateEnum))
+		CreateStage(GameHook.NightMainActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
+		CreateStage(GameHook.NightMainActionLoop, WokenUpStateEnum, AsleepStateEnum, HandleNightPowerUse_AndId),
+		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => Complete(AsleepStateEnum))
 	];
 
 	protected override HookListenerActionResult<NightRoleIdOnlyState> HandleNightPowerUse(GameSession session,

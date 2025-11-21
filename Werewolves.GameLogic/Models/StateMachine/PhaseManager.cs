@@ -22,7 +22,7 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
     /// </summary>
     /// <param name="subPhaseList">List of sub-phase subPhaseList that define the state machine.</param>
     /// <param name="entrySubPhase">The default entry sub-phase when no sub-phase state is cached.</param>
-    public PhaseManager(List<SubPhaseManager<TSubPhaseEnum>> subPhaseList, TSubPhaseEnum entrySubPhase)
+    public PhaseManager(TSubPhaseEnum entrySubPhase, List<SubPhaseManager<TSubPhaseEnum>> subPhaseList)
     {
         _entrySubPhase = entrySubPhase;
         

@@ -19,6 +19,8 @@ namespace Werewolves.StateModels.Core
 				_logEntries.Add(entry);
 			}
 
+			internal IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _logEntries.AsReadOnly();
+
 			/// <summary>
 			/// Searches the game history log for entries of a specific type, with optional filters.
 			/// </summary>
@@ -65,6 +67,7 @@ namespace Werewolves.StateModels.Core
 			=> _gameHistoryLog.FindLogEntries(turnIntervalConstraint ?? NumberRangeConstraint.Any, phase, filter);
 		public IReadOnlyList<Guid> GetPlayerSeatingOrder() => _playerSeatingOrder.AsReadOnly();
 		public IReadOnlyList<MainRoleType> GetRolesInPlay() => _rolesInPlay.AsReadOnly();
+		public IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _gameHistoryLog.GetAllLogEntries();
 
 		// Derived cached state (computed from log, mutated only by Apply methods)
 		public int TurnNumber { get; private set; }
