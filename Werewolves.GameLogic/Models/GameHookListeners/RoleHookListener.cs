@@ -20,7 +20,7 @@ internal abstract class RoleHookListener : IGameHookListener
 	
 	public abstract ListenerIdentifier Id { get; }
 
-	public virtual HookListenerActionResult AdvanceStateMachine(GameSession session, ModeratorResponse input)
+	public virtual HookListenerActionResult Execute(GameSession session, ModeratorResponse input)
 	{
 		//if there are no alive players with this role, skip
 
@@ -28,14 +28,14 @@ internal abstract class RoleHookListener : IGameHookListener
 
 		if (rolePlayer == null)
 		{
-			return HookListenerActionResult.Complete(); // No alive players with this role, skip
+			return HookListenerActionResult.Skip(); // No alive players with this role, skip
 		}
 
 		// otherwise, advance the core state machine
-		return AdvanceCoreStateMachine(session, input);
+		return ExecuteCore(session, input);
 	}
 
-	protected abstract HookListenerActionResult AdvanceCoreStateMachine(GameSession session,
+	protected abstract HookListenerActionResult ExecuteCore(GameSession session,
 		ModeratorResponse input);
 
 	#region MainRole Helper functions
@@ -73,13 +73,15 @@ internal abstract class RoleHookListener : IGameHookListener
 /// <typeparam name="TRoleStateEnum"></typeparam>
 internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener where TRoleStateEnum : struct, Enum
 {
+	private class RoleStageExecutionKey : IRoleStageExecutionKey { }
+	private static readonly RoleStageExecutionKey Key = new();
 	//for when the listener starts to respond to a hook and it has no current state
 	private Dictionary<GameHook, RoleStateMachineStage> InitialStateMachineStages { get; set; } = new();
 	private Dictionary<GameHook, Dictionary<TRoleStateEnum, RoleStateMachineStage>>? StateMachineStagesDictionary { get; set; }
 
 	protected abstract List<RoleStateMachineStage> DefineStateMachineStages();
 
-	protected sealed override HookListenerActionResult AdvanceCoreStateMachine(GameSession session,
+	protected sealed override HookListenerActionResult ExecuteCore(GameSession session,
 		ModeratorResponse input)
 	{
 		if (StateMachineStagesDictionary == null)
@@ -119,7 +121,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		}
 
 		//execute the stage
-		var result = ((IRoleStageRestrictedApi)stageToExecute).Execute(session, input, currentState);
+		var result = stageToExecute.Execute(Key, session, input, currentState);
 
 		return result;
 	}
@@ -177,7 +179,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		GameHook gameHook,
 		TRoleStateEnum? startStage,
 		TRoleStateEnum endStage,
-		Func<GameSession, ModeratorResponse, HookListenerActionResult<TRoleStateEnum>> actionToPerform,
+		Func<GameSession, ModeratorResponse, HookListenerActionResult> actionToPerform,
 		bool shouldOverwriteStartStage = false
 		)
 		=> new(
@@ -186,7 +188,6 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			startStage,
 			actionToPerform,
 			[endStage],
-			false,
 			shouldOverwriteStartStage
 		);
 
@@ -194,7 +195,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 		GameHook gameHook,
 		TRoleStateEnum? startStage,
 		HashSet<TRoleStateEnum> possibleEndStages,
-		Func<GameSession, ModeratorResponse, HookListenerActionResult<TRoleStateEnum>> actionToPerform,
+		Func<GameSession, ModeratorResponse, HookListenerActionResult> actionToPerform,
 		bool shouldOverwriteStartStage = false
 		)
 		=> new(
@@ -203,7 +204,6 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			startStage,
 			actionToPerform,
 			possibleEndStages,
-			false,
 			shouldOverwriteStartStage
 		);
 
@@ -218,7 +218,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 	internal RoleStateMachineStage CreateOpenEndedStage(
 		GameHook gameHook,
 		TRoleStateEnum? startStage,
-		Func<GameSession, ModeratorResponse, HookListenerActionResult<TRoleStateEnum>> actionToPerform,
+		Func<GameSession, ModeratorResponse, HookListenerActionResult> actionToPerform,
 		bool shouldOverwriteStartStage = false
 		)
 		=> new(
@@ -227,7 +227,6 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			startStage,
 			actionToPerform,
 			null,
-			ShouldAdvanceState: true,
 			shouldOverwriteStartStage
 		);
 
@@ -242,7 +241,7 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 	internal RoleStateMachineStage CreateEndStage(
 		GameHook gameHook,
 		TRoleStateEnum startStage,
-		Func<GameSession, ModeratorResponse, HookListenerActionResult<TRoleStateEnum>> actionToPerform,
+		Func<GameSession, ModeratorResponse, HookListenerActionResult> actionToPerform,
 		bool shouldOverwriteStartStage = false
 	)
 		=> new(
@@ -251,52 +250,28 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			startStage,
 			actionToPerform,
 			[startStage],
-			ShouldAdvanceState: false,
-			shouldOverwriteStartStage
+			shouldOverwriteStartStage,
+			ShouldAdvanceState: false
 		);
 
 	#endregion
 
 	#region RoleStateMachineStage Definition
-	private interface IRoleStageRestrictedApi
-	{
-		HookListenerActionResult<TRoleStateEnum> Execute(GameSession session, ModeratorResponse input, TRoleStateEnum? currentState);
-	}
 
-
+	/// <summary>
+	/// Used to grant access to the Execute method of RoleStateMachineStage only to RoleHookListener<TRoleStateEnum>
+	/// </summary>
+	internal interface IRoleStageExecutionKey { }
 
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="MainRoleType"></param>
-	/// <param name="GameHook"></param>
-	/// <param name="StartStage"></param>
-	/// <param name="ActionToPerform">
-	/// Whatever happens inside of this function, it must result in the state being set to one of the PossibleEndStages.
-	/// </param>
-	/// <param name="PossibleEndStages"></param>
-	/// <param name="ShouldAdvanceState">
-	/// Used for open ended stages, to ensure they at least advanced state.
-	/// If false, the stage is allowed to leave the state unchanged.
-	/// Otherwise, throw an error if the state is unchanged after execution.
-	/// </param>
-	/// <param name="ShouldOverwriteStartStage">While false, will throw an exception if it attempts to replace a handler for the same start stage.
-	/// Otherwise, will proceed with replacing it</param>
-	internal record RoleStateMachineStage(
-		MainRoleType MainRoleType,
-		GameHook GameHook,
-		TRoleStateEnum? StartStage,
-		Func<GameSession, ModeratorResponse, HookListenerActionResult<TRoleStateEnum>> ActionToPerform,
-		HashSet<TRoleStateEnum>? PossibleEndStages,
-		bool ShouldAdvanceState,
-		bool ShouldOverwriteStartStage = false)
-		: IRoleStageRestrictedApi
+	internal record RoleStateMachineStage
 	{
-
 		// Ensure this is only visible to the class RoleHookListener<TRoleStateEnum>
-		HookListenerActionResult<TRoleStateEnum> IRoleStageRestrictedApi.Execute(GameSession session, ModeratorResponse input, TRoleStateEnum? currentState)
+		internal HookListenerActionResult Execute(IRoleStageExecutionKey key, GameSession session, ModeratorResponse input, TRoleStateEnum? currentState)
 		{
-			if (currentState.Equals(StartStage) == false)
+			if (currentState?.Equals(StartStage) == false)
 			{
 				throw new InvalidOperationException(
 					$"State Machine Error: MainRole '{MainRoleType}' attempted to execute stage for '{currentState} but " +
@@ -304,40 +279,99 @@ internal abstract class RoleHookListener<TRoleStateEnum> : RoleHookListener wher
 			}
 
 			var output = ActionToPerform(session, input);
-			var newState = output.NextListenerPhase;
+			
 
-			if (newState == null)
+			if (output.Outcome != HookListenerOutcome.Skip)
 			{
-				throw new InvalidOperationException(
-					$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to null state");
+				var newState = output.NextListenerPhase!;
+
+				//if we are in a stage that should advance state, but we didn't, throw
+				if (ShouldAdvanceState && currentState != null &&
+				    newState.Equals(currentState.ToString()))
+				{
+					throw new InvalidOperationException(
+						$"State Machine Error: MainRole '{MainRoleType}' attempted to remain in state '{newState}' " +
+						$"but this stage requires state advancement.");
+				}
+
+				//if we didn't error out and we ended up in a state not in PossibleEndStages, throw
+				if (PossibleEndStages != null &&
+				    PossibleEndStages.Contains(newState) == false)
+				{
+					var joinedPossibleStateList = string.Join(", ", PossibleEndStages);
+					throw new InvalidOperationException(
+						$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to invalid state '{newState}'. " +
+						$"Valid end states from this stage are: {joinedPossibleStateList}."
+					);
+				}
 			}
-
-			//if we are in a stage that should advance state, but we didn't, throw
-			else if (ShouldAdvanceState &&
-			         newState.Equals(currentState))
-			{
-				throw new InvalidOperationException(
-					$"State Machine Error: MainRole '{MainRoleType}' attempted to remain in state '{newState}' " +
-					$"but this stage requires state advancement.");
-			}
-
-			//if we didn't error out and we ended up in a state not in PossibleEndStages, throw
-			else if (PossibleEndStages != null &&
-			         PossibleEndStages.Contains((TRoleStateEnum)newState) == false)
-			{
-				var joinedPossibleStateList = string.Join(", ", PossibleEndStages);
-				throw new InvalidOperationException(
-					$"State Machine Error: MainRole '{MainRoleType}' attempted to transition to invalid state '{newState}'. " +
-					$"Valid end states from this stage are: {joinedPossibleStateList}."
-				);
-			}
-
-			//set the new state
-			session.TransitionListenerState(MainRoleType, (TRoleStateEnum)newState);
-
 
 			return output;
 		}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="MainRoleType"></param>
+		/// <param name="GameHook"></param>
+		/// <param name="StartStage"></param>
+		/// <param name="ActionToPerform">
+		/// Whatever happens inside of this function, it must result in the state being set to one of the PossibleEndStages.
+		/// </param>
+		/// <param name="PossibleEndStages"></param>
+		/// <param name="ShouldAdvanceState">
+		/// Used for open ended stages, to ensure they at least advanced state.
+		/// If false, the stage is allowed to leave the state unchanged.
+		/// Otherwise, throw an error if the state is unchanged after execution.
+		/// </param>
+		/// <param name="ShouldOverwriteStartStage">While false, will throw an exception if it attempts to replace a handler for the same start stage.
+		/// Otherwise, will proceed with replacing it</param>
+		public RoleStateMachineStage(MainRoleType MainRoleType,
+			GameHook GameHook,
+			TRoleStateEnum? StartStage,
+			Func<GameSession, ModeratorResponse, HookListenerActionResult> ActionToPerform,
+			HashSet<TRoleStateEnum>? PossibleEndStages,
+			bool ShouldOverwriteStartStage = false,
+			bool ShouldAdvanceState = true)
+		{
+			this.MainRoleType = MainRoleType;
+			this.GameHook = GameHook;
+			this.StartStage = StartStage;
+			this.ActionToPerform = ActionToPerform;
+			this.PossibleEndStages = PossibleEndStages?.Select(s => s.ToString()).ToHashSet();
+			this.ShouldOverwriteStartStage = ShouldOverwriteStartStage;
+		}
+
+		private class HookStateMachineStageKey : IHookSubPhaseKey{}
+		private static readonly HookStateMachineStageKey Key = new();
+
+		/// <summary></summary>
+		public MainRoleType MainRoleType { get; init; }
+
+		/// <summary></summary>
+		public GameHook GameHook { get; init; }
+
+		/// <summary></summary>
+		public TRoleStateEnum? StartStage { get; init; }
+
+		/// <summary>
+		/// Whatever happens inside of this function, it must result in the state being set to one of the PossibleEndStages.
+		/// </summary>
+		public Func<GameSession, ModeratorResponse, HookListenerActionResult> ActionToPerform { get; init; }
+
+		/// <summary></summary>
+		public HashSet<string>? PossibleEndStages { get; init; }
+
+		/// <summary>
+		/// Used for end stages, to indicate that the stage does not advance state.
+		/// </summary>
+		public bool ShouldAdvanceState { get; init; }
+
+		/// <summary>While false, will throw an exception if it attempts to replace a handler for the same start stage.
+		/// Otherwise, will proceed with replacing it</summary>
+		public bool ShouldOverwriteStartStage { get; init; }
+
 	}
 	#endregion
 }

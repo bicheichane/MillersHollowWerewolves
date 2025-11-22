@@ -7,46 +7,6 @@ namespace Werewolves.StateModels.Core
 {
 	internal sealed partial class GameSessionKernel
 	{
-		private class GameLogManager
-		{
-			private readonly List<GameLogEntryBase> _logEntries = new();
-			internal void AddLogEntry(SessionMutator.IStateMutatorKey key, GameLogEntryBase entry)
-			{
-				_logEntries.Add(entry);
-			}
-
-			internal IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _logEntries.AsReadOnly();
-
-			/// <summary>
-			/// Searches the game history log for entries of a specific type, with optional filters.
-			/// </summary>
-			internal IEnumerable<TLogEntry> FindLogEntries<TLogEntry>(NumberRangeConstraint turnIntervalConstraint, GamePhase? phase = null,
-				Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase
-			{
-				IEnumerable<TLogEntry> query = _logEntries.OfType<TLogEntry>();
-
-				var turnsAgo = turnIntervalConstraint;
-				if (turnsAgo.Minimum < 0 || turnsAgo.Maximum < 0)
-					throw new ArgumentOutOfRangeException(nameof(turnIntervalConstraint), "turnsAgo cannot be negative.");
-
-				query = query.Where(log =>
-					log.TurnNumber >= turnsAgo.Minimum &&
-					log.TurnNumber <= turnsAgo.Maximum);
-
-				if (phase.HasValue)
-				{
-					query = query.Where(log => log.CurrentPhase == phase.Value);
-				}
-
-				if (filter != null)
-				{
-					query = query.Where(filter);
-				}
-
-				return query;
-			}
-		}
-
 		private readonly Dictionary<Guid, Player> _players = new();
 		private readonly List<Guid> _playerSeatingOrder = new();
 		private readonly List<MainRoleType> _rolesInPlay = new();
@@ -56,22 +16,22 @@ namespace Werewolves.StateModels.Core
 		// Transient execution state
 		private GamePhaseStateCache _phaseStateCache = new();
 
-		public IGamePhaseStateCache PhaseStateCache => _phaseStateCache;
+		internal IGamePhaseStateCache PhaseStateCache => _phaseStateCache;
 
 		internal IEnumerable<TLogEntry> FindLogEntries<TLogEntry>
 			(NumberRangeConstraint? turnIntervalConstraint = null, GamePhase? phase = null, Func<TLogEntry, bool>? filter = null) where TLogEntry : GameLogEntryBase 
 			=> _gameHistoryLog.FindLogEntries(turnIntervalConstraint ?? NumberRangeConstraint.Any, phase, filter);
-		public IReadOnlyList<Guid> GetPlayerSeatingOrder() => _playerSeatingOrder.AsReadOnly();
-		public IReadOnlyList<MainRoleType> GetRolesInPlay() => _rolesInPlay.AsReadOnly();
-		public IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _gameHistoryLog.GetAllLogEntries();
+		internal IReadOnlyList<Guid> GetPlayerSeatingOrder() => _playerSeatingOrder.AsReadOnly();
+		internal IReadOnlyList<MainRoleType> GetRolesInPlay() => _rolesInPlay.AsReadOnly();
+		internal IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _gameHistoryLog.GetAllLogEntries();
 
-		// Derived cached state (computed from log, mutated only by Apply methods)
-		public int TurnNumber { get; private set; }
+		private int _turnNumber = 0;
+		internal int TurnNumber => _turnNumber;
 
 		private ModeratorInstruction? _pendingModeratorInstruction = null;
-		public ModeratorInstruction? PendingModeratorInstruction => _pendingModeratorInstruction;
-		public void SetPendingModeratorInstruction(ModeratorInstruction instruction) => _pendingModeratorInstruction = instruction;
-		public GamePhase CurrentPhase => _phaseStateCache.GetCurrentPhase();
+		
+		internal ModeratorInstruction? PendingModeratorInstruction => _pendingModeratorInstruction;
+		internal GamePhase CurrentPhase => _phaseStateCache.GetCurrentPhase();
 
 		internal GameSessionKernel(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay,
 			List<string>? eventCardIdsInDeck = null)
@@ -88,21 +48,16 @@ namespace Werewolves.StateModels.Core
 				throw new ArgumentException(GameStrings.RoleListCannotBeEmpty, nameof(rolesInPlay));
 			}
 
-			var players = new Dictionary<Guid, Player>();
-			var seatingOrder = new List<Guid>();
-
 			foreach (var name in playerNamesInOrder)
 			{
 				var player = new Player(name);
 				_players.Add(player.Id, player);
 
 				//TODO: add seating order input logic
-				seatingOrder.Add(player.Id);
+				_playerSeatingOrder.Add(player.Id);
 			}
 
-			_playerSeatingOrder = seatingOrder;
-			_rolesInPlay = rolesInPlay;
-			TurnNumber = 0;
+			_rolesInPlay = new List<MainRoleType>(rolesInPlay);
 			_phaseStateCache = new GamePhaseStateCache(GamePhase.Setup);
 		}
 
@@ -120,14 +75,14 @@ namespace Werewolves.StateModels.Core
 		internal void CompleteSubPhaseStage() => 
 			_phaseStateCache.CompleteSubPhaseStage();
 
-		internal void TransitionListenerAndState<T>(ListenerIdentifier listener, T state) where T : struct, Enum =>
-			_phaseStateCache.TransitionListenerAndState<T>(listener, state);
+		internal void TransitionListenerAndState(ListenerIdentifier listener, string state) =>
+			_phaseStateCache.TransitionListenerAndState(listener, state);
 
-		internal IPlayer GetPlayer(Guid playerId) => GetPlayerInternal(playerId);
+		internal IPlayer GetIPlayer(Guid playerId) => GetPlayer(playerId);
 
-		internal IEnumerable<IPlayer> GetPlayers() => _players.Values;
+		internal IEnumerable<IPlayer> GetIPlayers() => _players.Values;
 
-		private Player GetPlayerInternal(Guid playerId)
+		private Player GetPlayer(Guid playerId)
 		{
 			if (!_players.TryGetValue(playerId, out var player))
 			{
@@ -137,6 +92,8 @@ namespace Werewolves.StateModels.Core
 			return player;
 		}
 
-		private PlayerState GetMutablePlayerState(SessionMutator.IStateMutatorKey key, Guid playerId) => GetPlayerInternal(playerId).GetMutableState(key);
+		private PlayerState GetMutablePlayerState(SessionMutator.IStateMutatorKey key, Guid playerId) => GetPlayer(playerId).GetMutableState(key);
+		private void IncrementTurnNumber(SessionMutator.IStateMutatorKey key) => _turnNumber++;
+		internal void SetPendingModeratorInstruction(ModeratorInstruction instruction) => _pendingModeratorInstruction = instruction;
 	}
 }

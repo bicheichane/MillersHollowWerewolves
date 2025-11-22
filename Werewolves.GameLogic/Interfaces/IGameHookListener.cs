@@ -19,7 +19,7 @@ internal interface IGameHookListener
     /// <param name="session">The current game session.</param>
     /// <param name="input">The moderator response to process.</param>
     /// <returns>A HookListenerActionResult indicating the outcome of the state machine advancement.</returns>
-    HookListenerActionResult AdvanceStateMachine(GameSession session, ModeratorResponse input);
+    HookListenerActionResult Execute(GameSession session, ModeratorResponse input);
 
     ListenerIdentifier Id { get; }
 }

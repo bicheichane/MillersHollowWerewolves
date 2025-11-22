@@ -107,14 +107,12 @@ internal partial class GameSessionKernel
 		/// <summary>
 		/// Sets the state for a current listener.
 		/// </summary>
-		/// <typeparam name="T">The enum type for the listener state.</typeparam>
 		/// <param name="listener">The identifier of the current listener.</param>
-		/// <param name="enumState">The state enum value for the listener.</param>
-		internal void TransitionListenerAndState<T>(ListenerIdentifier listener, [DisallowNull] T? enumState)
-			where T : struct, Enum
+		/// <param name="state">The state value for the listener.</param>
+		internal void TransitionListenerAndState(ListenerIdentifier listener, string state)
 		{
 			_currentListener = listener;
-			_currentListenerState = enumState.ToString();
+			_currentListenerState = state;
 		}
 
 		#endregion

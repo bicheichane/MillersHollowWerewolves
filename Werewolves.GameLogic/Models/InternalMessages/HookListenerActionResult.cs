@@ -7,12 +7,13 @@ namespace Werewolves.GameLogic.Models.InternalMessages;
 /// Represents the result of a listener's state machine advancement.
 /// This communicates a precise, unambiguous outcome to the GFM dispatcher.
 /// </summary>
-internal class HookListenerActionResult
+internal sealed class HookListenerActionResult
 {
     /// <summary>
     /// The outcome type (NeedInput, Complete, Error).
     /// </summary>
     public HookListenerOutcome Outcome { get; }
+    public string? NextListenerPhase { get; private set; }
     
     /// <summary>
     /// Optional instruction for the moderator when Outcome is NeedInput or Complete.
@@ -20,9 +21,10 @@ internal class HookListenerActionResult
     public ModeratorInstruction? Instruction { get; }
     
 
-    protected HookListenerActionResult(HookListenerOutcome outcome, ModeratorInstruction? instruction = null)
+    private HookListenerActionResult(HookListenerOutcome outcome, string? nextListenerPhase, ModeratorInstruction? instruction = null)
     {
         Outcome = outcome;
+        NextListenerPhase = nextListenerPhase;
         Instruction = instruction;
     }
 
@@ -30,54 +32,29 @@ internal class HookListenerActionResult
     /// Creates a NeedInput result with the provided instruction.
     /// </summary>
     /// <param name="instruction">The instruction to show to the moderator.</param>
+    /// <param name="nextListenerPhase"></param>
     /// <returns>A HookListenerActionResult indicating input is needed.</returns>
-    public static HookListenerActionResult NeedInput(ModeratorInstruction instruction)
+    public static HookListenerActionResult NeedInput<T>(ModeratorInstruction instruction, T nextListenerPhase) where T : struct, Enum
     {
-        return new HookListenerActionResult(HookListenerOutcome.NeedInput, instruction: instruction);
+        return new HookListenerActionResult(HookListenerOutcome.NeedInput, nextListenerPhase.ToString(), instruction: instruction);
     }
 
     /// <summary>
     /// Creates a Complete result with an optional instruction.
     /// </summary>
-    /// <param name="instruction">Optional instruction to show to the moderator.</param>
+    /// <param name="nextListenerPhase"></param>
     /// <returns>A HookListenerActionResult indicating completion.</returns>
-    public static HookListenerActionResult Complete()
+    public static HookListenerActionResult Complete<T>(T nextListenerPhase) where T : struct, Enum
     {
-        return new HookListenerActionResult(HookListenerOutcome.Complete);
+        return new HookListenerActionResult(HookListenerOutcome.Complete, nextListenerPhase.ToString());
     }
-}
-
-internal class HookListenerActionResult<T> : HookListenerActionResult where T : struct, Enum
-{
-	public T? NextListenerPhase { get; }
-
-	private HookListenerActionResult(HookListenerOutcome outcome, ModeratorInstruction? instruction = null, T? nextListenerPhase = null) : base(outcome, instruction)
-	{
-		NextListenerPhase = nextListenerPhase;
-	}
-
-	public HookListenerActionResult(HookListenerActionResult baseResult, T nextListenerPhase) : 
-		base(baseResult.Outcome, baseResult.Instruction)
-	{
-		NextListenerPhase = nextListenerPhase;
-	}
 
 	/// <summary>
-	/// Creates a NeedInput result with the provided instruction.
+	/// Used when the listener should be skipped (i.e. no players alive with a given role)
 	/// </summary>
-	/// <param name="instruction">The instruction to show to the moderator.</param>
-	/// <returns>A HookListenerActionResult indicating input is needed.</returns>
-	public static HookListenerActionResult<T> NeedInput(ModeratorInstruction instruction, T nextListenerPhase)
-	{
-		return new HookListenerActionResult<T>(HookListenerOutcome.NeedInput, instruction: instruction, nextListenerPhase: nextListenerPhase);
-	}
-
-	/// <summary>
-	/// </summary>
-	/// <param name="instruction">Optional instruction to show to the moderator.</param>
-	/// <returns>A HookListenerActionResult indicating completion.</returns>
-	public static HookListenerActionResult<T> Complete(T nextListenerPhase)
-	{
-		return new HookListenerActionResult<T>(HookListenerOutcome.Complete, nextListenerPhase: nextListenerPhase);
+	/// <returns></returns>
+	public static HookListenerActionResult Skip()
+    {
+        return new HookListenerActionResult(HookListenerOutcome.Skip, null);
 	}
 }

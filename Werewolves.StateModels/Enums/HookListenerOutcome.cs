@@ -6,6 +6,10 @@ namespace Werewolves.StateModels.Enums;
 /// </summary>
 public enum HookListenerOutcome
 {
+	/// <summary>
+	/// Listener is inactive for this hook invocation and should be skipped.
+	/// </summary>
+	Skip,
     /// <summary>
     /// The listener is active and requires further input from the moderator.
     /// The GameFlowManager should halt all processing and await the next moderator input.

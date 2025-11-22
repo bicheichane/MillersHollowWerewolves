@@ -24,7 +24,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 		CreateStage(GameHook.NightMainActionLoop, null, [WokenUpStateEnum, AsleepStateEnum], HandleRoleWakeupAndId),
 		CreateOpenEndedStage(GameHook.NightMainActionLoop, WokenUpStateEnum, HandleNightPowerUse_AndId),
 		CreateStage(GameHook.NightMainActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
-		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
+		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult.Complete(AsleepStateEnum)),
 	];
 
 	/// <summary>
@@ -34,13 +34,13 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 	/// <param name="session"></param>
 	/// <param name="input"></param>
 	/// <returns></returns>
-	protected abstract HookListenerActionResult<T> HandleNightPowerUse(GameSession session, ModeratorResponse input);
+	protected abstract HookListenerActionResult HandleNightPowerUse(GameSession session, ModeratorResponse input);
 
 	#endregion
 
 	#region Default State Machine Advancement
 	
-	protected virtual HookListenerActionResult<T> HandleNightPowerUse_AndId(GameSession session, ModeratorResponse input)
+	protected virtual HookListenerActionResult HandleNightPowerUse_AndId(GameSession session, ModeratorResponse input)
 	{
 		var state = GetCurrentListenerState(session);
 		
@@ -55,9 +55,9 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 		return output;
 	}
 
-	protected virtual HookListenerActionResult<T> HandleRoleWakeupAndId(GameSession session, ModeratorResponse input)
+	protected virtual HookListenerActionResult HandleRoleWakeupAndId(GameSession session, ModeratorResponse input)
 	{
-		HookListenerActionResult<T> output;
+		HookListenerActionResult output;
 		
 		// wake up the role. piggyback the id request if it's the first night
 		if (session.TurnNumber == 1 || HasNightPowers)
@@ -70,7 +70,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 		// otherwise, if it's not the first night and the role has no night powers, complete immediately
 		else
 		{
-			output = HookListenerActionResult<T>.Complete(AsleepStateEnum);
+			output = HookListenerActionResult.Complete(AsleepStateEnum);
 		}
 
 		return output;
@@ -78,14 +78,14 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 	#endregion
 	
 	#region Helper functions
-	private HookListenerActionResult<T> PrepareWakeupInstruction(GameSession session)
+	private HookListenerActionResult PrepareWakeupInstruction(GameSession session)
 	{
-		return HookListenerActionResult<T>.NeedInput(
+		return HookListenerActionResult.NeedInput(
 			new ConfirmationInstruction(GameStrings.RoleWakesUp.Format(PublicName)),
 			WokenUpStateEnum);
 	}
 
-	protected virtual HookListenerActionResult<T> PrepareWakeupInstructionWithIdRequest(GameSession session)
+	protected virtual HookListenerActionResult PrepareWakeupInstructionWithIdRequest(GameSession session)
 	{
 		var defaultInstruction = PrepareWakeupInstruction(session);
 
@@ -108,7 +108,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 			privateInstruction = GameStrings.RoleMultipleIdentificationPrompt.Format(PublicName);
 		}
 
-		return HookListenerActionResult<T>.NeedInput(
+		return HookListenerActionResult.NeedInput(
 			new SelectPlayersInstruction(
 				playersWithoutRole,
 				NumberRangeConstraint.Exact(roleCount),
@@ -123,14 +123,14 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 	}
 
 
-	protected virtual HookListenerActionResult<T> HandleAsleepConfirmation(GameSession session, ModeratorResponse input)
+	protected virtual HookListenerActionResult HandleAsleepConfirmation(GameSession session, ModeratorResponse input)
 	{
-		return HookListenerActionResult<T>.Complete(AsleepStateEnum);
+		return HookListenerActionResult.Complete(AsleepStateEnum);
 	}
 
-	protected virtual HookListenerActionResult<T> PrepareSleepInstruction(GameSession session)
+	protected virtual HookListenerActionResult PrepareSleepInstruction(GameSession session)
 	{
-		return HookListenerActionResult<T>.NeedInput(
+		return HookListenerActionResult.NeedInput(
 			new ConfirmationInstruction(GameStrings.RoleGoesToSleepSingle.Format(PublicName)),
 			ReadyToSleepStateEnum);
 	}

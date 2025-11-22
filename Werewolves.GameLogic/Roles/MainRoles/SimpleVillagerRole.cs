@@ -17,9 +17,9 @@ internal class SimpleVillagerRole : RoleHookListener
     internal override string PublicName => GameStrings.SimpleVillagerRoleName;
     public override ListenerIdentifier Id => ListenerIdentifier.Listener(MainRoleType.SimpleVillager);
 
-	protected override HookListenerActionResult AdvanceCoreStateMachine(GameSession session, ModeratorResponse input)
+	protected override HookListenerActionResult ExecuteCore(GameSession session, ModeratorResponse input)
     {
-        return HookListenerActionResult.Complete();
+        return HookListenerActionResult.Skip();
     }
 
     

@@ -17,6 +17,25 @@ public interface IGameSession
 }
 
 /// <summary>
+/// Used to grant game flow manager access to updating the pending moderator instruction cache
+/// </summary>
+public interface IGameFlowManagerKey{}
+
+/// <summary>
+/// Used to grant phase manager access to updating main-phase sub-phase state cache
+/// </summary>
+public interface IPhaseManagerKey {}
+
+/// <summary>
+/// Used to grant phase manager access to updating sub-phase stage state cache
+/// </summary>
+public interface ISubPhaseManagerKey { }
+
+/// <summary>
+/// Used to grant IHookSubPhaseStage access to updating game hook listener and listener state
+/// </summary>
+public interface IHookSubPhaseKey{}
+/// <summary>
 /// Represents the tracked state of a single ongoing game.
 /// This class encapsulates all game state and provides a controlled API for state mutations.
 /// The GameHistoryLog is the single source of truth for all non-deterministic game events.
@@ -49,30 +68,33 @@ internal class GameSession : IGameSession
 
 	#region Internal Game Cache read-access
     internal ModeratorInstruction? PendingModeratorInstruction => _gameSessionKernel.PendingModeratorInstruction;
-    internal void SetPendingModeratorInstruction(ModeratorInstruction instruction) =>
-        _gameSessionKernel.SetPendingModeratorInstruction(instruction);
+
 	internal T? GetSubPhase<T>() where T : struct, Enum => _gameSessionKernel.PhaseStateCache.GetSubPhase<T>();
     internal ListenerIdentifier? GetCurrentListener() => _gameSessionKernel.PhaseStateCache.GetCurrentListener();
 
     internal T? GetCurrentListenerState<T>(ListenerIdentifier listener) where T : struct, Enum =>
         _gameSessionKernel.PhaseStateCache.GetCurrentListenerState<T>(listener);
+    internal bool TryGetActiveGameHook(out GameHook hook) =>
+	    Enum.TryParse(_gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage(), out hook);
 	#endregion
 
 	#region Internal Game Cache write-access
+	// Only accessible by PhaseManager or GameFlowManager via key parameter
 
-    internal void TransitionSubPhase(Enum subPhase) =>
+	internal void SetPendingModeratorInstruction(IGameFlowManagerKey key, ModeratorInstruction instruction) =>
+		_gameSessionKernel.SetPendingModeratorInstruction(instruction);
+
+	internal void TransitionSubPhaseCache(IPhaseManagerKey key, Enum subPhase) =>
         _gameSessionKernel.TransitionSubPhase(subPhase);
 
-    internal bool TryGetActiveGameHook(out GameHook hook) =>
-        Enum.TryParse(_gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage(), out hook);
-
-	/// <summary>
-	/// Checks if the specified sub-phase stage can be entered,
-	/// and starts it if entering for the first time for the current sub-phase.
-	/// </summary>
-	/// <param name="subPhaseStageId"></param>
-	/// <returns></returns>
-	internal bool TryEnterSubPhaseStage(string subPhaseStageId)
+    /// <summary>
+    /// Checks if the specified sub-phase stage can be entered,
+    /// and starts it if entering for the first time for the current sub-phase.
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="subPhaseStageId"></param>
+    /// <returns></returns>
+    internal bool TryEnterSubPhaseStage(ISubPhaseManagerKey key, string subPhaseStageId)
     {
         var currentSubPhaseStage = _gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage();
 
@@ -101,10 +123,10 @@ internal class GameSession : IGameSession
 		return true;
     }
 
-    internal void CompleteSubPhaseStage() =>
+    internal void CompleteSubPhaseStageCache(IPhaseManagerKey key) =>
         _gameSessionKernel.CompleteSubPhaseStage();
 
-	internal void TransitionListenerState<T>(ListenerIdentifier listener, T state) where T : struct, Enum =>
+	internal void TransitionListenerStateCache(IHookSubPhaseKey key, ListenerIdentifier listener, string state)  =>
         _gameSessionKernel.TransitionListenerAndState(listener, state);
 
     #endregion
@@ -114,11 +136,11 @@ internal class GameSession : IGameSession
 
     #region Public Query API
 
-    public IPlayer GetPlayer(Guid playerId) => _gameSessionKernel.GetPlayer(playerId);
+    public IPlayer GetPlayer(Guid playerId) => _gameSessionKernel.GetIPlayer(playerId);
 
     public IPlayerState GetPlayerState(Guid playerId) => GetPlayer(playerId).State;
 
-    public IEnumerable<IPlayer> GetPlayers() => _gameSessionKernel.GetPlayers();
+    public IEnumerable<IPlayer> GetPlayers() => _gameSessionKernel.GetIPlayers();
 
     public int RoleInPlayCount(MainRoleType type) => _gameSessionKernel.GetRolesInPlay().Count(r => r == type);
 
@@ -209,7 +231,7 @@ internal class GameSession : IGameSession
 
     internal List<MainRoleType> GetUnassignedRoles()
     {
-        var assignedRoles = _gameSessionKernel.GetPlayers()
+        var assignedRoles = _gameSessionKernel.GetIPlayers()
             .Select(p => p.State.MainRole)
             .Where(r => r.HasValue)
             .Select(r => r!.Value)

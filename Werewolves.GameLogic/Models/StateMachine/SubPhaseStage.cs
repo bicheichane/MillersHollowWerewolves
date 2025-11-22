@@ -32,28 +32,7 @@ internal abstract class SubPhaseStage
     public string Id { get; }
     private Action<ModeratorResponse>? _validateInputRequirements = null;
 
-	/// <summary>
-	/// This tries to execute the sub-phase stage, returning true if it was executed, 
-	/// with the corresponding PhaseHandlerResult. If it was not executed (because the stage was already executed
-	/// for this sub-phase entry), it returns false and a null result.
-	/// </summary>
-	/// <param name="session"></param>
-	/// <param name="input"></param>
-	/// <param name="result"></param>
-	/// <returns></returns>
-	internal bool TryExecute(GameSession session, ModeratorResponse input, out PhaseHandlerResult? result)
-    {
-        if (session.TryEnterSubPhaseStage(Id))
-        {
-            result = Execute(session, input);
-            return true;
-        }
-
-        result = null;
-        return false;
-    }
-
-    protected PhaseHandlerResult Execute(GameSession session, ModeratorResponse input)
+    internal PhaseHandlerResult Execute(GameSession session, ModeratorResponse input)
     {
         _validateInputRequirements?.Invoke(input);
 
@@ -171,7 +150,10 @@ internal sealed class LogicSubPhaseStage : SubPhaseStage
 /// the game flow management system and is not thread-safe.</remarks>
 internal sealed class HookSubPhaseStage : SubPhaseStage
 {
-    private readonly GameHook _hook;
+    private class HookSubPhaseKey : IHookSubPhaseKey { }
+    private static readonly HookSubPhaseKey Key = new();
+
+	private readonly GameHook _hook;
     private readonly Func<GameSession, ModeratorResponse, PhaseHandlerResult> _onComplete;
 
     internal static SubPhaseStage HookStage(GameHook gameHook) 
@@ -219,9 +201,14 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
             }
 
 			// Call the listener's state machine
-            var hookResult = listener.AdvanceStateMachine(session, input);
+            var hookResult = listener.Execute(session, input);
 
-            switch (hookResult.Outcome)
+            if (hookResult.Outcome != HookListenerOutcome.Skip)
+            {
+                session.TransitionListenerStateCache(Key, listenerId, hookResult.NextListenerPhase!);
+			}
+            
+			switch (hookResult.Outcome)
             {
                 case HookListenerOutcome.NeedInput:
 					// Handler needs input, pause processing
@@ -231,6 +218,8 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
 					// Listener completed successfully, continue to next
                     continue;
 
+                case HookListenerOutcome.Skip:
+                    continue;
                 default:
                     throw new InvalidOperationException($"Unknown HookListenerActionOutcome: {hookResult.Outcome}");
             }

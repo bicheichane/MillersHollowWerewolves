@@ -47,7 +47,7 @@ internal partial class GameSessionKernel
 
 			if (newPhase == GamePhase.Night)
 			{
-				kernel.TurnNumber += 1;
+				kernel.IncrementTurnNumber(Key);
 			}
 		}
 

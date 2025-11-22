@@ -1,7 +1,7 @@
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
-using static Werewolves.GameLogic.Models.InternalMessages.HookListenerActionResult<Werewolves.GameLogic.Models.GameHookListeners.NightRoleIdOnlyState>;
+using static Werewolves.GameLogic.Models.InternalMessages.HookListenerActionResult;
 
 namespace Werewolves.GameLogic.Models.GameHookListeners;
 
@@ -25,7 +25,7 @@ internal abstract class NightRoleIdOnlyHookListener : NightRoleHookListener<Nigh
 		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => Complete(AsleepStateEnum))
 	];
 
-	protected override HookListenerActionResult<NightRoleIdOnlyState> HandleNightPowerUse(GameSession session,
+	protected override HookListenerActionResult HandleNightPowerUse(GameSession session,
 		ModeratorResponse input) =>
 		Complete(AsleepStateEnum);
 }

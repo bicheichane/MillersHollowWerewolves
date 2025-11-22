@@ -27,6 +27,9 @@ namespace Werewolves.GameLogic.Services;
 /// </summary>
 internal static class GameFlowManager
 {
+    private class GameFlowManagerKey : IGameFlowManagerKey;
+
+    private static readonly GameFlowManagerKey Key = new();
     #region Static Flow Definitions
     internal static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
@@ -256,7 +259,7 @@ internal static class GameFlowManager
     internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
     {
         var currentPhase = session.GetCurrentPhase();
-        
+
         // --- Execute Phase Handler ---
         PhaseHandlerResult handlerResult = RouteInputToPhaseHandler(session, input);
 
@@ -273,7 +276,7 @@ internal static class GameFlowManager
         }
 
         // --- Update Pending Instruction ---
-		session.SetPendingModeratorInstruction(nextInstructionToSend);
+		session.SetPendingModeratorInstruction(Key, nextInstructionToSend);
 
 		return ProcessResult.Success(nextInstructionToSend);
     }

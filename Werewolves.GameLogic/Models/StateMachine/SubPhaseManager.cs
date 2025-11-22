@@ -9,6 +9,9 @@ namespace Werewolves.GameLogic.Models.StateMachine;
 /// <typeparam name="TSubPhase">The enum type defining the sub-phases for the parent phase.</typeparam>
 internal record SubPhaseManager<TSubPhase> where TSubPhase : struct, Enum
 {
+	private class SubPhaseStageCacheKey : ISubPhaseManagerKey {}
+	private static readonly SubPhaseStageCacheKey Key = new();
+
 	public SubPhaseManager(
 		TSubPhase subPhase, 
 		List<SubPhaseStage> subPhaseStages, 
@@ -65,9 +68,9 @@ internal record SubPhaseManager<TSubPhase> where TSubPhase : struct, Enum
 			// Try to execute each sub-phase stage in order
 			// They should only produce a result if they need to send an instruction to the moderator
 			// Or if we reached the last stage: we need to have a transition defined, either to a sub-phase or a main phase
-			if (stage.TryExecute(session, input, out var result) && result != null)
+			if (session.TryEnterSubPhaseStage(Key, stage.Id))
 			{
-				return result;
+				return stage.Execute(session, input);
 			}
 		}
 		

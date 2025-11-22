@@ -20,24 +20,24 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 		CreateStage(GameHook.NightMainActionLoop, WokenUpStateEnum, AwaitingTargetSelectionEnum, HandleNightPowerUse_AndId),
 		CreateStage(GameHook.NightMainActionLoop, AwaitingTargetSelectionEnum, AsleepStateEnum, HandleParseNightPowerConsequences),
 		CreateStage(GameHook.NightMainActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
-		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult<T>.Complete(AsleepStateEnum)),
+		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult.Complete(AsleepStateEnum)),
 	];
 
 	protected abstract ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input);
 
 	protected abstract void ProcessTargetSelection(GameSession session, ModeratorResponse input);
 
-	protected override HookListenerActionResult<T> HandleNightPowerUse(GameSession session, ModeratorResponse input) =>
+	protected override HookListenerActionResult HandleNightPowerUse(GameSession session, ModeratorResponse input) =>
 		HandleTargetSelectionRequest(session, input);
 
-	private HookListenerActionResult<T> HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
+	private HookListenerActionResult HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
 	{
 		var instruction = GenerateTargetSelectionInstruction(session, input);
-		return HookListenerActionResult<T>.NeedInput(instruction, AwaitingTargetSelectionEnum);
+		return HookListenerActionResult.NeedInput(instruction, AwaitingTargetSelectionEnum);
 		
 	}
 
-	private HookListenerActionResult<T> HandleParseNightPowerConsequences(GameSession session, ModeratorResponse input)
+	private HookListenerActionResult HandleParseNightPowerConsequences(GameSession session, ModeratorResponse input)
 	{
 		ProcessTargetSelection(session, input);
 		return PrepareSleepInstruction(session);

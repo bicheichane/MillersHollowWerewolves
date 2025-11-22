@@ -3,7 +3,6 @@ using Werewolves.StateModels.Core;
 
 namespace Werewolves.GameLogic.Models.StateMachine;
 
-
 /// <summary>
 /// Generic phase definition that manages a declarative map of sub-phase stages.
 /// Implements IPhaseDefinition to allow the main PhaseDefinitions dictionary to hold phase handlers for different sub-phase enums.
@@ -11,7 +10,10 @@ namespace Werewolves.GameLogic.Models.StateMachine;
 /// <typeparam name="TSubPhaseEnum">The enum type defining the sub-phases for this phase.</typeparam>
 internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnum : struct, Enum
 {
-    private readonly Dictionary<TSubPhaseEnum, SubPhaseManager<TSubPhaseEnum>> _subPhaseDictionary;
+    private class PhaseManagerKey : IPhaseManagerKey {}
+    private static readonly PhaseManagerKey Key = new();
+
+	private readonly Dictionary<TSubPhaseEnum, SubPhaseManager<TSubPhaseEnum>> _subPhaseDictionary;
     private readonly TSubPhaseEnum _entrySubPhase;
 
     /// <summary>
@@ -92,7 +94,7 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
                         $"Valid next sub-phases are: {(allowed == null ? "None" : string.Join(", ", allowed))}.");
                 }
 
-                session.TransitionSubPhase(subPhaseResult.SubGamePhase);
+                session.TransitionSubPhaseCache(Key, subPhaseResult.SubGamePhase);
 				break;
             }
             case MainPhaseHandlerResult mainPhaseResult:
@@ -111,7 +113,7 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
 				break;
             }
             case StayInSubPhaseHandlerResult stayInSubPhase:
-                session.CompleteSubPhaseStage();
+                session.CompleteSubPhaseStageCache(Key);
 				break;
         }
     }
