@@ -21,5 +21,5 @@ public record ProcessResult(
         new(true, instruction);
 
     public static ProcessResult Failure(ModeratorInstruction instruction) =>
-        new(false, null);
+        new(false, instruction);
 } 

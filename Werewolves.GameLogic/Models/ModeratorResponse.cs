@@ -17,4 +17,7 @@ public class ModeratorResponse
     public Dictionary<Guid, MainRoleType>? AssignedPlayerRoles { get; internal init; }
     public string? SelectedOption { get; internal init; }
     public bool? Confirmation { get; internal init; }
+
+    //internal so only ModeratorInputs can create instances, not external consumers
+    internal ModeratorResponse(){}
 }

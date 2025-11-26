@@ -72,7 +72,7 @@ public class GameService
     /// <summary>
     /// Processes input provided by the moderator using the state machine.
     /// </summary>
-    public ProcessResult RespondToInstruction(Guid gameId, ModeratorResponse input)
+    public ProcessResult ProcessInstruction(Guid gameId, ModeratorResponse input)
 	{
 		if (!_sessions.TryGetValue(gameId, out var session))
 		{
@@ -80,12 +80,8 @@ public class GameService
 		}
 
 		// --- Input Validation Against Last Instruction ---
-		var validationResult = ValidateExpectedInput(session, input);
-		if (validationResult?.IsSuccess == false)
-		{
-			return validationResult; // Return failure if validation fails
-		}
-
+		EnsureInputTypeIsExpected(session, input);
+		
 		var result = GameFlowManager.HandleInput(session, input);
 
 		if (result.ModeratorInstruction is FinishedGameConfirmationInstruction)
@@ -110,8 +106,7 @@ public class GameService
     /// Validates moderator input against the expected instruction type.
     /// In the new architecture, each instruction type handles its own validation via CreateResponse methods.
     /// </summary>
-    /// <returns>A ProcessResult.Failure if validation fails, otherwise null.</returns>
-    private static ProcessResult? ValidateExpectedInput(GameSession session, ModeratorResponse input)
+    private static void EnsureInputTypeIsExpected(GameSession session, ModeratorResponse input)
     {
 	    var lastRequest = session.PendingModeratorInstruction;
 
@@ -131,8 +126,6 @@ public class GameService
         {
             throw new InvalidOperationException("Confirmation instruction requires a boolean confirmation.");
         }
-
-        return null; // Basic validation passed
     }
 
     private static bool DoesResponseTypeMatchInstruction(ModeratorInstruction instruction, ModeratorResponse response)
@@ -140,7 +133,7 @@ public class GameService
         return instruction switch
         {
             StartGameConfirmationInstruction => response.Type == Confirmation,
-            FinishedGameConfirmationInstruction => response.Type is FinishedGame or Confirmation,
+            FinishedGameConfirmationInstruction => response.Type == Confirmation,
             ConfirmationInstruction => response.Type == Confirmation,
             SelectPlayersInstruction => response.Type == PlayerSelection,
             AssignRolesInstruction => response.Type == AssignPlayerRoles,

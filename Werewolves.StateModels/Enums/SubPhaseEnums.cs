@@ -28,8 +28,7 @@ public enum SetupSubPhases
 /// </summary>
 public enum NightSubPhases
 {
-    Start,            // Village goes to sleep, increment turn number
-    ActionLoop        // Main sequence: iterate through night roles and fire hooks (includes first-night identification)
+    Start,            // handles the entire night phase
 }
 
 /// <summary>

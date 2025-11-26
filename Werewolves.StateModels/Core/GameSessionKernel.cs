@@ -59,6 +59,7 @@ namespace Werewolves.StateModels.Core
 
 			_rolesInPlay = new List<MainRoleType>(rolesInPlay);
 			_phaseStateCache = new GamePhaseStateCache(GamePhase.Setup);
+            _pendingModeratorInstruction = StartGameConfirmationInstruction(GameGuid: Guid.Empty);
 		}
 
 		internal void AddEntryAndUpdateState(GameLogEntryBase entry)

@@ -228,7 +228,7 @@ internal static class GameFlowManager
                     NavigationEndStage(DaySubPhaseStage.VoteOutcomeNavigation, AfterVoteConcludedNavigation)
                 ],
                 possibleNextSubPhases: [
-                    DaySubPhases.DetermineVoteType,     // loops if stuttering judge triggers
+                    DaySubPhases.DetermineVoteType,     // loops if i.e. stuttering judge triggers
                     DaySubPhases.ProcessVoteDeathLoop,   // if players were eliminated, we need to fire the on death trigger
                     DaySubPhases.Finalize               // proceed to finalize if no eliminations
                 ]
@@ -540,7 +540,7 @@ internal static class GameFlowManager
 
         if (shouldVoteRepeat)
         {
-            return TransitionSubPhaseSilent(DaySubPhases.NormalVoting);
+            return TransitionSubPhaseSilent(DaySubPhases.DetermineVoteType);
         }
         else if (session.GetPlayerEliminatedThisVote().Any())
         {

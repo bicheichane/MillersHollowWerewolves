@@ -47,11 +47,4 @@ public record StartGameConfirmationInstruction(Guid GameGuid) : ConfirmationInst
 
 public record FinishedGameConfirmationInstruction(string VictoryDescription) : ConfirmationInstruction(GameStrings.GameOverMessage.Format(VictoryDescription))
 {
-    public override ModeratorResponse CreateResponse(bool confirmation)
-    {
-        return new ModeratorResponse()
-        {
-            Type = ExpectedInputType.FinishedGame,
-        };
-    }
 }

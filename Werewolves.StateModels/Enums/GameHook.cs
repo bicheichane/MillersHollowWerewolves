@@ -16,8 +16,5 @@ public enum GameHook
     
     // Day phase hooks
     DawnMainActionLoop,                    // Fired at each dawn after any potential victims are fully dealt with
-    
-	DayVoteStarted,                     // Fired when voting phase begins
-    NightResolutionStarted,             // Fired when night resolution begins
 
 }
