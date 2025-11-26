@@ -1,8 +1,7 @@
 using System.Collections.Immutable;
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.Instructions;
+namespace Werewolves.StateModels.Models.Instructions;
 
 /// <summary>
 /// Instruction that requires the moderator to assign roles to specific players.

@@ -16,6 +16,8 @@ namespace Werewolves.StateModels.Core
 		// Transient execution state
 		private GamePhaseStateCache _phaseStateCache = new();
 
+		internal Guid Id { get; }
+
 		internal IGamePhaseStateCache PhaseStateCache => _phaseStateCache;
 
 		internal IEnumerable<TLogEntry> FindLogEntries<TLogEntry>
@@ -33,11 +35,14 @@ namespace Werewolves.StateModels.Core
 		internal ModeratorInstruction? PendingModeratorInstruction => _pendingModeratorInstruction;
 		internal GamePhase CurrentPhase => _phaseStateCache.GetCurrentPhase();
 
-		internal GameSessionKernel(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay,
+		internal GameSessionKernel(Guid id, ModeratorInstruction initialInstruction, List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay,
 			List<string>? eventCardIdsInDeck = null)
 		{
+			Id = id;
+			ArgumentNullException.ThrowIfNull(initialInstruction);
 			ArgumentNullException.ThrowIfNull(playerNamesInOrder);
 			ArgumentNullException.ThrowIfNull(rolesInPlay);
+			_pendingModeratorInstruction = initialInstruction;
 			if (!playerNamesInOrder.Any())
 			{
 				throw new ArgumentException(GameStrings.PlayerListCannotBeEmpty, nameof(playerNamesInOrder));
@@ -59,7 +64,6 @@ namespace Werewolves.StateModels.Core
 
 			_rolesInPlay = new List<MainRoleType>(rolesInPlay);
 			_phaseStateCache = new GamePhaseStateCache(GamePhase.Setup);
-            _pendingModeratorInstruction = StartGameConfirmationInstruction(GameGuid: Guid.Empty);
 		}
 
 		internal void AddEntryAndUpdateState(GameLogEntryBase entry)

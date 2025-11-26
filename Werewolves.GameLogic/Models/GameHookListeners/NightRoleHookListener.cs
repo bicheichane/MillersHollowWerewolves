@@ -1,5 +1,5 @@
-using Werewolves.GameLogic.Models.Instructions;
 using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;

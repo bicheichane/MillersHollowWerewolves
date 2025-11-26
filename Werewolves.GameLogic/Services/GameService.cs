@@ -5,9 +5,8 @@
 // Add this line for resource access
 // For Debug.Fail
 using System.Collections.Concurrent;
-using Werewolves.GameLogic.Models;
-using Werewolves.GameLogic.Models.Instructions;
 using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
@@ -36,11 +35,20 @@ public class GameService
     /// <returns>The unique ID for the newly created game session.</returns>
     public StartGameConfirmationInstruction StartNewGame(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
     {
-	    var session = new GameSession(playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
-
+        // 1. Generate the game ID
+        var gameId = Guid.NewGuid();
+        
+        // 2. Get the initial instruction from GameFlowManager (pure function)
+        var initialInstruction = GameFlowManager.GetInitialInstruction(rolesInPlay, gameId);
+        
+        // 3. Create the session with both the ID and instruction
+        var session = new GameSession(gameId, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
+        
+        // 4. Store the session
         _sessions.TryAdd(session.Id, session);
-
-        return new(session.Id);
+        
+        // 5. Return the same instruction that was passed to the session
+        return initialInstruction;
     }
 
     /// <summary>

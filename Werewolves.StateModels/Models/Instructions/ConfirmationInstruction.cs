@@ -1,9 +1,8 @@
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
-using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Resources;
 
-namespace Werewolves.GameLogic.Models.Instructions;
+namespace Werewolves.StateModels.Models.Instructions;
 
 /// <summary>
 /// Instruction that requires a simple yes/no confirmation from the moderator.

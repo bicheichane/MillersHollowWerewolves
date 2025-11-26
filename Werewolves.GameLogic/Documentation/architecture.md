@@ -70,7 +70,7 @@ The architecture uses a declarative hook-based system where the `GameFlowManager
 
 The architecture is split into two separate library projects to achieve compiler-enforced encapsulation: 
 
-*   **`Werewolves.StateModels`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state and its mutation mechanisms. 
+*   **`Werewolves.StateModels`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, all `ModeratorInstruction` implementations (in `Models.Instructions`), and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state, its mutation mechanisms, and the UI communication contract (instructions). 
 *   **`Werewolves.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.StateModels`. **Crucially, `Werewolves.StateModels` grants `[InternalsVisibleTo("Werewolves.GameLogic")]`.** This allows the Rules Engine to access the `internal` concrete `GameSession` and its mutation methods, while external consumers (UI) are restricted to the `public` read-only interfaces. 
 
 # Core Components
@@ -83,6 +83,7 @@ The architecture separates the public API (`GameSession`) from the internal stat
 The hermetically sealed kernel that owns the game's mutable memory. It is not visible to the public API.
 
 *   **Sole Owner of Mutable State:** The Kernel holds the master references to:
+    *   `Id` (Guid): The unique game session identifier, injected at construction
     *   `GameHistoryLog` (The event source)
     *   `GamePhaseStateCache` (Transient execution state)
     *   `Players` (Dictionary of concrete `Player` objects)
@@ -97,7 +98,7 @@ The hermetically sealed kernel that owns the game's mutable memory. It is not vi
 A lightweight, stateless wrapper that implements `IGameSession` and delegates all operations to an internal `_gameSessionKernel` instance.
 
 *   **Public API (IGameSession):** Read-only projection for UI consumers.
-    *   `Id` (Guid): Unique identifier.
+    *   `Id` (Guid): Unique identifier (pass-through to `GameSessionKernel.Id`).
     *   `TurnNumber` (int): The current turn number.
     *   `GetCurrentPhase()` (GamePhase): Returns the current main game phase.
     *   `GetPlayers()` (IEnumerable<IPlayer>): Returns all players.
@@ -259,6 +260,7 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
     *   `ListenerImplementations` (static Dictionary<ListenerIdentifier, IGameHookListener>): Lookup for concrete listener implementations (i.e., the role classes).
     *   `PhaseDefinitions` (static Dictionary<GamePhase, IPhaseDefinition>): Declarative mapping of each main `GamePhase` to its corresponding `PhaseManager`.
 *   **Primary Methods:**
+    *   `GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)` (StartGameConfirmationInstruction): **Static factory method for bootstrapping.** Returns the initial instruction required to construct a valid `GameSession`. This pure function performs input validation and generates the startup instruction without creating any game state.
     *   `HandleInput(GameSession session, ModeratorResponse input)` (ProcessResult): **The central state machine orchestrator.**
         *   Retrieves the current phase and delegates to the appropriate `IPhaseDefinition` (`PhaseManager`).
         *   The `PhaseManager` loops, executing the current `SubPhaseManager`'s sequence of atomic stages until an instruction is generated for the moderator.
@@ -283,7 +285,7 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
 Orchestrates the game flow based on moderator input and tracked state. **Delegates state machine management to `GameFlowManager` while handling high-level game logic and external interfaces.** 
 
 *   **Public Methods:** 
-    *   `StartNewGame(...)` (StartGameConfirmationInstruction): Creates a new `GameSession` and adds it to the active game session list.
+    *   `StartNewGame(...)` (StartGameConfirmationInstruction): **Orchestrates atomic game initialization.** Generates a unique game ID, retrieves the initial instruction from `GameFlowManager.GetInitialInstruction`, constructs a `GameSession` with both the ID and instruction, stores the session, and returns the instruction.
     *   `ProcessInstruction(Guid gameId, ModeratorResponse input)` (ProcessResult): **The central entry point for processing moderator actions.** 
         *   Retrieves the current `GameSession` and delegates to `GameFlowManager.HandleInput`. 
         *   The `GameFlowManager` handles all state machine logic, validation, and transition management. 
@@ -366,7 +368,8 @@ Consequently, the `ModeratorResponse` structure requires the moderator to provid
 
  
 ## `ModeratorInstruction` Class Hierarchy
-Polymorphic instruction system for communication TO the moderator. 
+Polymorphic instruction system for communication TO the moderator. **Assembly Location:** The abstract base class `ModeratorInstruction` and all concrete implementations are located in `Werewolves.StateModels.Models.Instructions`. This placement allows `GameSession` to accept instructions as constructor parameters without circular dependencies.
+
 *   **Abstract Base Class:** 
     *   `PublicAnnouncement` (string?): Text to be read aloud or displayed publicly to all players. 
     *   `PrivateInstruction` (string?): Text for moderator's eyes only, containing reminders, rules, or guidance. 
@@ -418,13 +421,20 @@ Polymorphic instruction system for communication TO the moderator.
 
 # Game Loop Outline (Declarative Sub-Phase Architecture)
 
-1.  **Setup Phase (`GamePhase.Setup`):**
-    *   `GameService.StartNewGame` initializes the `GameSession` and sets the initial phase to `Setup`.
+1.  **Bootstrap (Pre-Phase):**
+    *   `GameService.StartNewGame` is called with player names and roles.
+    *   `GameService` generates a unique `Guid` for the game session.
+    *   `GameService` calls `GameFlowManager.GetInitialInstruction(rolesInPlay, gameId)` to obtain the startup instruction.
+    *   `GameService` constructs `GameSession` with the ID and instruction, ensuring atomic validity.
+    *   The initial instruction (`StartGameConfirmationInstruction`) is returned to the caller.
+
+2.  **Setup Phase (`GamePhase.Setup`):**
+    *   The moderator confirms the initial instruction, triggering `GameService.ProcessInstruction`.
     *   The `PhaseManager` for `Setup` executes its single `SubPhaseManager`.
     *   Its `EndNavigationSubPhaseStage` runs, processing the moderator's confirmation.
     *   If confirmed, it returns a `MainPhaseHandlerResult` to transition to `GamePhase.Night`.
 
-2.  **Night Phase (`GamePhase.Night`):**
+3.  **Night Phase (`GamePhase.Night`):**
     *   The `PhaseManager` for `Night` is activated. It begins executing the `NightSubPhases.Start` sub-phase.
     *   The `SubPhaseManager` for `Start` runs its sequence of atomic stages:
         1.  A `LogicSubPhaseStage` issues the "Village goes to sleep" instruction and increments the turn number.
@@ -433,14 +443,14 @@ Polymorphic instruction system for communication TO the moderator.
         4.  Once all listeners complete, the `HookSubPhaseStage`'s `onComplete` delegate runs.
         5.  The final `EndNavigationSubPhaseStage` executes, returning a `MainPhaseHandlerResult` to transition to `GamePhase.Dawn`.
 
-3.  **Dawn Phase (`GamePhase.Dawn`):**
+4.  **Dawn Phase (`GamePhase.Dawn`):**
     *   The `PhaseManager` for `Dawn` is activated, starting at `DawnSubPhases.CalculateVictims`.
     *   **Calculate Victims:** The `NightInteractionResolver` is invoked to process all night actions, resolving conflicts (Witch vs Defender vs Infection) and applying eliminations/status effects. Navigates either to `AnnounceVictims` or `Finalize`, depending on whether or not there were any night deaths.
     *   **Announce Victims:** If victims exist, the `AnnounceVictims` sub-phase requests role assignments for the victims, and fires `GameHook.PlayerRoleAssignedOnElimination`. Navigates to `Finalize`
     *   **Finalize:** The `Finalize` sub-phase transitions to `GamePhase.Day`.
     *   **Victory Check:** `GameFlowManager` checks for victory conditions.
 
-4.  **Day Phase (`GamePhase.Day`):**
+5.  **Day Phase (`GamePhase.Day`):**
     *   The `PhaseManager` for `Day` starts at `DaySubPhases.Debate`.
     *   **Debate:** Issues an instruction for discussion, then transitions to `DetermineVoteType`.
     *   **Determine Vote Type:** Determines what's the appropriate vote type, checking for active events or modifiers (defaults to `NormalVoting` sub-phase).

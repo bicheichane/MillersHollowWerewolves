@@ -1,5 +1,6 @@
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.StateModels.Core;
+using Werewolves.StateModels.Models;
 
 namespace Werewolves.GameLogic.Models.StateMachine;
 

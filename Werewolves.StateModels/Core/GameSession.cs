@@ -42,12 +42,12 @@ public interface IHookSubPhaseKey{}
 /// </summary>
 internal class GameSession : IGameSession
 {
-	public Guid Id { get; } = Guid.NewGuid();
+	public Guid Id => _gameSessionKernel.Id;
 	public IEnumerable<GameLogEntryBase> GameHistoryLog => _gameSessionKernel.GetAllLogEntries();
 
-	internal GameSession(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
+	internal GameSession(Guid id, ModeratorInstruction initialInstruction, List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
 	{
-		_gameSessionKernel = new GameSessionKernel(playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
+		_gameSessionKernel = new GameSessionKernel(id, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
 	}
 
 	#region Private Fields

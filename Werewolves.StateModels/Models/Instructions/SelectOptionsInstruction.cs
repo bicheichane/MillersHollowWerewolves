@@ -1,7 +1,6 @@
 using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.Instructions;
+namespace Werewolves.StateModels.Models.Instructions;
 
 /// <summary>
 /// Instruction that requires the moderator to select from a list of text options.

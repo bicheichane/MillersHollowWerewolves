@@ -1,8 +1,7 @@
 using System.Collections.Immutable;
 using Werewolves.GameLogic.Interfaces;
-using Werewolves.GameLogic.Models;
-using Werewolves.GameLogic.Models.Instructions;
 using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.StateModels.Models.Instructions;
 using Werewolves.GameLogic.Models.StateMachine;
 using Werewolves.GameLogic.Roles.MainRoles;
 using Werewolves.StateModels.Core;
@@ -30,6 +29,30 @@ internal static class GameFlowManager
     private class GameFlowManagerKey : IGameFlowManagerKey;
 
     private static readonly GameFlowManagerKey Key = new();
+
+    #region Static Factory Methods
+
+    /// <summary>
+    /// Gets the initial instruction to bootstrap a new game session.
+    /// This is a pure function that generates the startup instruction without creating any game state.
+    /// </summary>
+    /// <param name="rolesInPlay">The roles that will be used in this game.</param>
+    /// <param name="gameId">The unique identifier for the game session.</param>
+    /// <returns>The initial instruction prompting the moderator to confirm game start.</returns>
+    public static StartGameConfirmationInstruction GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)
+    {
+        // Validate inputs
+        ArgumentNullException.ThrowIfNull(rolesInPlay);
+        if (!rolesInPlay.Any())
+        {
+            throw new ArgumentException("Role list cannot be empty", nameof(rolesInPlay));
+        }
+
+        return new StartGameConfirmationInstruction(gameId);
+    }
+
+    #endregion
+
     #region Static Flow Definitions
     internal static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
