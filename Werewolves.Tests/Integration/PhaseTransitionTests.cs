@@ -15,25 +15,17 @@ public class PhaseTransitionTests
     #region PT-001 to PT-004: Valid Transitions
 
     /// <summary>
-    /// PT-001: Setup.Confirm to Night.Start is a valid transition.
+    /// PT-001: New game starts in Night phase.
     /// </summary>
     [Fact]
-    public void SetupConfirm_ToNightStart_IsValidTransition()
+    public void NewGame_StartsInNightPhase()
     {
-        // Arrange
+        // Arrange & Act
         var builder = GameTestBuilder.Create()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
-        // Verify we start in Setup phase
-        var initialState = builder.GetGameState();
-        initialState!.GetCurrentPhase().Should().Be(GamePhase.Setup);
-
-        // Act
-        var result = builder.ConfirmGameStart();
-
         // Assert
-        result.IsSuccess.Should().BeTrue();
         var gameState = builder.GetGameState();
         gameState!.GetCurrentPhase().Should().Be(GamePhase.Night);
     }
@@ -112,10 +104,10 @@ public class PhaseTransitionTests
     #region Additional Phase Transition Tests
 
     /// <summary>
-    /// Verify game starts in Setup phase with Confirm sub-phase.
+    /// Verify game starts in Night phase.
     /// </summary>
     [Fact]
-    public void NewGame_StartsInSetupPhase()
+    public void NewGame_HasNightAsInitialPhase()
     {
         // Arrange & Act
         var builder = GameTestBuilder.Create()
@@ -124,7 +116,7 @@ public class PhaseTransitionTests
 
         // Assert
         var gameState = builder.GetGameState();
-        gameState!.GetCurrentPhase().Should().Be(GamePhase.Setup);
+        gameState!.GetCurrentPhase().Should().Be(GamePhase.Night);
     }
 
     /// <summary>

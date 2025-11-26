@@ -144,16 +144,6 @@ internal static class GameFlowManager
 
     internal static readonly Dictionary<GamePhase, IPhaseDefinition> PhaseDefinitions = new()
     {
-        [GamePhase.Setup] = new PhaseManager<SetupSubPhases>(
-        entrySubPhase: SetupSubPhases.Confirm,
-        subPhaseList: [
-            new(subPhase: SetupSubPhases.Confirm, //Handler = HandleSetupConfirmation,
-                subPhaseStages: 
-                    [NavigationEndStage(SetupSubPhaseStage.ConfirmSetup, HandleSetupPhase)], 
-                possibleNextMainPhaseTransitions: 
-                    [new(GamePhase.Night)])
-        ]),
-
         [GamePhase.Night] = new PhaseManager<NightSubPhases>(
         entrySubPhase: NightSubPhases.Start,
         subPhaseList: [
@@ -363,21 +353,6 @@ internal static class GameFlowManager
 
 	#endregion
 
-	#region Setup Phase Handlers
-
-	private static MajorNavigationPhaseHandlerResult HandleSetupPhase(GameSession session, ModeratorResponse input)
-    {
-        var nightStartInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.NightStartsPrompt,
-            privateInstruction: GameStrings.ConfirmNightStarted
-        );
-        // Transition happens, specific instruction provided.
-
-        return TransitionPhase(nightStartInstruction, GamePhase.Night);
-    }
-
-	#endregion
-
 	#region Night Phase Handler Methods
 
 	/// <summary>
@@ -386,7 +361,8 @@ internal static class GameFlowManager
 	private static ModeratorInstruction HandleNightStart(GameSession session, ModeratorResponse input)
     {
         var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Village goes to sleep. Night actions begin."
+            publicAnnouncement: GameStrings.NightStartsPrompt,
+            privateInstruction: GameStrings.ConfirmNightStarted
         );
 
         return instruction;

@@ -7,7 +7,7 @@ using Xunit;
 namespace Werewolves.Tests.Integration;
 
 /// <summary>
-/// Tests for game lifecycle: creation, setup confirmation, and phase transitions.
+/// Tests for game lifecycle: creation, game start confirmation, and phase transitions.
 /// Test IDs: GL-001 through GL-020
 /// </summary>
 public class GameLifecycleTests
@@ -92,13 +92,13 @@ public class GameLifecycleTests
 
     #endregion
 
-    #region GL-010 to GL-011: Setup Confirmation
+    #region GL-010 to GL-011: Game Start Confirmation
 
     /// <summary>
-    /// GL-010: Confirming setup transitions to Night phase.
+    /// GL-010: Confirming game start triggers Night phase execution.
     /// </summary>
     [Fact]
-    public void ConfirmSetup_TransitionsToNightPhase()
+    public void ConfirmGameStart_TransitionsToNightPhase()
     {
         // Arrange
         var builder = GameTestBuilder.Create()
@@ -115,10 +115,10 @@ public class GameLifecycleTests
     }
 
     /// <summary>
-    /// GL-011: After setup confirmation, TurnNumber is 1.
+    /// GL-011: After game start confirmation, TurnNumber is 1.
     /// </summary>
     [Fact]
-    public void ConfirmSetup_SetsCorrectTurnNumber()
+    public void ConfirmGameStart_SetsCorrectTurnNumber()
     {
         // Arrange
         var builder = GameTestBuilder.Create()

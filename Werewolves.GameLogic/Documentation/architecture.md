@@ -27,6 +27,7 @@ The system distinguishes between two types of state:
     *   **Mechanism:** Changes occur **exclusively** via `GameLogEntryBase` (e.g., `AssignRoleLogEntry`, `VictoryConditionMetLogEntry`).
     *   **Purpose:** Represents the permanent historical record of the game. If the application restarts, the *consequences* of previous actions are preserved.
     *   **Replayability:** The `GameHistoryLog` is sufficient to reconstruct the **Game Status**, but not the **Execution Pointer**. Replaying the log restores the game to the start of the current Main Phase.
+    *   **Initial State:** Games begin in the Night phase. There is no Setup phase; the `StartGameConfirmationInstruction` directly triggers Night phase execution when confirmed.
 
 2.  **Transient Execution State (In-Memory):**
     *   **Scope:** `_phaseStateCache` (SubPhase, ActiveStage, ListenerState), `_pendingInstruction`.
@@ -408,7 +409,7 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 ## Enums
 
 ### Core Game Flow Enums
-*   `GamePhase`: `Setup`, `Night`, `Dawn`, `Day`.
+*   `GamePhase`: `Night`, `Dawn`, `Day`.
 *   `GameHook`: `NightMainActionLoop`, `PlayerRoleAssignedOnElimination`, `OnVoteConcluded`, `DawnMainActionLoop`.
 *   `PlayerHealth`: `Alive`, `Dead`. 
 *   `ExpectedInputType`: `PlayerSelection`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `AssignPlayerRoles`, `OptionSelection`, `Confirmation`.
@@ -438,7 +439,6 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 *   `ImmediateFeedbackNightRoleState`: `AwaitingAwakeConfirmation`, `AwaitingTargetSelection`, `AwaitingModeratorFeedback`, `AwaitingSleepConfirmation`, `Asleep`. Extended state machine for roles requiring immediate moderator feedback during target selection.
 
 ### Sub-Phase Enums
-*   `SetupSubPhases`: `Confirm`.
 *   `NightSubPhases`: `Start`.
 *   `DawnSubPhases`: `CalculateVictims`, `AnnounceVictims`, `ProcessRoleReveals`, `Finalize`.
 *   `DaySubPhases`: `Debate`, `DetermineVoteType`, `NormalVoting`, `AccusationVoting`, `FriendVoting`, `HandleNonTieVote`, `ProcessVoteOutcome`, `ProcessVoteDeathLoop`, `Finalize`.
@@ -452,14 +452,9 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
     *   `GameService` calls `GameFlowManager.GetInitialInstruction(rolesInPlay, gameId)` to obtain the startup instruction.
     *   `GameService` constructs `GameSession` with the ID and instruction, ensuring atomic validity.
     *   The initial instruction (`StartGameConfirmationInstruction`) is returned to the caller.
+    *   When the moderator confirms this instruction, the game begins directly in the Night phase.
 
-2.  **Setup Phase (`GamePhase.Setup`):**
-    *   The moderator confirms the initial instruction, triggering `GameService.ProcessInstruction`.
-    *   The `PhaseManager` for `Setup` executes its single `SubPhaseManager`.
-    *   Its `EndNavigationSubPhaseStage` runs, processing the moderator's confirmation.
-    *   If confirmed, it returns a `MainPhaseHandlerResult` to transition to `GamePhase.Night`.
-
-3.  **Night Phase (`GamePhase.Night`):**
+2.  **Night Phase (`GamePhase.Night`):**
     *   The `PhaseManager` for `Night` is activated. It begins executing the `NightSubPhases.Start` sub-phase.
     *   The `SubPhaseManager` for `Start` runs its sequence of atomic stages:
         1.  A `LogicSubPhaseStage` issues the "Village goes to sleep" instruction and increments the turn number.
@@ -468,14 +463,14 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
         4.  Once all listeners complete, the `HookSubPhaseStage`'s `onComplete` delegate runs.
         5.  The final `EndNavigationSubPhaseStage` executes, returning a `MainPhaseHandlerResult` to transition to `GamePhase.Dawn`.
 
-4.  **Dawn Phase (`GamePhase.Dawn`):**
+3.  **Dawn Phase (`GamePhase.Dawn`):**
     *   The `PhaseManager` for `Dawn` is activated, starting at `DawnSubPhases.CalculateVictims`.
     *   **Calculate Victims:** The `NightInteractionResolver` is invoked to process all night actions, resolving conflicts (Witch vs Defender vs Infection) and applying eliminations/status effects. Navigates either to `AnnounceVictims` or `Finalize`, depending on whether or not there were any night deaths.
     *   **Announce Victims:** If victims exist, the `AnnounceVictims` sub-phase requests role assignments for the victims, and fires `GameHook.PlayerRoleAssignedOnElimination`. Navigates to `Finalize`
     *   **Finalize:** The `Finalize` sub-phase transitions to `GamePhase.Day`.
     *   **Victory Check:** `GameFlowManager` checks for victory conditions.
 
-5.  **Day Phase (`GamePhase.Day`):**
+4.  **Day Phase (`GamePhase.Day`):**
     *   The `PhaseManager` for `Day` starts at `DaySubPhases.Debate`.
     *   **Debate:** Issues an instruction for discussion, then transitions to `DetermineVoteType`.
     *   **Determine Vote Type:** Determines what's the appropriate vote type, checking for active events or modifiers (defaults to `NormalVoting` sub-phase).

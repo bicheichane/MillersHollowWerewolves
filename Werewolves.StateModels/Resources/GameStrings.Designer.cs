@@ -106,6 +106,15 @@ namespace Werewolves.StateModels.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Game ready. Proceed to Night 1?.
+        /// </summary>
+        public static string GameStartPrompt {
+            get {
+                return ResourceManager.GetString("GameStartPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The following players were eliminated during the night: \n{0}.
         /// </summary>
         public static string MultipleVictimEliminatedAnnounce {
@@ -219,15 +228,6 @@ namespace Werewolves.StateModels.Resources {
         public static string SeerRoleName {
             get {
                 return ResourceManager.GetString("SeerRoleName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Setup complete. Proceed to Night 1?.
-        /// </summary>
-        public static string SetupCompletePrompt {
-            get {
-                return ResourceManager.GetString("SetupCompletePrompt", resourceCulture);
             }
         }
         

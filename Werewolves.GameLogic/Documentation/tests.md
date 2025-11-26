@@ -43,14 +43,14 @@ Tests covering the complete game creation and lifecycle flow.
   - When: Game is started and state retrieved
   - Then: Session contains exactly 5 players in correct seating order
 
-### 1.2 Setup Confirmation
-- **GL-010**: `ConfirmSetup_TransitionsToNightPhase`
+### 1.2 Game Start Confirmation
+- **GL-010**: `ConfirmGameStart_TransitionsToNightPhase`
   - Given: Game started, pending `StartGameConfirmationInstruction`
-  - When: Moderator confirms (true)
-  - Then: Phase transitions to `Night`, sub-phase is `Start`
+  - When: Moderator confirms and triggers Night phase execution
+  - Then: Night phase begins, sub-phase is `Start`
 
-- **GL-011**: `ConfirmSetup_SetsCorrectTurnNumber`
-  - Given: Game started and confirmed
+- **GL-011**: `ConfirmGameStart_SetsCorrectTurnNumber`
+  - Given: Game start confirmed
   - When: Night phase begins
   - Then: `TurnNumber` is 1
 
@@ -67,10 +67,10 @@ Tests covering the complete game creation and lifecycle flow.
 Tests validating the state machine transitions and cache behavior.
 
 ### 2.1 Valid Transitions
-- **PT-001**: `SetupConfirm_ToNightStart_IsValidTransition`
-  - Given: Game in `Setup.Confirm`
-  - When: Confirmation processed
-  - Then: Transitions to `Night.Start` without error
+- **PT-001**: `NewGame_StartsInNightPhase`
+  - Given: Game created and start confirmed
+  - When: Game begins
+  - Then: Initial phase is `Night.Start`
 
 - **PT-002**: `NightStart_ToDawnCalculateVictims_IsValidTransition`
   - Given: Game in `Night.Start`, all actions complete
