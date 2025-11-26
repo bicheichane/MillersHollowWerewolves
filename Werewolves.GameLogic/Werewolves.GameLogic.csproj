@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Werewolves.StateModels\Werewolves.StateModels.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Roles\SecondaryRoles\" />
+  </ItemGroup>
+
+</Project>

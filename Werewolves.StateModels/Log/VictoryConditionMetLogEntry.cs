@@ -1,0 +1,23 @@
+using Werewolves.StateModels.Core;
+using Werewolves.StateModels.Enums;
+using Werewolves.StateModels.Resources;
+
+namespace Werewolves.StateModels.Log;
+
+/// <summary>
+/// Logs when a victory condition is met.
+/// </summary>
+public record VictoryConditionMetLogEntry : GameLogEntryBase
+{
+    public required Team WinningTeam { get; init; }
+    public string ConditionDescription { get; init; } = GameStrings.DefaultLogValue;
+
+    /// <summary>
+    /// Applies the victory condition to the game state.
+    /// </summary>
+    protected override GameLogEntryBase InnerApply(ISessionMutator mutator)
+    {
+		//logging only, no state change
+		return this;
+    }
+}
