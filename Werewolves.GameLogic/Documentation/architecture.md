@@ -106,13 +106,38 @@ A lightweight, stateless wrapper that implements `IGameSession` and delegates al
     *   `GetPlayerState(Guid id)` (IPlayerState): Retrieves a player's state by ID.
     *   `GameHistoryLog` (IEnumerable<GameLogEntryBase>): The event log.
     *   `RoleInPlayCount(MainRoleType type)` (int): Returns count of a specific role in play.
-*   **Internal API (GameLogic):** Mutation gatekeeper for the rules engine. Domain-specific methods create and dispatch log entries internally:
-    *   `EliminatePlayer(Guid playerId, EliminationReason reason)`: Eliminates a player by creating a `PlayerEliminatedLogEntry`.
-    *   `AssignRole(Guid playerId, MainRoleType role)`: Assigns a role by creating an `AssignRoleLogEntry`.
-    *   `ApplyStatusEffect(StatusEffectTypes effectType, Guid playerId)`: Applies a status effect by creating a `StatusEffectLogEntry`.
-    *   `TransitionMainPhase(GamePhase newPhase)`: Transitions main phase by creating a `PhaseTransitionLogEntry`.
-    *   `SetPendingModeratorInstruction(IGameFlowManagerKey key, ...)`: Updates transient instruction state.
-    *   `TransitionSubPhaseCache(IPhaseManagerKey key, ...)`: Updates transient sub-phase state.
+*   **Internal API (GameLogic):** Mutation gatekeeper for the rules engine.
+    *   **State Mutation Methods** (create and dispatch log entries):
+        *   `EliminatePlayer(Guid playerId, EliminationReason reason)`: Eliminates a player by creating a `PlayerEliminatedLogEntry`.
+        *   `AssignRole(Guid playerId, MainRoleType role)`: Assigns a role to a single player by creating an `AssignRoleLogEntry`.
+        *   `AssignRole(List<Guid> playerIds, MainRoleType role)`: Assigns the same role to multiple players by creating an `AssignRoleLogEntry`.
+        *   `ApplyStatusEffect(StatusEffectTypes effectType, Guid playerId)`: Applies a status effect by creating a `StatusEffectLogEntry`.
+        *   `TransitionMainPhase(GamePhase newPhase)`: Transitions main phase by creating a `PhaseTransitionLogEntry`.
+        *   `PerformNightActionNoTarget(NightActionType type)`: Records a night action with no target.
+        *   `PerformNightAction(NightActionType type, Guid targetId)`: Records a night action targeting a single player.
+        *   `PerformNightAction(NightActionType type, List<Guid> targetIds)`: Records a night action targeting multiple players.
+        *   `PerformDayVote(Guid? reportedOutcomePlayerId)`: Records a vote outcome by creating a `VoteOutcomeReportedLogEntry`. Pass `null` for a tie.
+        *   `VictoryConditionMet(Team winningTeam, string description)`: Records victory by creating a `VictoryConditionMetLogEntry`.
+    *   **Cache Read Methods** (query transient execution state):
+        *   `PendingModeratorInstruction` (ModeratorInstruction?): Returns the current pending instruction.
+        *   `GetSubPhase<T>()` (T?): Returns the current sub-phase as a typed enum.
+        *   `GetCurrentListener()` (ListenerIdentifier?): Returns the currently active/paused listener.
+        *   `GetCurrentListenerState<T>(ListenerIdentifier listener)` (T?): Returns the listener's internal state machine value as a typed enum.
+        *   `TryGetActiveGameHook(out GameHook hook)` (bool): Attempts to parse the active sub-phase stage as a `GameHook`.
+    *   **Cache Write Methods** (require specific Keys for access):
+        *   `SetPendingModeratorInstruction(IGameFlowManagerKey key, ModeratorInstruction instruction)`: Updates transient instruction state.
+        *   `TransitionSubPhaseCache(IPhaseManagerKey key, Enum subPhase)`: Updates transient sub-phase state.
+        *   `TryEnterSubPhaseStage(ISubPhaseManagerKey key, string subPhaseStageId)` (bool): Attempts to enter a sub-phase stage atomically. Returns `false` if already in a different stage or if the stage has already been completed.
+        *   `CompleteSubPhaseStageCache(IPhaseManagerKey key)`: Marks the current sub-phase stage as completed.
+        *   `TransitionListenerStateCache(IHookSubPhaseKey key, ListenerIdentifier listener, string state)`: Updates listener and its state.
+    *   **Query Methods** (read derived state from log):
+        *   `GetPlayersTargetedLastNight(NightActionType actionType, NumberRangeConstraint countConstraint, NumberRangeConstraint? turnsAgoConstraint)` (IEnumerable<IPlayer>): Returns players targeted by a specific night action type.
+        *   `WasDayAbilityTriggeredThisTurn(DayPowerType powerType)` (bool): Checks if a specific day power was used this turn.
+        *   `HasPlayerBeenVotedForPreviously(Guid playerId)` (bool): Checks if a player was the vote outcome target in any previous turn.
+        *   `ShouldVoteRepeat()` (bool): Determines if the Stuttering Judge's extra vote should trigger a re-vote.
+        *   `GetPlayersEliminatedThisDawn()` (IEnumerable<IPlayer>): Returns players eliminated during the current turn's Dawn phase.
+        *   `GetPlayerEliminatedThisVote()` (IEnumerable<Guid>): Returns player IDs eliminated during the current turn's Day phase.
+        *   `GetUnassignedRoles()` (List<MainRoleType>): Returns roles from `RolesInPlay` that have not yet been assigned to any player.
 
 ## `NightInteractionResolver` (Rule Engine)
 
