@@ -49,7 +49,7 @@ public class GameLifecycleTests : DiagnosticTestBase
         var emptyRoles = new List<MainRoleType>();
 
         // Act
-        var act = () => gameService.StartNewGame(playerNames, emptyRoles);
+        var act = () => gameService.StartNewGameWithObserver(playerNames, emptyRoles);
 
         // Assert
         act.Should().Throw<ArgumentException>();

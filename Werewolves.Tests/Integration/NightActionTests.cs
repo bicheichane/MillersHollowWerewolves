@@ -352,15 +352,100 @@ public class NightActionTests : DiagnosticTestBase
     /// <summary>
     /// NA-021: Seer killed Night 1 cannot act on Night 2.
     /// </summary>
-    [Fact(Skip = "Requires full Night→Dawn→Day→Night cycle to test")]
+    [Fact]
     public void Seer_KilledNight1_CannotActNight2()
     {
-        // This test requires:
-        // 1. Complete Night 1 where werewolf kills Seer
-        // 2. Process Dawn (Seer eliminated)
-        // 3. Complete Day (vote someone out or no vote)
-        // 4. Start Night 2
-        // 5. Verify Seer is skipped
+        // Arrange: 5 players (1 WW, 1 Seer, 3 Villagers) to ensure game continues after deaths
+        var builder = CreateBuilder()
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
+        builder.StartGame();
+        builder.ConfirmGameStart();
+
+        var gameState = builder.GetGameState()!;
+        var players = gameState.GetPlayers().ToList();
+        var werewolfPlayer = players[0];   // WW
+        var seerPlayer = players[1];       // Seer
+        var villager1 = players[2];        // Villager (will be lynched Day 1)
+        var villager2 = players[3];        // Villager
+        var villager3 = players[4];        // Villager
+
+        // === Night 1: Werewolf kills Seer, Seer acts normally ===
+        builder.CompleteNightPhase(
+            werewolfIds: [werewolfPlayer.Id],
+            victimId: seerPlayer.Id,        // WW targets Seer
+            seerId: seerPlayer.Id,
+            seerTargetId: werewolfPlayer.Id // Seer checks WW before dying
+        );
+
+        // Verify we're in Dawn
+        gameState.GetCurrentPhase().Should().Be(GamePhase.Dawn);
+
+        // === Dawn 1: Seer is eliminated ===
+        builder.CompleteDawnPhase();
+
+        // Verify Seer is now dead
+        var updatedSeer = gameState.GetPlayer(seerPlayer.Id);
+        updatedSeer.State.Health.Should().Be(PlayerHealth.Dead);
+
+        // === Day 1: Lynch a villager (to continue game) ===
+        builder.CompleteDayPhaseWithLynch(villager1.Id);
+
+        // Verify we're back to Night phase (Night 2)
+        gameState.GetCurrentPhase().Should().Be(GamePhase.Night);
+        gameState.TurnNumber.Should().Be(2);
+
+        // === Night 2: Verify Seer is skipped ===
+        // Confirm night starts
+        ConfirmNightStart(builder);
+
+        // On Night 2, werewolves are already identified
+        // First comes the wake confirmation, then target selection
+        // The flow might have intermediate confirmations, so let's handle them
+        var currentInstruction = builder.GetCurrentInstruction();
+        
+        // Process confirmations until we get to target selection or something else
+        while (currentInstruction is ConfirmationInstruction confirmInstr)
+        {
+            builder.Process(confirmInstr.CreateResponse(true));
+            currentInstruction = builder.GetCurrentInstruction();
+            
+            // Safety check: we should hit target selection within a few iterations
+            if (gameState.GetCurrentPhase() != GamePhase.Night)
+            {
+                break; // Transitioned out of night
+            }
+        }
+
+        // Now we should have the victim selection
+        var victimInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(
+            currentInstruction,
+            "Werewolf victim selection (Night 2)");
+        builder.Process(victimInstruction.CreateResponse([villager2.Id]));
+
+        // Confirm werewolf sleep
+        var sleepInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Werewolf sleep confirmation");
+        builder.Process(sleepInstruction.CreateResponse(true));
+
+        // After werewolf completes, the next instruction should NOT be Seer
+        // It should be night end confirmation or transition to Dawn
+        var nextInstruction = builder.GetCurrentInstruction();
+        
+        // The Seer should be skipped - the next instruction should be a confirmation
+        // for night ending, not a SelectPlayersInstruction for Seer
+        nextInstruction.Should().BeOfType<ConfirmationInstruction>(
+            "Seer is dead and should be skipped - should go to night end");
+
+        // Count Seer actions in the log - should only be 1 from Night 1
+        var seerActions = gameState.GameHistoryLog
+            .OfType<NightActionLogEntry>()
+            .Where(e => e.ActionType == NightActionType.SeerCheck)
+            .ToList();
+
+        seerActions.Should().HaveCount(1, "Seer should only have acted on Night 1 before dying");
+
+        MarkTestCompleted();
     }
 
     /// <summary>

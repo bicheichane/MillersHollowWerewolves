@@ -8,7 +8,7 @@ using Werewolves.StateModels.Models;
 /// Optional observer for state change diagnostics.
 /// Used by tests to capture intermediate state mutations.
 /// </summary>
-public interface IStateChangeObserver
+internal interface IStateChangeObserver
 {
     void OnMainPhaseChanged(GamePhase newPhase);
     void OnSubPhaseChanged(string? newSubPhase);

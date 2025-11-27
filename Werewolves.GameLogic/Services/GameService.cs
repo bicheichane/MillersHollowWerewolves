@@ -26,6 +26,26 @@ public class GameService
     {
     }
 
+    public StartGameConfirmationInstruction StartNewGame(
+        List<string> playerNamesInOrder, 
+        List<MainRoleType> rolesInPlay, 
+        List<string>? eventCardIdsInDeck = null) => StartNewGameCore(
+            playerNamesInOrder, 
+            rolesInPlay, 
+            eventCardIdsInDeck, 
+            stateChangeObserver: null);
+
+    // Overload to accept state change observer for test suite diagnostics
+    internal StartGameConfirmationInstruction StartNewGameWithObserver(
+        List<string> playerNamesInOrder, 
+        List<MainRoleType> rolesInPlay, 
+        List<string>? eventCardIdsInDeck = null,
+        IStateChangeObserver? stateChangeObserver = null) => StartNewGameCore(
+            playerNamesInOrder, 
+            rolesInPlay, 
+            eventCardIdsInDeck, 
+            stateChangeObserver);            
+
     /// <summary>
     /// Starts a new game session.
     /// </summary>
@@ -34,7 +54,7 @@ public class GameService
     /// <param name="eventCardIdsInDeck">Optional list of event card IDs included.</param>
     /// <param name="stateChangeObserver">Optional observer for state change diagnostics.</param>
     /// <returns>The unique ID for the newly created game session.</returns>
-    public StartGameConfirmationInstruction StartNewGame(
+    private StartGameConfirmationInstruction StartNewGameCore(
         List<string> playerNamesInOrder, 
         List<MainRoleType> rolesInPlay, 
         List<string>? eventCardIdsInDeck = null,

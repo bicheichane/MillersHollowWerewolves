@@ -71,6 +71,7 @@ internal class GameSession : IGameSession
 
 	internal T? GetSubPhase<T>() where T : struct, Enum => _gameSessionKernel.PhaseStateCache.GetSubPhase<T>();
     internal ListenerIdentifier? GetCurrentListener() => _gameSessionKernel.PhaseStateCache.GetCurrentListener();
+    internal string? GetActiveSubPhaseStage() => _gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage();
 
     internal T? GetCurrentListenerState<T>(ListenerIdentifier listener) where T : struct, Enum =>
         _gameSessionKernel.PhaseStateCache.GetCurrentListenerState<T>(listener);

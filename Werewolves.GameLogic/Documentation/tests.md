@@ -98,12 +98,6 @@ Tests validating the state machine transitions and cache behavior.
   - When: Transition to `Day.ProcessVoteOutcome`
   - Then: Previous stage data is cleared
 
-### 2.3 Invalid Transitions
-- **PT-020**: `InvalidPhaseTransition_ThrowsException`
-  - Given: Game in `Night.Start`
-  - When: Attempting direct transition to `Day.Debate` (skipping Dawn)
-  - Then: Throws `InvalidOperationException`
-
 ---
 
 ## 3. Night Action Tests
@@ -170,15 +164,10 @@ Tests for victim calculation and elimination processing.
   - When: Dawn resolution occurs
   - Then: Victim is eliminated with `EliminationReason.WerewolfAttack`
 
-- **DR-002**: `NoWerewolfVictim_NoElimination`
-  - Given: Werewolves made no selection (edge case)
-  - When: Dawn resolution occurs
-  - Then: No elimination, game proceeds to Day
-
-- **DR-003**: `MultipleWerewolves_SameVictim_SingleElimination`
-  - Given: 2 werewolves, both selected same victim
-  - When: Dawn resolution occurs
-  - Then: Victim eliminated once (not duplicated)
+- **DR-002**: `NoWerewolfVictim_NoElimination_Impossible`
+  - Given: Valid victims exist (i.e. villagers)
+  - When: Werewolves wake up
+  - Then: Not possible to have no victim selected
 
 ### 4.2 Role Reveal Flow
 - **DR-010**: `VictimEliminated_RoleRevealRequested`
