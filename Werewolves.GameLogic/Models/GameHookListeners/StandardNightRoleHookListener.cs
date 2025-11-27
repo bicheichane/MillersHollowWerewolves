@@ -18,7 +18,7 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 	[
 		CreateStage(GameHook.NightMainActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
 		CreateStage(GameHook.NightMainActionLoop, WokenUpStateEnum, AwaitingTargetSelectionEnum, HandleNightPowerUse_AndId),
-		CreateStage(GameHook.NightMainActionLoop, AwaitingTargetSelectionEnum, AsleepStateEnum, HandleParseNightPowerConsequences),
+		CreateStage(GameHook.NightMainActionLoop, AwaitingTargetSelectionEnum, ReadyToSleepStateEnum, HandleParseNightPowerConsequences),
 		CreateStage(GameHook.NightMainActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
 		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult.Complete(AsleepStateEnum)),
 	];
