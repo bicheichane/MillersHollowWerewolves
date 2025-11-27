@@ -186,12 +186,14 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
 		// Dispatch to each listener in sequence
         foreach (var listenerId in listeners)
         {
-            if (!GameFlowManager.ListenerImplementations.TryGetValue(listenerId, out var listener))
+            // Get or create listener instance for this session (factory pattern for test isolation)
+            if (!GameFlowManager.ListenerFactories.TryGetValue(listenerId, out var factory))
             {
-				//throw new InvalidOperationException($"Listener implementation not found for listener ID: {listenerId}");
+				//throw new InvalidOperationException($"Listener factory not found for listener ID: {listenerId}");
 				// TODO: Skip unimplemented listeners for now
                 continue;
             }
+            var listener = session.GetOrCreateListener(listenerId, factory);
 
             // Check if we have a currently paused listener
             var currentListener = session.GetCurrentListener();

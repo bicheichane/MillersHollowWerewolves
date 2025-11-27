@@ -12,6 +12,14 @@ namespace Werewolves.StateModels.Core
 		private readonly List<MainRoleType> _rolesInPlay = new();
 		private readonly IStateChangeObserver? _stateChangeObserver;
 
+		/// <summary>
+		/// Session-scoped cache of listener instances. Created on-demand via factories, lives for the session lifetime.
+		/// This ensures each game session has fresh listener instances with clean state machines.
+		/// </summary>
+		private readonly Dictionary<ListenerIdentifier, object> _listenerInstanceCache = new();
+
+		internal Dictionary<ListenerIdentifier, object> ListenerInstanceCache => _listenerInstanceCache;
+
 		// Private canonical state - the single source of truth
 		private readonly GameLogManager _gameHistoryLog = new();
 		// Transient execution state

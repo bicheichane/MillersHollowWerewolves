@@ -133,6 +133,22 @@ internal class GameSession : IGameSession
 	internal void ClearCurrentListenerCache(IHookSubPhaseKey key) =>
 		_gameSessionKernel.ClearCurrentListener();
 
+	/// <summary>
+	/// Gets or creates a listener instance for this session. Listeners are cached per-session
+	/// to ensure state machine isolation between games while maintaining consistency within a game.
+	/// </summary>
+	internal T GetOrCreateListener<T>(ListenerIdentifier id, Func<T> factory) where T : class
+	{
+		if (_gameSessionKernel.ListenerInstanceCache.TryGetValue(id, out var existing))
+		{
+			return (T)existing;
+		}
+
+		var instance = factory();
+		_gameSessionKernel.ListenerInstanceCache[id] = instance;
+		return instance;
+	}
+
     #endregion
 
 

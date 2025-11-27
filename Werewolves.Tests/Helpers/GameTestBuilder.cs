@@ -269,6 +269,7 @@ public class GameTestBuilder
 
     /// <summary>
     /// Completes a full night phase with werewolf and optional Seer actions.
+    /// This includes confirming the night-end instruction that transitions to Dawn.
     /// </summary>
     /// <param name="werewolfIds">The IDs of all werewolf players.</param>
     /// <param name="victimId">The ID of the werewolf victim.</param>
@@ -294,6 +295,13 @@ public class GameTestBuilder
             result = CompleteSeerNightAction(seerId.Value, seerTargetId.Value);
         }
 
+        // Confirm the night-end instruction ("Night actions complete. Village wakes up.")
+        // This transitions the game to Dawn phase proper
+        var nightEndInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
+            result,
+            "Night end confirmation");
+        result = Process(nightEndInstruction.CreateResponse(true));
+
         return result;
     }
 
@@ -305,8 +313,9 @@ public class GameTestBuilder
     /// Completes the dawn phase flow: CalculateVictims → AnnounceVictims (with role assignments) → DawnMainActionLoop → Finalize → Day.
     /// Handles variable number of victims (0 to many) by processing instructions until Day phase is reached.
     /// </summary>
+    /// <param name="roleAssignments">Optional: Specific role assignments for eliminated players. If null, assigns SimpleVillager to all.</param>
     /// <returns>The result of the final instruction that transitions to Day phase.</returns>
-    public ProcessResult CompleteDawnPhase()
+    public ProcessResult CompleteDawnPhase(Dictionary<Guid, MainRoleType>? roleAssignments = null)
     {
         EnsureGameStarted();
 
@@ -328,7 +337,7 @@ public class GameTestBuilder
             // Handle different instruction types during dawn
             result = instruction switch
             {
-                AssignRolesInstruction assignRoles => HandleAssignRolesInstruction(assignRoles),
+                AssignRolesInstruction assignRoles => HandleAssignRolesInstruction(assignRoles, roleAssignments),
                 ConfirmationInstruction confirmation => Process(confirmation.CreateResponse(true)),
                 SelectPlayersInstruction selectPlayers => throw new InvalidOperationException(
                     $"Unexpected SelectPlayersInstruction during dawn phase. " +
@@ -347,19 +356,26 @@ public class GameTestBuilder
     }
 
     /// <summary>
-    /// Handles AssignRolesInstruction by assigning SimpleVillager to all players.
-    /// This is appropriate for test scenarios where the actual role doesn't matter for the test logic.
+    /// Handles AssignRolesInstruction by using provided assignments or defaulting to SimpleVillager.
     /// </summary>
-    private ProcessResult HandleAssignRolesInstruction(AssignRolesInstruction instruction)
+    /// <param name="instruction">The role assignment instruction.</param>
+    /// <param name="overrideAssignments">Optional specific assignments. Missing players get SimpleVillager.</param>
+    private ProcessResult HandleAssignRolesInstruction(AssignRolesInstruction instruction, Dictionary<Guid, MainRoleType>? overrideAssignments = null)
     {
         var assignments = new Dictionary<Guid, MainRoleType>();
         
         foreach (var playerId in instruction.PlayersForAssignment)
         {
-            // Use the first available role from the list (typically matches the actual role)
-            // For simple test scenarios, SimpleVillager is often available
-            var roleToAssign = instruction.RolesForAssignment.FirstOrDefault(MainRoleType.SimpleVillager);
-            assignments[playerId] = roleToAssign;
+            if (overrideAssignments != null && overrideAssignments.TryGetValue(playerId, out var specifiedRole))
+            {
+                assignments[playerId] = specifiedRole;
+            }
+            else
+            {
+                // Default to first available role or SimpleVillager
+                var roleToAssign = instruction.RolesForAssignment.FirstOrDefault(MainRoleType.SimpleVillager);
+                assignments[playerId] = roleToAssign;
+            }
         }
 
         var response = instruction.CreateResponse(assignments);

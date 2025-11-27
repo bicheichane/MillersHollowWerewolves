@@ -111,12 +111,16 @@ internal static class GameFlowManager
         ],
 	};
 
-    internal static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
+    /// <summary>
+    /// Factory functions for creating listener instances. Each game session gets its own fresh instances.
+    /// This ensures listener state machines are isolated between games (fixing test isolation bugs).
+    /// </summary>
+    internal static readonly Dictionary<ListenerIdentifier, Func<IGameHookListener>> ListenerFactories = new()
     {
-        // Define listener implementations here
-        [Listener(SimpleWerewolf)] = new SimpleWerewolfRole(),
-        [Listener(Seer)] = new SeerRole(),
-        [Listener(SimpleVillager)] = new SimpleVillagerRole()
+        // Define listener factories here - each invocation creates a fresh instance
+        [Listener(SimpleWerewolf)] = () => new SimpleWerewolfRole(),
+        [Listener(Seer)] = () => new SeerRole(),
+        [Listener(SimpleVillager)] = () => new SimpleVillagerRole()
     };
 
     internal static readonly Dictionary<GamePhase, IPhaseDefinition> PhaseDefinitions = new()

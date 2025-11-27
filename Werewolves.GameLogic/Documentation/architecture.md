@@ -90,6 +90,7 @@ The hermetically sealed kernel that owns the game's mutable memory. It is not vi
     *   `Players` (Dictionary of concrete `Player` objects)
     *   `SeatingOrder` (List of Guids)
     *   `RolesInPlay` (List of roles)
+    *   `ListenerInstanceCache` (Dictionary of session-scoped listener instances)
 *   **Private Nested Classes:**
     *   **`Player` & `PlayerState`:** Concrete implementations of `IPlayer` and `IPlayerState` are defined as **private nested classes** within the Kernel. This ensures their setters are physically inaccessible to any code outside the Kernel file.
     *   **`SessionMutator`:** A **private nested class** implementing `ISessionMutator`. This is the "Proxy Mutator" that bridges the gap between the log entry and the private state.
@@ -132,6 +133,8 @@ A lightweight, stateless wrapper that implements `IGameSession` and delegates al
         *   `CompleteSubPhaseStageCache(IPhaseManagerKey key)`: Marks the current sub-phase stage as completed.
         *   `TransitionListenerStateCache(IHookSubPhaseKey key, ListenerIdentifier listener, string state)`: Updates listener and its state.
         *   `ClearCurrentListenerCache(IHookSubPhaseKey key)`: Clears the current listener and its state.
+    *   **Listener Instance Management** (session-scoped listener caching):
+        *   `GetOrCreateListener<T>(ListenerIdentifier id, Func<T> factory)` (T): Gets or creates a listener instance for this session. Listeners are cached per-session to ensure state machine isolation between games while maintaining consistency within a game.
     *   **Query Methods** (read derived state from log):
         *   `GetPlayersTargetedLastNight(NightActionType actionType, NumberRangeConstraint countConstraint, NumberRangeConstraint? turnsAgoConstraint)` (IEnumerable<IPlayer>): Returns players targeted by a specific night action type.
         *   `WasDayAbilityTriggeredThisTurn(DayPowerType powerType)` (bool): Checks if a specific day power was used this turn.
@@ -284,7 +287,7 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
 
 *   **Core Components:**
     *   `HookListeners` (static Dictionary<GameHook, List<ListenerIdentifier>>): Declarative mapping of hooks to the ordered list of listeners that respond to them.
-    *   `ListenerImplementations` (static Dictionary<ListenerIdentifier, IGameHookListener>): Lookup for concrete listener implementations (i.e., the role classes).
+    *   `ListenerFactories` (static Dictionary<ListenerIdentifier, Func<IGameHookListener>>): Factory functions for creating listener instances. Each game session gets its own fresh instances via `GameSession.GetOrCreateListener`, ensuring listener state machine isolation between games.
     *   `PhaseDefinitions` (static Dictionary<GamePhase, IPhaseDefinition>): Declarative mapping of each main `GamePhase` to its corresponding `PhaseManager`.
 *   **Primary Methods:**
     *   `GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)` (StartGameConfirmationInstruction): **Static factory method for bootstrapping.** Returns the initial instruction required to construct a valid `GameSession`. This pure function performs input validation and generates the startup instruction without creating any game state.
