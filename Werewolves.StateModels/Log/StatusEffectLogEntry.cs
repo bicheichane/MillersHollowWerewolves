@@ -32,4 +32,7 @@ public record StatusEffectLogEntry : GameLogEntryBase
 
 		return this;
 	}
+
+	public override string ToString() =>
+		$"StatusEffect: {EffectType} on {PlayerId}";
 }

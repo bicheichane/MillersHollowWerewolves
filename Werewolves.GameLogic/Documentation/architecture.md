@@ -528,3 +528,43 @@ The `GameFlowManager` implements automatic victory condition checking to ensure 
     *   Solo role win conditions (Angel, Piper, White Werewolf, Prejudiced Manipulator) 
     *   Event-specific win conditions 
     *   Complex role interactions (Charmed players, infected players, etc.) 
+
+### Diagnostic State Observation
+
+For integration testing, an optional `IStateChangeObserver` can be injected into `GameSessionKernel` at construction time. This observer receives callbacks for all state mutations, enabling tests to capture a complete timeline of changes.
+
+**Tracked State Changes:**
+- Main phase transitions (`OnMainPhaseChanged`)
+- Sub-phase transitions (`OnSubPhaseChanged`)
+- Sub-phase stage changes (`OnSubPhaseStageChanged`)
+- Listener and listener state changes (`OnListenerChanged`)
+- Turn number increments (`OnTurnNumberChanged`)
+- Pending instruction updates (`OnPendingInstructionChanged`)
+- Game log entry applications (`OnLogEntryApplied`)
+
+**Test Integration:**
+- `DiagnosticStateObserver` captures all state changes to a timestamped log
+- `GameTestBuilder.Create(output)` automatically injects the observer when an `ITestOutputHelper` is provided
+- `DiagnosticTestBase` automatically dumps the state change log when a test fails (via `IDisposable`)
+
+**Production Overhead:** Zero. The observer is null by default; null-conditional calls (`?.`) have negligible cost.
+
+**Usage Example:**
+```csharp
+public class MyTests : DiagnosticTestBase
+{
+    public MyTests(ITestOutputHelper output) : base(output) { }
+
+    [Fact]
+    public void MyTest()
+    {
+        var builder = CreateBuilder()
+            .WithSimpleGame(4, werewolfCount: 1);
+        builder.StartGame();
+        
+        // Test logic...
+        
+        MarkTestCompleted(); // Suppresses diagnostic dump on success
+    }
+}
+``` 

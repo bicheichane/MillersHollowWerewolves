@@ -3,6 +3,7 @@ using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.Tests.Helpers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Werewolves.Tests.Integration;
 
@@ -10,8 +11,9 @@ namespace Werewolves.Tests.Integration;
 /// Tests for phase and sub-phase transitions and state cache behavior.
 /// Test IDs: PT-001 through PT-020
 /// </summary>
-public class PhaseTransitionTests
+public class PhaseTransitionTests : DiagnosticTestBase
 {
+    public PhaseTransitionTests(ITestOutputHelper output) : base(output) { }
     #region PT-001 to PT-004: Valid Transitions
 
     /// <summary>
@@ -21,13 +23,15 @@ public class PhaseTransitionTests
     public void NewGame_StartsInNightPhase()
     {
         // Arrange & Act
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Assert
         var gameState = builder.GetGameState();
         gameState!.GetCurrentPhase().Should().Be(GamePhase.Night);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -110,13 +114,15 @@ public class PhaseTransitionTests
     public void NewGame_HasNightAsInitialPhase()
     {
         // Arrange & Act
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Assert
         var gameState = builder.GetGameState();
         gameState!.GetCurrentPhase().Should().Be(GamePhase.Night);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -126,13 +132,15 @@ public class PhaseTransitionTests
     public void NewGame_HasConfirmationInstruction()
     {
         // Arrange & Act
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Assert
         var instruction = builder.GetCurrentInstruction();
         instruction.Should().BeOfType<StartGameConfirmationInstruction>();
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -142,7 +150,7 @@ public class PhaseTransitionTests
     public void AfterNightTransition_HasPendingInstruction()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
@@ -152,6 +160,8 @@ public class PhaseTransitionTests
         // Assert
         var instruction = builder.GetCurrentInstruction();
         instruction.Should().NotBeNull("Night phase should have an active instruction");
+
+        MarkTestCompleted();
     }
 
     #endregion

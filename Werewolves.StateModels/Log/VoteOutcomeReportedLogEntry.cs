@@ -21,4 +21,9 @@ public record VoteOutcomeReportedLogEntry : GameLogEntryBase
 		//logging only; no state change
 		return this;
 	}
+
+    public override string ToString() =>
+        ReportedOutcomePlayerId == Guid.Empty
+            ? "VoteOutcome: Tie"
+            : $"VoteOutcome: {ReportedOutcomePlayerId}";
 }

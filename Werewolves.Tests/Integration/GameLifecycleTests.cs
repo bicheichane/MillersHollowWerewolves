@@ -3,6 +3,7 @@ using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.Tests.Helpers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Werewolves.Tests.Integration;
 
@@ -10,8 +11,9 @@ namespace Werewolves.Tests.Integration;
 /// Tests for game lifecycle: creation, game start confirmation, and phase transitions.
 /// Test IDs: GL-001 through GL-020
 /// </summary>
-public class GameLifecycleTests
+public class GameLifecycleTests : DiagnosticTestBase
 {
+    public GameLifecycleTests(ITestOutputHelper output) : base(output) { }
     #region GL-001 to GL-003: Game Creation
 
     /// <summary>
@@ -21,7 +23,7 @@ public class GameLifecycleTests
     public void StartNewGame_WithValidRolesAndPlayers_ReturnsStartGameConfirmationInstruction()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 3, werewolfCount: 1, includeSeer: true);
 
         // Act
@@ -31,6 +33,8 @@ public class GameLifecycleTests
         instruction.Should().NotBeNull();
         instruction.Should().BeOfType<StartGameConfirmationInstruction>();
         instruction.GameGuid.Should().NotBeEmpty();
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -49,6 +53,8 @@ public class GameLifecycleTests
 
         // Assert
         act.Should().Throw<ArgumentException>();
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -58,7 +64,7 @@ public class GameLifecycleTests
     public void StartNewGame_CreatesSessionWithCorrectPlayerCount()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
 
         // Act
@@ -68,6 +74,8 @@ public class GameLifecycleTests
         // Assert
         gameState.Should().NotBeNull();
         gameState!.GetPlayers().Should().HaveCount(5);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -77,7 +85,7 @@ public class GameLifecycleTests
     public void StartNewGame_PlayersInCorrectSeatingOrder()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithPlayers("Alice", "Bob", "Charlie", "Diana")
             .WithRoles(MainRoleType.SimpleWerewolf, MainRoleType.Seer, MainRoleType.SimpleVillager, MainRoleType.SimpleVillager);
 
@@ -88,6 +96,8 @@ public class GameLifecycleTests
         // Assert
         var playerNames = gameState!.GetPlayers().Select(p => p.Name).ToList();
         playerNames.Should().ContainInOrder("Alice", "Bob", "Charlie", "Diana");
+
+        MarkTestCompleted();
     }
 
     #endregion
@@ -101,7 +111,7 @@ public class GameLifecycleTests
     public void ConfirmGameStart_TransitionsToNightPhase()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
@@ -112,6 +122,8 @@ public class GameLifecycleTests
         result.IsSuccess.Should().BeTrue();
         var gameState = builder.GetGameState();
         gameState!.GetCurrentPhase().Should().Be(GamePhase.Night);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -121,7 +133,7 @@ public class GameLifecycleTests
     public void ConfirmGameStart_SetsCorrectTurnNumber()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
@@ -131,6 +143,8 @@ public class GameLifecycleTests
 
         // Assert
         gameState!.TurnNumber.Should().Be(1);
+
+        MarkTestCompleted();
     }
 
     #endregion
@@ -146,7 +160,7 @@ public class GameLifecycleTests
     public void CompleteGameCycle_NightToDawnToDay_TransitionsCorrectly()
     {
         // Arrange - Simple 4 player game: 1 WW, 1 Seer, 2 Villagers
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -158,6 +172,8 @@ public class GameLifecycleTests
         // Note: Full cycle test requires completing night actions.
         // This will be expanded when night action flow is fully testable.
         // For now, we verify the initial Night phase transition.
+
+        MarkTestCompleted();
     }
 
     #endregion

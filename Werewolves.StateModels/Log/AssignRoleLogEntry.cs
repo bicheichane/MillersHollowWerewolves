@@ -31,4 +31,7 @@ public record AssignRoleLogEntry : GameLogEntryBase
 
 		return this;
 	}
+
+	public override string ToString() =>
+		$"AssignRole: {AssignedMainRole} → [{string.Join(", ", PlayerIds)}]";
 }

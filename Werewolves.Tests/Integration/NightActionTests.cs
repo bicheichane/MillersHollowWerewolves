@@ -4,6 +4,7 @@ using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Log;
 using Werewolves.Tests.Helpers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Werewolves.Tests.Integration;
 
@@ -11,8 +12,9 @@ namespace Werewolves.Tests.Integration;
 /// Tests for night phase actions: werewolf attacks, seer investigations, action logging.
 /// Test IDs: NA-001 through NA-022
 /// </summary>
-public class NightActionTests
+public class NightActionTests : DiagnosticTestBase
 {
+    public NightActionTests(ITestOutputHelper output) : base(output) { }
     #region NA-001 to NA-003: Werewolf Actions
 
     /// <summary>
@@ -23,7 +25,7 @@ public class NightActionTests
     public void Werewolves_WakeAndSelectVictim_LogsNightAction()
     {
         // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -64,6 +66,8 @@ public class NightActionTests
 
         nightActions.Should().HaveCount(1);
         nightActions[0].TargetIds.Should().BeEquivalentTo([victimPlayer.Id]);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -73,7 +77,7 @@ public class NightActionTests
     public void Werewolves_CannotSelectWerewolf_AsVictim()
     {
         // Arrange - 5 players: 2 WW, 1 Seer, 2 Villagers
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 5, werewolfCount: 2, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -103,6 +107,8 @@ public class NightActionTests
         // Assert - Werewolves should not be in selectable targets
         victimInstruction.SelectablePlayerIds.Should().NotContain(werewolf1.Id);
         victimInstruction.SelectablePlayerIds.Should().NotContain(werewolf2.Id);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -112,7 +118,7 @@ public class NightActionTests
     public void Werewolves_CompleteFlow_WakeSleepCycle()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -143,6 +149,8 @@ public class NightActionTests
 
         // Assert - Should have moved to next role (Seer) or completed night
         result3.IsSuccess.Should().BeTrue();
+
+        MarkTestCompleted();
     }
 
     #endregion
@@ -156,7 +164,7 @@ public class NightActionTests
     public void Seer_ChecksWerewolf_ActionIsLogged()
     {
         // Arrange - Complete werewolf actions first to get to Seer
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -198,6 +206,8 @@ public class NightActionTests
 
         seerActions.Should().HaveCount(1);
         seerActions[0].TargetIds.Should().BeEquivalentTo([werewolfPlayer.Id]);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -207,7 +217,7 @@ public class NightActionTests
     public void Seer_ChecksVillager_ActionIsLogged()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -246,6 +256,8 @@ public class NightActionTests
 
         seerActions.Should().HaveCount(1);
         seerActions[0].TargetIds.Should().BeEquivalentTo([villagerToCheck.Id]);
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -255,7 +267,7 @@ public class NightActionTests
     public void Seer_ActionLogged_WithCorrectDetails()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -279,6 +291,8 @@ public class NightActionTests
         seerAction.TurnNumber.Should().Be(1);
         seerAction.CurrentPhase.Should().Be(GamePhase.Night);
         seerAction.TargetIds.Should().BeEquivalentTo([players[2].Id]);
+
+        MarkTestCompleted();
     }
 
     #endregion
@@ -293,7 +307,7 @@ public class NightActionTests
     public void Seer_TargetedNight1_StillActsBeforeDawn()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -331,6 +345,8 @@ public class NightActionTests
             .ToList();
 
         seerActions.Should().HaveCount(1, "Seer should have acted despite being targeted");
+
+        MarkTestCompleted();
     }
 
     /// <summary>
@@ -354,7 +370,7 @@ public class NightActionTests
     public void FirstNight_RoleIdentification_RecordsRoleCorrectly()
     {
         // Arrange
-        var builder = GameTestBuilder.Create()
+        var builder = CreateBuilder()
             .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
@@ -388,6 +404,8 @@ public class NightActionTests
 
         roleAssignments.Should().HaveCount(1);
         roleAssignments[0].AssignedMainRole.Should().Be(MainRoleType.SimpleWerewolf);
+
+        MarkTestCompleted();
     }
 
     #endregion

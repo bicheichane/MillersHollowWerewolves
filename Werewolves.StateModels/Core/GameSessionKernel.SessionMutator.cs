@@ -41,24 +41,27 @@ internal partial class GameSessionKernel
         public void SetPlayerRole(Guid playerId, MainRoleType role) 
             => GetMutablePlayerState(playerId).MainRole = role;
 
-        public void SetCurrentPhase(GamePhase newPhase)
+		public void SetCurrentPhase(GamePhase newPhase)
 		{
 			kernel._phaseStateCache.TransitionMainPhase(Key, newPhase);
+			kernel._stateChangeObserver?.OnMainPhaseChanged(newPhase);
 
 			if (newPhase == GamePhase.Night)
 			{
 				kernel.IncrementTurnNumber(Key);
+				kernel._stateChangeObserver?.OnTurnNumberChanged(kernel.TurnNumber);
 			}
-		}
-
-		public void SetElderExtraLifeUsed(Guid playerId, bool hasUsedExtraLife)
+		}		public void SetElderExtraLifeUsed(Guid playerId, bool hasUsedExtraLife)
 			=> GetMutablePlayerState(playerId).HasUsedElderExtraLife = hasUsedExtraLife;
 
 		public void SetPlayerInfected(Guid playerId, bool isInfected)
 			=> GetMutablePlayerState(playerId).IsInfected = isInfected;
 
-		public void AddLogEntry<T>(T entry) where T : GameLogEntryBase 
-			=> kernel._gameHistoryLog.AddLogEntry(Key, entry);
+		public void AddLogEntry<T>(T entry) where T : GameLogEntryBase
+		{
+			kernel._gameHistoryLog.AddLogEntry(Key, entry);
+			kernel._stateChangeObserver?.OnLogEntryApplied(entry);
+		}
 
         public void SetVillageIdiotImmunityUsed(Guid playerId, bool hasUsedImmunity) 
             => GetMutablePlayerState(playerId).HasVillageIdiotUsedImmunity = hasUsedImmunity;

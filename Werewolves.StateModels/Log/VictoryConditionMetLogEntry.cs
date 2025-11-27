@@ -20,4 +20,7 @@ public record VictoryConditionMetLogEntry : GameLogEntryBase
 		//logging only, no state change
 		return this;
     }
+
+    public override string ToString() =>
+        $"Victory: {WinningTeam} - {ConditionDescription}";
 }

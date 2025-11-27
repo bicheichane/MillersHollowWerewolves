@@ -4,6 +4,7 @@ using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Models.Instructions;
+using Xunit.Abstractions;
 
 namespace Werewolves.Tests.Helpers;
 
@@ -18,11 +19,18 @@ public class GameTestBuilder
     private Guid _gameId;
     private bool _gameStarted;
     private ModeratorInstruction? _lastInstruction = null;
+    private readonly DiagnosticStateObserver _diagnosticObserver = new();
+    private readonly ITestOutputHelper? _output;
+
+    private GameTestBuilder(ITestOutputHelper? output = null)
+    {
+        _output = output;
+    }
 
 	/// <summary>
 	/// Creates a new test builder instance.
 	/// </summary>
-	public static GameTestBuilder Create() => new();
+	public static GameTestBuilder Create(ITestOutputHelper? output = null) => new(output);
 
     /// <summary>
     /// Adds players with auto-generated names (Player1, Player2, etc.).
@@ -95,10 +103,16 @@ public class GameTestBuilder
             throw new InvalidOperationException(
                 $"Player count ({_playerNames.Count}) must match role count ({_roles.Count})");
 
-        var instruction = _gameService.StartNewGame(_playerNames, _roles);
+        var instruction = _gameService.StartNewGame(_playerNames, _roles, stateChangeObserver: _diagnosticObserver);
         _lastInstruction = instruction;
 		_gameId = instruction.GameGuid;
         _gameStarted = true;
+        
+        // Wire up session for GUID-to-name resolution in diagnostics
+        var session = _gameService.GetGameStateView(_gameId);
+        if (session != null)
+            _diagnosticObserver.SetSession(session);
+        
         return instruction;
     }
 
@@ -152,6 +166,16 @@ public class GameTestBuilder
     /// Gets roles in play.
     /// </summary>
     public IReadOnlyList<MainRoleType> Roles => _roles;
+
+    /// <summary>
+    /// Gets the formatted diagnostic log of all state changes.
+    /// </summary>
+    public string DiagnosticLog => _diagnosticObserver.GetFormattedLog();
+
+    /// <summary>
+    /// Writes the diagnostic log to the test output.
+    /// </summary>
+    public void DumpDiagnostics() => _output?.WriteLine(DiagnosticLog);
 
     private void EnsureGameStarted()
     {
