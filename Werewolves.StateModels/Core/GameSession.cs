@@ -129,6 +129,9 @@ internal class GameSession : IGameSession
 	internal void TransitionListenerStateCache(IHookSubPhaseKey key, ListenerIdentifier listener, string state)  =>
         _gameSessionKernel.TransitionListenerAndState(listener, state);
 
+	internal void ClearCurrentListenerCache(IHookSubPhaseKey key) =>
+		_gameSessionKernel.ClearCurrentListener();
+
     #endregion
 
 

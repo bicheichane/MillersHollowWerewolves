@@ -181,8 +181,7 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
             return onComplete(session, input);
         }
 
-		// Check if we have a currently paused listener
-        var currentListener = session.GetCurrentListener();
+		
 
 		// Dispatch to each listener in sequence
         foreach (var listenerId in listeners)
@@ -194,7 +193,10 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
                 continue;
             }
 
-            if (currentListener != null && currentListener != listenerId)
+            // Check if we have a currently paused listener
+            var currentListener = session.GetCurrentListener();
+
+			if (currentListener != null && currentListener != listenerId)
             {
 				// Another listener is currently paused, skip until resumed
                 continue;
@@ -216,7 +218,8 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
 
                 case HookListenerOutcome.Complete:
 					// Listener completed successfully, continue to next
-                    continue;
+                    session.ClearCurrentListenerCache(Key);
+					continue;
 
                 case HookListenerOutcome.Skip:
                     continue;

@@ -102,6 +102,12 @@ namespace Werewolves.StateModels.Core
 			_stateChangeObserver?.OnListenerChanged(listener, state);
 		}
 
+		internal void ClearCurrentListener()
+		{
+			_phaseStateCache.ClearCurrentListener();
+			_stateChangeObserver?.OnListenerChanged(null, null);
+		}
+
 		internal IPlayer GetIPlayer(Guid playerId) => GetPlayer(playerId);
 
 		internal IEnumerable<IPlayer> GetIPlayers() => _players.Values;

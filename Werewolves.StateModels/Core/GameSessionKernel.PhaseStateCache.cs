@@ -179,13 +179,20 @@ internal partial class GameSessionKernel
 
 		#endregion
 
-		#region Private Helpers
+		#region Internal State Cleanup
 
-		private void ClearCurrentListener()
+		/// <summary>
+		/// Clears the current listener and its state.
+		/// </summary>
+		internal void ClearCurrentListener()
 		{
 			_currentListener = null;
 			_currentListenerState = null;
 		}
+
+		#endregion
+
+		#region Private Helpers
 
 		/// <summary>
 		/// Marks the current hook as completed and clears it.
