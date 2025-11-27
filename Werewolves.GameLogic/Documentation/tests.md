@@ -223,12 +223,6 @@ Tests for the voting phase and elimination outcomes.
   - When: Vote processed
   - Then: `VoteOutcomeReportedLogEntry` indicates tie
 
-### 5.3 Special Cases
-- **DV-020**: `LastWerewolf_EliminatedByVote_TriggersVictoryCheck`
-  - Given: Single werewolf remaining
-  - When: Werewolf eliminated by day vote
-  - Then: Victory condition checked immediately
-
 ---
 
 ## 6. Victory Condition Tests
@@ -236,17 +230,13 @@ Tests for the voting phase and elimination outcomes.
 Tests for both victory paths.
 
 ### 6.1 Villager Victory
-- **VC-001**: `AllWerewolvesDead_VillagersWin`
-  - Given: Game with 1 werewolf and 3 villagers
-  - When: Werewolf is eliminated (by vote or other means)
-  - Then: `WinningTeam` is `Villagers`
 
-- **VC-002**: `WerewolfEliminated_AtDawn_VillagerVictory`
-  - Given: Last werewolf killed by special ability at dawn (future: Knight's sword)
+- **VC-001**: `WerewolfEliminated_AtDawn_VillagerVictory`
+  - Given: Last werewolf killed by special ability at dawn (future: Knight's sword, witch's poison, etc.)
   - When: Dawn resolution completes
   - Then: Victory detected, `WinningTeam` is `Villagers`
 
-- **VC-003**: `WerewolfEliminated_AtDay_VillagerVictory`
+- **VC-002**: `WerewolfEliminated_AtDay_VillagerVictory`
   - Given: Last werewolf voted out during day
   - When: Vote elimination processed
   - Then: Victory detected, `WinningTeam` is `Villagers`
@@ -266,6 +256,11 @@ Tests for both victory paths.
   - Given: 1 werewolf, 2 villagers; werewolf kills 1 villager
   - When: Dawn resolution completes (now 1 WW, 1 Villager)
   - Then: Victory detected, `WinningTeam` is `Werewolves`
+
+- **VC-013**: `VillagerKilled_AtDay_WerewolfVictory`
+  - Given: 1 werewolf, 3 villagers; werewolf kills 1 villager during the night; a villager is voted for lynching
+  - When: Day resolution completes (now 1 WW, 1 Villager)
+  - Then: Victory detected, `WinningTeam` is `Werewolves
 
 ### 6.3 Victory Timing
 - **VC-020**: `VictoryCondition_CheckedAtDawn`
