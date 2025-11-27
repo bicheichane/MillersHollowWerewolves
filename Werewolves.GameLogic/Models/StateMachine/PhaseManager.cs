@@ -114,7 +114,13 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
 				break;
             }
             case StayInSubPhaseHandlerResult stayInSubPhase:
-                session.CompleteSubPhaseStageCache(Key);
+				// Only mark the stage as complete if explicitly indicated.
+				// Hook stages that pause mid-execution set StageComplete = false
+				// to allow re-entry on the next input.
+                if (stayInSubPhase.StageComplete)
+                {
+                    session.CompleteSubPhaseStageCache(Key);
+                }
 				break;
         }
     }

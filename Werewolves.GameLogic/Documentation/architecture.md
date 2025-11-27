@@ -342,7 +342,9 @@ A hierarchy of records represents the outcome of a `SubPhaseStage`'s execution, 
 *   `MajorNavigationPhaseHandlerResult`: Abstract record for results that cause a transition.
     *   `MainPhaseHandlerResult(ModeratorInstruction?, GamePhase)`: Signals a transition to a new main phase.
     *   `SubPhaseHandlerResult(ModeratorInstruction?, Enum)`: Signals a transition to a new sub-phase within the current main phase.
-*   `StayInSubPhaseHandlerResult(ModeratorInstruction?)`: Signals that the state machine should remain in the current sub-phase. If the instruction is `null`, the `PhaseManager` will immediately attempt to execute the next stage in the sequence. If an instruction is provided, processing pauses until the moderator responds.
+*   `StayInSubPhaseHandlerResult(ModeratorInstruction?, bool StageComplete)`: Signals that the state machine should remain in the current sub-phase.
+    *   **`StageComplete = true`:** The current stage is marked complete and will not be re-entered. If `ModeratorInstruction` is `null`, the `PhaseManager` immediately executes the next stage. Created via `CompleteSubPhaseStage(instruction)`.
+    *   **`StageComplete = false`:** The current stage remains active for re-entry on the next input. Used when pausing mid-stage to await moderator input (e.g., during hook listener execution). Created via `PauseSubPhaseStage(instruction)`.
 
 ## Hook System Components
  
@@ -459,8 +461,8 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
     *   The `SubPhaseManager` for `Start` runs its sequence of atomic stages:
         1.  A `LogicSubPhaseStage` issues the "Village goes to sleep" instruction and increments the turn number.
         2.  A `HookSubPhaseStage` fires the `GameHook.NightMainActionLoop`. It iterates through all registered role listeners (`SimpleWerewolfRole`, `SeerRole`, etc.), calling `Execute` on each.
-        3.  If a listener needs input, it returns `HookListenerActionResult.NeedInput`, which becomes a `StayInSubPhaseHandlerResult` with an instruction. The `PhaseManager` pauses.
-        4.  Once all listeners complete, the `HookSubPhaseStage`'s `onComplete` delegate runs.
+        3.  If a listener needs input, it returns `HookListenerActionResult.NeedInput`, which becomes a `StayInSubPhaseHandlerResult` via `PauseSubPhaseStage(instruction)`. The stage remains active for re-entry, and the `PhaseManager` pauses.
+        4.  Once all listeners complete, the `HookSubPhaseStage`'s `onComplete` delegate runs, returning `CompleteSubPhaseStage(null)` to mark the stage complete.
         5.  The final `EndNavigationSubPhaseStage` executes, returning a `MainPhaseHandlerResult` to transition to `GamePhase.Dawn`.
 
 3.  **Dawn Phase (`GamePhase.Dawn`):**

@@ -30,29 +30,6 @@ internal static class GameFlowManager
 
     private static readonly GameFlowManagerKey Key = new();
 
-    #region Static Factory Methods
-
-    /// <summary>
-    /// Gets the initial instruction to bootstrap a new game session.
-    /// This is a pure function that generates the startup instruction without creating any game state.
-    /// </summary>
-    /// <param name="rolesInPlay">The roles that will be used in this game.</param>
-    /// <param name="gameId">The unique identifier for the game session.</param>
-    /// <returns>The initial instruction prompting the moderator to confirm game start.</returns>
-    public static StartGameConfirmationInstruction GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)
-    {
-        // Validate inputs
-        ArgumentNullException.ThrowIfNull(rolesInPlay);
-        if (!rolesInPlay.Any())
-        {
-            throw new ArgumentException("Role list cannot be empty", nameof(rolesInPlay));
-        }
-
-        return new StartGameConfirmationInstruction(gameId);
-    }
-
-    #endregion
-
     #region Static Flow Definitions
     internal static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
@@ -265,11 +242,34 @@ internal static class GameFlowManager
         ]),
 
     };
+	#endregion
+
+	#region Static Factory Methods
+
+    /// <summary>
+    /// Gets the initial instruction to bootstrap a new game session.
+    /// This is a pure function that generates the startup instruction without creating any game state.
+    /// </summary>
+    /// <param name="rolesInPlay">The roles that will be used in this game.</param>
+    /// <param name="gameId">The unique identifier for the game session.</param>
+    /// <returns>The initial instruction prompting the moderator to confirm game start</returns>
+    public static StartGameConfirmationInstruction GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)
+    {
+        // Validate inputs
+        ArgumentNullException.ThrowIfNull(rolesInPlay);
+        if (!rolesInPlay.Any())
+        {
+            throw new ArgumentException("Role list cannot be empty", nameof(rolesInPlay));
+        }
+
+        return new StartGameConfirmationInstruction(gameId);
+    }
+
     #endregion
 
-    #region State Machine
+	#region State Machine
 
-    internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
+	internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
     {
         var currentPhase = session.GetCurrentPhase();
 
@@ -365,7 +365,7 @@ internal static class GameFlowManager
             privateInstruction: GameStrings.ConfirmNightStarted
         );
 
-        return instruction;
+		return instruction;
     }
 
     private static MainPhaseHandlerResult HandleNightActionLoopFinish(GameSession session, ModeratorResponse input)

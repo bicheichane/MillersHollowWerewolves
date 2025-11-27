@@ -27,7 +27,7 @@ namespace Werewolves.StateModels.Core
 		internal IReadOnlyList<MainRoleType> GetRolesInPlay() => _rolesInPlay.AsReadOnly();
 		internal IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _gameHistoryLog.GetAllLogEntries();
 
-		private int _turnNumber = 0;
+		private int _turnNumber;
 		internal int TurnNumber => _turnNumber;
 
 		private ModeratorInstruction? _pendingModeratorInstruction = null;
@@ -63,7 +63,8 @@ namespace Werewolves.StateModels.Core
 			}
 
 			_rolesInPlay = new List<MainRoleType>(rolesInPlay);
-			_phaseStateCache = new GamePhaseStateCache(GamePhase.Setup);
+			_phaseStateCache = new GamePhaseStateCache(GamePhase.Night);
+			_turnNumber = 1;
 		}
 
 		internal void AddEntryAndUpdateState(GameLogEntryBase entry)

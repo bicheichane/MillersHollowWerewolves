@@ -22,13 +22,12 @@ internal abstract class RoleHookListener : IGameHookListener
 
 	public virtual HookListenerActionResult Execute(GameSession session, ModeratorResponse input)
 	{
-		//if there are no alive players with this role, skip
+		var roleCount = session.RoleInPlayCount(Id);
 
-		var rolePlayer = GetAliveRolePlayers(session)?.FirstOrDefault();
-
-		if (rolePlayer == null)
+		if (roleCount == 0 ||   //if role is not in play, skip
+			session.GetPlayers().WithRole(Id).WithHealth(Dead).Count() == roleCount) // if all players with this role are dead, skip
 		{
-			return HookListenerActionResult.Skip(); // No alive players with this role, skip
+			return HookListenerActionResult.Skip();
 		}
 
 		// otherwise, advance the core state machine
