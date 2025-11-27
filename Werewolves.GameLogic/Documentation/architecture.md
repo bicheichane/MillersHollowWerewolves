@@ -292,14 +292,16 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
 *   **Primary Methods:**
     *   `GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)` (StartGameConfirmationInstruction): **Static factory method for bootstrapping.** Returns the initial instruction required to construct a valid `GameSession`. This pure function performs input validation and generates the startup instruction without creating any game state.
     *   `HandleInput(GameSession session, ModeratorResponse input)` (ProcessResult): **The central state machine orchestrator.**
-        *   Retrieves the current phase and delegates to the appropriate `IPhaseDefinition` (`PhaseManager`).
-        *   The `PhaseManager` loops, executing the current `SubPhaseManager`'s sequence of atomic stages until an instruction is generated for the moderator.
-        *   It validates all transitions (both sub-phase and main-phase) against the declarative rules.
+        *   Delegates to `RouteInputToPhaseHandler` for phase-level processing.
         *   After a phase handler completes, it checks for victory conditions.
         *   Returns a `ProcessResult` with the next instruction.
+    *   `RouteInputToPhaseHandler(GameSession session, ModeratorResponse input)` (`private static`): **Routes input to the appropriate phase handler and manages silent main phase transitions.**
+        *   Retrieves the current phase and delegates to the appropriate `IPhaseDefinition` (`PhaseManager`).
+        *   **Silent Transition Loop:** If a `PhaseManager` returns a `MainPhaseHandlerResult` with no instruction (a silent transition), this method loops and re-routes to the new phase's handler. This continues until an instruction is produced.
+        *   **Defensive Null Check:** After the loop exits, an invariant check ensures no null instructions escape from non-`MainPhaseHandlerResult` results, as this would indicate a bug in sub-phase or hook stage logic.
     *   `CheckVictoryConditions(GameSession session)` (`private static`, returns `(Team WinningTeam, string Description)?`): Evaluates win conditions based on the current game state. Returns `null` if no victory condition is met, or a tuple containing the winning team and description.
 *   **Declarative State Machine Architecture:** The game flow is defined by a hierarchy of declarative components:
-    *   **`PhaseManager<TSubPhaseEnum>`**: Manages the flow between sub-phases for a single main `GamePhase`. It contains a dictionary of `SubPhaseManager`s.
+    *   **`PhaseManager<TSubPhaseEnum>`**: Manages the flow between sub-phases for a single main `GamePhase`. It contains a dictionary of `SubPhaseManager`s. Each `PhaseManager` is **phase-aware**: it determines which `GamePhase` it manages by finding itself in the `PhaseDefinitions` dictionary (cached after first lookup). This enables clean exit when a silent main phase transition occurs—if the session's current phase no longer matches the owned phase, the manager returns immediately with a `MainPhaseHandlerResult(null, currentPhase)`, allowing `RouteInputToPhaseHandler` to continue processing in the correct new phase.
     *   **`SubPhaseManager<TSubPhase>`**: Defines a single sub-phase. It contains a linear sequence of `SubPhaseStage`s that are executed in order. It also declares all valid transitions to other sub-phases or main phases.
     *   **`SubPhaseStage`**: An abstract class representing a single, **atomic, non-re-entrant** unit of work. The `GamePhaseStateCache` ensures each stage is executed at most once per sub-phase entry.
         *   `LogicSubPhaseStage`: Executes a custom logic handler.

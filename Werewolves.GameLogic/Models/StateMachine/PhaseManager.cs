@@ -1,5 +1,7 @@
 using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.GameLogic.Services;
 using Werewolves.StateModels.Core;
+using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
 
 namespace Werewolves.GameLogic.Models.StateMachine;
@@ -16,6 +18,19 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
 
 	private readonly Dictionary<TSubPhaseEnum, SubPhaseManager<TSubPhaseEnum>> _subPhaseDictionary;
     private readonly TSubPhaseEnum _entrySubPhase;
+    private GamePhase? _cachedOwnedPhase;
+
+    /// <summary>
+    /// Determines which GamePhase this manager handles by finding itself in the PhaseDefinitions dictionary.
+    /// The result is cached after the first lookup.
+    /// </summary>
+    private GamePhase GetOwnedPhase()
+    {
+        _cachedOwnedPhase ??= GameFlowManager.PhaseDefinitions
+            .First(kvp => ReferenceEquals(kvp.Value, this))
+            .Key;
+        return _cachedOwnedPhase.Value;
+    }
 
     /// <summary>
     /// Creates a new PhaseManager with the specified subPhaseList and entry point.
@@ -49,6 +64,7 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
 	/// <returns>A PhaseHandlerResult indicating the outcome of the processing.</returns>
 	public PhaseHandlerResult ProcessInputAndUpdatePhase(GameSession session, ModeratorResponse input)
     {
+        var ownedPhase = GetOwnedPhase();
         PhaseHandlerResult result;
         do
         {
@@ -67,7 +83,9 @@ internal class PhaseManager<TSubPhaseEnum> : IPhaseDefinition where TSubPhaseEnu
 
             // 4. Validate the resulting transition against the declarative rules of the stage
             AttemptTransition(session, subPhaseState, result, subPhase);
-        } while (result.ModeratorInstruction == null);
+            
+            // Exit if we're no longer the active phase (silent main phase transition occurred)
+        } while (result.ModeratorInstruction == null && session.GetCurrentPhase() == ownedPhase);
         
 
         return result;

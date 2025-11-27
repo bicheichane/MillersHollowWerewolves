@@ -324,14 +324,31 @@ internal static class GameFlowManager
 
     private static PhaseHandlerResult RouteInputToPhaseHandler(GameSession session, ModeratorResponse input)
     {
-        var currentPhase = session.GetCurrentPhase();
-        
-        if (!PhaseDefinitions.TryGetValue(currentPhase, out var phaseDef))
+        PhaseHandlerResult result;
+        do
         {
-            throw new InvalidOperationException($"No phase definition found for phase: {currentPhase}");
+            var currentPhase = session.GetCurrentPhase();
+            
+            if (!PhaseDefinitions.TryGetValue(currentPhase, out var phaseDef))
+            {
+                throw new InvalidOperationException($"No phase definition found for phase: {currentPhase}");
+            }
+
+            result = phaseDef.ProcessInputAndUpdatePhase(session, input);
+        } 
+        while (result is MainPhaseHandlerResult { ModeratorInstruction: null });
+
+        // Defensive check: null instructions should only bubble up from MainPhaseHandlerResult
+        // during silent phase transitions (handled by the loop above). If we get here with a null
+        // instruction, something has gone wrong at the sub-phase or hook level.
+        if (result.ModeratorInstruction == null)
+        {
+            throw new InvalidOperationException(
+                $"Internal State Machine Error: Received null ModeratorInstruction from non-MainPhaseHandlerResult. " +
+                $"Result type: {result.GetType().Name}, Current phase: {session.GetCurrentPhase()}");
         }
 
-        return phaseDef.ProcessInputAndUpdatePhase(session, input);
+        return result;
     }
 
     private static (Team WinningTeam, string Description)? CheckVictoryConditions(GameSession session)
