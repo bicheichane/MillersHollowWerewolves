@@ -90,16 +90,68 @@ internal partial class DiagnosticStateObserver : IStateChangeObserver
         {
             if (_log.Count == 0) return "(no state changes recorded)";
 
+            var entries = new List<(string Type, string Content)>();
+            foreach (var logLine in _log)
+            {
+                var (type, content) = ParseLogEntry(logLine);
+                content = ReplaceGuidsWithNames(content);
+                entries.Add((type, content));
+            }
+
+            // Calculate content column width (minimum 20, max based on content)
+            int contentWidth = Math.Max(20, entries.Max(e => e.Content.Length));
+            
             var sb = new StringBuilder();
             sb.AppendLine("=== State Change Timeline ===");
-            for (int i = 0; i < _log.Count; i++)
+            sb.AppendLine();
+            
+            // Header row with box-drawing dividers
+            // Columns: # | Phase | Sub | Stage | Instr | Log | Lstnr | Turn | Content
+            string divider = $"{"- - ",4} - {" - ",3} - {" - ",3} - {" - ",3} - {" - ",3} - {" - ",3} - {" - ",3} - {" - ",3} + - -";
+            
+            sb.AppendLine(divider);
+            sb.AppendLine($"{"#",4} | {"Phs",3} | {"Sub",3} | {"Stg",3} | {"Ins",3} | {"Log",3} | {"Lst",3} | {"Trn",3} | Content");
+            sb.AppendLine(divider);
+            
+            for (int i = 0; i < entries.Count; i++)
             {
-                // Apply GUID-to-name replacement at output time when session is available
-                var line = ReplaceGuidsWithNames(_log[i]);
-                sb.AppendLine($"{i + 1,4}. {line}");
+                var (type, content) = entries[i];
+                
+                string phs = type == "Phase" ? " X " : "   ";
+                string sub = type == "SubPhase" ? " X " : "   ";
+                string stg = type == "Stage" ? " X " : "   ";
+                string ins = type == "Instruction" ? " X " : "   ";
+                string log = type == "Log" ? " X " : "   ";
+                string lst = type == "Listener" ? " X " : "   ";
+                string trn = type == "Turn" ? " X " : "   ";
+                
+                sb.AppendLine($"{i + 1,4} | {phs} | {sub} | {stg} | {ins} | {log} | {lst} | {trn} | {content}");
+                sb.AppendLine(divider);
             }
+            
             return sb.ToString();
         }
+    }
+
+    private static (string Type, string Content) ParseLogEntry(string logLine)
+    {
+        // Parse entries like "[Phase] → Night" or "[Log] NightActionLogEntry: ..."
+        if (logLine.StartsWith("[Phase]"))
+            return ("Phase", logLine.Substring("[Phase] → ".Length));
+        if (logLine.StartsWith("[SubPhaseStage]"))
+            return ("Stage", logLine.Substring("[SubPhaseStage] → ".Length));
+        if (logLine.StartsWith("[SubPhase]"))
+            return ("SubPhase", logLine.Substring("[SubPhase] → ".Length));
+        if (logLine.StartsWith("[Instruction]"))
+            return ("Instruction", logLine.Substring("[Instruction] → ".Length));
+        if (logLine.StartsWith("[Log]"))
+            return ("Log", logLine.Substring("[Log] ".Length));
+        if (logLine.StartsWith("[Listener]"))
+            return ("Listener", logLine.Substring("[Listener] → ".Length));
+        if (logLine.StartsWith("[Turn]"))
+            return ("Turn", logLine.Substring("[Turn] → ".Length));
+        
+        return ("Unknown", logLine);
     }
 
     public void Clear()

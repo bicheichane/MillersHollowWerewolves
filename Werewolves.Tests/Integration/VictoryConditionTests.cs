@@ -154,7 +154,7 @@ public class VictoryConditionTests : DiagnosticTestBase
         victoryLog.Should().NotBeNull();
         victoryLog!.WinningTeam.Should().Be(Team.Werewolves);
 
-        MarkTestCompleted();
+        //MarkTestCompleted();
     }
 
     /// <summary>

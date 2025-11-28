@@ -2,6 +2,7 @@ using FluentAssertions;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Log;
+using Werewolves.StateModels.Resources;
 using Werewolves.Tests.Helpers;
 using Xunit;
 using Xunit.Abstractions;
@@ -158,10 +159,10 @@ public class NightActionTests : DiagnosticTestBase
     #region NA-010 to NA-012: Seer Actions
 
     /// <summary>
-    /// NA-010: Seer checks a werewolf and receives appropriate feedback.
+    /// NA-010: Seer checks a werewolf and receives feedback indicating they wake with werewolves.
     /// </summary>
     [Fact]
-    public void Seer_ChecksWerewolf_ActionIsLogged()
+    public void Seer_ChecksWerewolf_ReceivesFeedbackAndLogsAction()
     {
         // Arrange - Complete werewolf actions first to get to Seer
         var builder = CreateBuilder()
@@ -195,7 +196,15 @@ public class NightActionTests : DiagnosticTestBase
 
         // Seer checks the werewolf
         var seerTargetResponse = seerTargetInstruction.CreateResponse([werewolfPlayer.Id]);
-        builder.Process(seerTargetResponse);
+        var afterSeerCheck = builder.Process(seerTargetResponse);
+
+        // Assert - Verify feedback instruction is returned
+        var feedbackInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
+            afterSeerCheck,
+            "Seer feedback instruction");
+
+        // Verify feedback indicates target wakes with werewolves
+        feedbackInstruction.PrivateInstruction.Should().Contain(GameStrings.SeerResultWerewolfTeam);
 
         // Assert - Check that a SeerCheck action was logged
         var updatedState = builder.GetGameState()!;
@@ -211,10 +220,10 @@ public class NightActionTests : DiagnosticTestBase
     }
 
     /// <summary>
-    /// NA-011: Seer checks a villager and action is logged.
+    /// NA-011: Seer checks a villager and receives feedback indicating they do NOT wake with werewolves.
     /// </summary>
     [Fact]
-    public void Seer_ChecksVillager_ActionIsLogged()
+    public void Seer_ChecksVillager_ReceivesFeedbackAndLogsAction()
     {
         // Arrange
         var builder = CreateBuilder()
@@ -245,9 +254,17 @@ public class NightActionTests : DiagnosticTestBase
         var seerTargetInstruction = InstructionAssert.ExpectSuccessWithType<SelectPlayersInstruction>(
             afterSeerIdentify);
         var seerTargetResponse = seerTargetInstruction.CreateResponse([villagerToCheck.Id]);
-        builder.Process(seerTargetResponse);
+        var afterSeerCheck = builder.Process(seerTargetResponse);
 
-        // Assert
+        // Assert - Verify feedback instruction is returned
+        var feedbackInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
+            afterSeerCheck,
+            "Seer feedback instruction");
+
+        // Verify feedback indicates target does NOT wake with werewolves
+        feedbackInstruction.PrivateInstruction.Should().Contain(GameStrings.SeerResultNotWerewolfTeam);
+
+        // Assert - Check that a SeerCheck action was logged
         var updatedState = builder.GetGameState()!;
         var seerActions = updatedState.GameHistoryLog
             .OfType<NightActionLogEntry>()
@@ -291,6 +308,149 @@ public class NightActionTests : DiagnosticTestBase
         seerAction.TurnNumber.Should().Be(1);
         seerAction.CurrentPhase.Should().Be(GamePhase.Night);
         seerAction.TargetIds.Should().BeEquivalentTo([players[2].Id]);
+
+        MarkTestCompleted();
+    }
+
+    /// <summary>
+    /// NA-013: Seer cannot check themselves - their own ID is excluded from selectable targets.
+    /// </summary>
+    [Fact]
+    public void Seer_CannotCheckSelf()
+    {
+        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        var builder = CreateBuilder()
+            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+        builder.StartGame();
+        builder.ConfirmGameStart();
+
+        // Confirm night starts
+        ConfirmNightStart(builder);
+
+        var gameState = builder.GetGameState()!;
+        var players = gameState.GetPlayers().ToList();
+        var werewolfPlayer = players[0];
+        var seerPlayer = players[1];
+        var villagerPlayer = players[3];
+
+        // Complete werewolf actions to get to Seer's turn
+        CompleteWerewolfNightAction(builder, [werewolfPlayer.Id], villagerPlayer.Id);
+
+        // Identify the Seer
+        var seerIdentifyInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(
+            builder.GetCurrentInstruction(),
+            "Seer identification");
+        var seerIdentifyResponse = seerIdentifyInstruction.CreateResponse([seerPlayer.Id]);
+        var afterSeerIdentify = builder.Process(seerIdentifyResponse);
+
+        // Get Seer's target selection instruction
+        var seerTargetInstruction = InstructionAssert.ExpectSuccessWithType<SelectPlayersInstruction>(
+            afterSeerIdentify,
+            "Seer target selection");
+
+        // Assert - Seer's own ID should NOT be in selectable targets
+        seerTargetInstruction.SelectablePlayerIds.Should().NotContain(seerPlayer.Id,
+            "Seer should not be able to check themselves");
+
+        MarkTestCompleted();
+    }
+
+    /// <summary>
+    /// NA-014: Seer cannot check dead players - dead player IDs are excluded from selectable targets.
+    /// </summary>
+    [Fact]
+    public void Seer_CannotCheckDeadPlayers()
+    {
+        // Arrange: 5 players (1 WW, 1 Seer, 3 Villagers) to ensure game continues after deaths
+        var builder = CreateBuilder()
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
+        builder.StartGame();
+        builder.ConfirmGameStart();
+
+        var gameState = builder.GetGameState()!;
+        var players = gameState.GetPlayers().ToList();
+        var werewolfPlayer = players[0];   // WW
+        var seerPlayer = players[1];       // Seer
+        var villager1 = players[2];        // Villager (will be killed Night 1)
+        var villager2 = players[3];        // Villager (will be lynched Day 1)
+        var villager3 = players[4];        // Villager
+
+        // === Night 1: Werewolf kills villager1, Seer checks villager3 ===
+        builder.CompleteNightPhase(
+            werewolfIds: [werewolfPlayer.Id],
+            victimId: villager1.Id,
+            seerId: seerPlayer.Id,
+            seerTargetId: villager3.Id
+        );
+
+        // Verify we're in Dawn
+        gameState.GetCurrentPhase().Should().Be(GamePhase.Dawn);
+
+        // === Dawn 1: villager1 is eliminated ===
+        builder.CompleteDawnPhase();
+
+        // Verify villager1 is now dead
+        var deadVillager = gameState.GetPlayer(villager1.Id);
+        deadVillager.State.Health.Should().Be(PlayerHealth.Dead);
+
+        // === Day 1: Lynch villager2 (to avoid WW victory and continue game) ===
+        builder.CompleteDayPhaseWithLynch(villager2.Id);
+
+        // Verify we're back to Night phase (Night 2)
+        gameState.GetCurrentPhase().Should().Be(GamePhase.Night);
+        gameState.TurnNumber.Should().Be(2);
+
+        // === Night 2: Get to Seer's target selection and verify dead players are excluded ===
+        // Confirm night starts
+        ConfirmNightStart(builder);
+
+        // On Night 2, werewolves are already identified - process until we get to target selection
+        var currentInstruction = builder.GetCurrentInstruction();
+
+        // Process confirmations until we get to werewolf victim selection
+        while (currentInstruction is ConfirmationInstruction confirmInstr)
+        {
+            builder.Process(confirmInstr.CreateResponse(true));
+            currentInstruction = builder.GetCurrentInstruction();
+        }
+
+        // Werewolf victim selection
+        var victimInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(
+            currentInstruction,
+            "Werewolf victim selection (Night 2)");
+        builder.Process(victimInstruction.CreateResponse([villager3.Id]));
+
+        // Confirm werewolf sleep
+        var sleepInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Werewolf sleep confirmation");
+        builder.Process(sleepInstruction.CreateResponse(true));
+
+        // Now Seer should wake - on Night 2 they're already identified
+        // Process any confirmation instructions to get to target selection
+        currentInstruction = builder.GetCurrentInstruction();
+        while (currentInstruction is ConfirmationInstruction seerConfirmInstr)
+        {
+            builder.Process(seerConfirmInstr.CreateResponse(true));
+            currentInstruction = builder.GetCurrentInstruction();
+        }
+
+        // Get Seer's target selection instruction
+        var seerTargetInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(
+            currentInstruction,
+            "Seer target selection (Night 2)");
+
+        // Assert - Dead players should NOT be in selectable targets
+        seerTargetInstruction.SelectablePlayerIds.Should().NotContain(villager1.Id,
+            "Villager killed Night 1 should not be selectable");
+        seerTargetInstruction.SelectablePlayerIds.Should().NotContain(villager2.Id,
+            "Villager lynched Day 1 should not be selectable");
+
+        // Also verify that living players ARE selectable (sanity check)
+        seerTargetInstruction.SelectablePlayerIds.Should().Contain(werewolfPlayer.Id,
+            "Living werewolf should be selectable");
+        seerTargetInstruction.SelectablePlayerIds.Should().Contain(villager3.Id,
+            "Living villager should be selectable");
 
         MarkTestCompleted();
     }
@@ -489,6 +649,89 @@ public class NightActionTests : DiagnosticTestBase
 
         roleAssignments.Should().HaveCount(1);
         roleAssignments[0].AssignedMainRole.Should().Be(MainRoleType.SimpleWerewolf);
+
+        MarkTestCompleted();
+    }
+
+    /// <summary>
+    /// NA-023: Werewolves cannot target dead players - dead player IDs are excluded from selectable targets.
+    /// </summary>
+    [Fact]
+    public void Werewolves_CannotTargetDeadPlayers()
+    {
+        // Arrange: 5 players (1 WW, 1 Seer, 3 Villagers) to ensure game continues after deaths
+        var builder = CreateBuilder()
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
+        builder.StartGame();
+        builder.ConfirmGameStart();
+
+        var gameState = builder.GetGameState()!;
+        var players = gameState.GetPlayers().ToList();
+        var werewolfPlayer = players[0];   // WW
+        var seerPlayer = players[1];       // Seer
+        var villager1 = players[2];        // Villager (will be killed Night 1)
+        var villager2 = players[3];        // Villager (will be lynched Day 1)
+        var villager3 = players[4];        // Villager
+
+        // === Night 1: Werewolf kills villager1, Seer checks villager3 ===
+        builder.CompleteNightPhase(
+            werewolfIds: [werewolfPlayer.Id],
+            victimId: villager1.Id,
+            seerId: seerPlayer.Id,
+            seerTargetId: villager3.Id
+        );
+
+        // Verify we're in Dawn
+        gameState.GetCurrentPhase().Should().Be(GamePhase.Dawn);
+
+        // === Dawn 1: villager1 is eliminated ===
+        builder.CompleteDawnPhase();
+
+        // Verify villager1 is now dead
+        var deadVillager = gameState.GetPlayer(villager1.Id);
+        deadVillager.State.Health.Should().Be(PlayerHealth.Dead);
+
+        // === Day 1: Lynch villager2 (to avoid WW victory and continue game) ===
+        builder.CompleteDayPhaseWithLynch(villager2.Id);
+
+        // Verify we're back to Night phase (Night 2)
+        gameState.GetCurrentPhase().Should().Be(GamePhase.Night);
+        gameState.TurnNumber.Should().Be(2);
+
+        // === Night 2: Get to werewolf victim selection and verify dead players are excluded ===
+        // Confirm night starts
+        ConfirmNightStart(builder);
+
+        // On Night 2, werewolves are already identified - process confirmations until we get to target selection
+        var currentInstruction = builder.GetCurrentInstruction();
+
+        while (currentInstruction is ConfirmationInstruction confirmInstr)
+        {
+            builder.Process(confirmInstr.CreateResponse(true));
+            currentInstruction = builder.GetCurrentInstruction();
+        }
+
+        // Get werewolf victim selection instruction
+        var victimInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(
+            currentInstruction,
+            "Werewolf victim selection (Night 2)");
+
+        // Assert - Dead players should NOT be in selectable targets
+        victimInstruction.SelectablePlayerIds.Should().NotContain(villager1.Id,
+            "Villager killed Night 1 should not be selectable as werewolf target");
+        victimInstruction.SelectablePlayerIds.Should().NotContain(villager2.Id,
+            "Villager lynched Day 1 should not be selectable as werewolf target");
+
+        // Also verify that living players ARE selectable (sanity check)
+        // Note: Werewolf cannot target themselves, so only villager3 and seer should be selectable
+        victimInstruction.SelectablePlayerIds.Should().Contain(seerPlayer.Id,
+            "Living Seer should be selectable");
+        victimInstruction.SelectablePlayerIds.Should().Contain(villager3.Id,
+            "Living villager should be selectable");
+
+        // Verify werewolf cannot target themselves
+        victimInstruction.SelectablePlayerIds.Should().NotContain(werewolfPlayer.Id,
+            "Werewolf should not be able to target themselves");
 
         MarkTestCompleted();
     }

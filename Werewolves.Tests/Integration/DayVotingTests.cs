@@ -349,4 +349,66 @@ public class DayVotingTests : DiagnosticTestBase
     }
 
     #endregion
+
+    #region DV-020: Vote Target Validation
+
+    /// <summary>
+    /// DV-020: Vote cannot select a dead player.
+    /// After dawn elimination, the dead player's ID should be excluded from selectable targets.
+    /// </summary>
+    [Fact]
+    public void Vote_CannotSelectDeadPlayer()
+    {
+        // Arrange: Game with 5 players (1 WW, 1 Seer, 3 Villagers)
+        var builder = CreateBuilder()
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
+        builder.StartGame();
+        builder.ConfirmGameStart();
+
+        var players = builder.GetGameState()!.GetPlayers().ToList();
+        var werewolfId = players[0].Id;
+        var seerId = players[1].Id;
+        var villager1Id = players[2].Id;
+        var villager2Id = players[3].Id;
+        var villager3Id = players[4].Id;
+
+        // Complete Night 1: werewolf kills villager1
+        builder.CompleteNightPhase(
+            werewolfIds: [werewolfId],
+            victimId: villager1Id,
+            seerId: seerId,
+            seerTargetId: villager2Id);
+
+        // Complete Dawn 1: victim eliminated
+        builder.CompleteDawnPhase();
+
+        // Verify villager1 is now dead
+        var deadPlayer = builder.GetGameState()!.GetPlayers().First(p => p.Id == villager1Id);
+        deadPlayer.State.Health.Should().Be(PlayerHealth.Dead);
+
+        // Confirm debate to get to voting
+        var debateInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Debate confirmation");
+        var afterDebate = builder.Process(debateInstruction.CreateResponse(true));
+
+        // Act: Get the vote selection instruction
+        var votingInstruction = InstructionAssert.ExpectSuccessWithType<SelectPlayersInstruction>(
+            afterDebate,
+            "Voting instruction");
+
+        // Assert: Dead player's ID should NOT be in selectable targets
+        votingInstruction.SelectablePlayerIds.Should().NotContain(villager1Id,
+            "dead player should not be a valid vote target");
+
+        // Living players should be selectable
+        votingInstruction.SelectablePlayerIds.Should().Contain(werewolfId);
+        votingInstruction.SelectablePlayerIds.Should().Contain(seerId);
+        votingInstruction.SelectablePlayerIds.Should().Contain(villager2Id);
+        votingInstruction.SelectablePlayerIds.Should().Contain(villager3Id);
+
+        MarkTestCompleted();
+    }
+
+    #endregion
 }
