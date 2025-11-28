@@ -5,8 +5,42 @@ using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
 using Werewolves.StateModels.Models.Instructions;
 using Xunit.Abstractions;
+using static Werewolves.StateModels.Enums.GameHook;
+using static Werewolves.StateModels.Models.ListenerIdentifier;
 
 namespace Werewolves.Tests.Helpers;
+
+/// <summary>
+/// Holds the inputs needed for night phase actions.
+/// Each role that acts at night has optional properties here.
+/// </summary>
+public class NightActionInputs
+{
+    /// <summary>
+    /// Werewolf action: IDs of werewolf players to identify.
+    /// </summary>
+    public List<Guid>? WerewolfIds { get; init; }
+
+    /// <summary>
+    /// Werewolf action: ID of the victim to select.
+    /// </summary>
+    public Guid? WerewolfVictimId { get; init; }
+
+    /// <summary>
+    /// Seer action: ID of the Seer player to identify.
+    /// </summary>
+    public Guid? SeerId { get; init; }
+
+    /// <summary>
+    /// Seer action: ID of the player for the Seer to investigate.
+    /// </summary>
+    public Guid? SeerTargetId { get; init; }
+
+    // Future roles can add their inputs here, e.g.:
+    // public Guid? WitchHealTargetId { get; init; }
+    // public Guid? WitchPoisonTargetId { get; init; }
+    // public Guid? DefenderProtectTargetId { get; init; }
+}
 
 /// <summary>
 /// Fluent builder for creating test game scenarios with minimal boilerplate.
@@ -268,31 +302,49 @@ public class GameTestBuilder
     }
 
     /// <summary>
-    /// Completes a full night phase with werewolf and optional Seer actions.
+    /// Completes a full night phase by iterating through roles in the order defined by HookListeners[NightMainActionLoop].
     /// This includes confirming the night-end instruction that transitions to Dawn.
     /// </summary>
-    /// <param name="werewolfIds">The IDs of all werewolf players.</param>
-    /// <param name="victimId">The ID of the werewolf victim.</param>
-    /// <param name="seerId">Optional: The ID of the Seer player. If null, Seer actions are skipped.</param>
-    /// <param name="seerTargetId">Optional: The ID of the player for the Seer to investigate. Required if seerId is provided.</param>
+    /// <param name="inputs">The inputs for each role's night actions.</param>
     /// <returns>The result of the final action in the night phase.</returns>
-    public ProcessResult CompleteNightPhase(List<Guid> werewolfIds, Guid victimId, Guid? seerId = null, Guid? seerTargetId = null)
+    public ProcessResult CompleteNightPhase(NightActionInputs inputs)
     {
         EnsureGameStarted();
 
         // Confirm night starts
         ConfirmNightStart();
 
-        // Complete werewolf actions
-        var result = CompleteWerewolfNightAction(werewolfIds, victimId);
+        ProcessResult result = ProcessResult.Success(GetCurrentInstruction()!);
 
-        // Complete Seer actions if specified
-        if (seerId.HasValue)
+        // Iterate through roles in the order defined by HookListeners
+        var nightListeners = GameFlowManager.HookListeners[NightMainActionLoop];
+        
+        foreach (var listener in nightListeners)
         {
-            if (!seerTargetId.HasValue)
-                throw new ArgumentException("seerTargetId must be provided when seerId is specified", nameof(seerTargetId));
+            // Only process main roles (not secondary roles or events)
+            if (listener.ListenerType != GameHookListenerType.MainRole)
+                continue;
 
-            result = CompleteSeerNightAction(seerId.Value, seerTargetId.Value);
+            // Check if this role has an implementation
+            if (!GameFlowManager.ListenerFactories.ContainsKey(listener))
+                continue;
+
+            // Parse the role type
+            MainRoleType roleType = listener;
+
+            // Handle each role's night action based on the provided inputs
+            result = roleType switch
+            {
+                MainRoleType.SimpleWerewolf => HandleWerewolfNightAction(inputs),
+                MainRoleType.Seer => HandleSeerNightAction(inputs),
+                // Future roles can be added here as they're implemented:
+                // MainRoleType.Witch => HandleWitchNightAction(inputs),
+                // MainRoleType.Defender => HandleDefenderNightAction(inputs),
+                _ => result // Role not handled yet, skip
+            };
+
+            if (!result.IsSuccess)
+                return result;
         }
 
         // Confirm the night-end instruction ("Night actions complete. Village wakes up.")
@@ -303,6 +355,53 @@ public class GameTestBuilder
         result = Process(nightEndInstruction.CreateResponse(true));
 
         return result;
+    }
+
+    /// <summary>
+    /// Completes a full night phase with werewolf and optional Seer actions.
+    /// This is a convenience overload that creates NightActionInputs from individual parameters.
+    /// </summary>
+    /// <param name="werewolfIds">The IDs of all werewolf players.</param>
+    /// <param name="victimId">The ID of the werewolf victim.</param>
+    /// <param name="seerId">Optional: The ID of the Seer player. If null, Seer actions are skipped.</param>
+    /// <param name="seerTargetId">Optional: The ID of the player for the Seer to investigate. Required if seerId is provided.</param>
+    /// <returns>The result of the final action in the night phase.</returns>
+    public ProcessResult CompleteNightPhase(List<Guid> werewolfIds, Guid victimId, Guid? seerId = null, Guid? seerTargetId = null)
+    {
+        if (seerId.HasValue && !seerTargetId.HasValue)
+            throw new ArgumentException("seerTargetId must be provided when seerId is specified", nameof(seerTargetId));
+
+        var inputs = new NightActionInputs
+        {
+            WerewolfIds = werewolfIds,
+            WerewolfVictimId = victimId,
+            SeerId = seerId,
+            SeerTargetId = seerTargetId
+        };
+
+        return CompleteNightPhase(inputs);
+    }
+
+    /// <summary>
+    /// Handles the werewolf night action if inputs are provided.
+    /// </summary>
+    private ProcessResult HandleWerewolfNightAction(NightActionInputs inputs)
+    {
+        if (inputs.WerewolfIds == null || inputs.WerewolfVictimId == null)
+            return ProcessResult.Success(GetCurrentInstruction()!);
+
+        return CompleteWerewolfNightAction(inputs.WerewolfIds, inputs.WerewolfVictimId.Value);
+    }
+
+    /// <summary>
+    /// Handles the Seer night action if inputs are provided.
+    /// </summary>
+    private ProcessResult HandleSeerNightAction(NightActionInputs inputs)
+    {
+        if (inputs.SeerId == null || inputs.SeerTargetId == null)
+            return ProcessResult.Success(GetCurrentInstruction()!);
+
+        return CompleteSeerNightAction(inputs.SeerId.Value, inputs.SeerTargetId.Value);
     }
 
     #endregion

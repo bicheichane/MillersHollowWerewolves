@@ -328,6 +328,22 @@ var game = GameTestBuilder.Create()
     .StartGame();
 ```
 
+### NightActionInputs
+Data class for providing role-specific inputs to `CompleteNightPhase`. The test helper iterates through `GameFlowManager.HookListeners[NightMainActionLoop]` in order, ensuring tests follow the actual game flow:
+```csharp
+var inputs = new NightActionInputs
+{
+    WerewolfIds = [werewolfId],
+    WerewolfVictimId = victimId,
+    SeerId = seerId,           // Optional
+    SeerTargetId = seerTargetId // Required if SeerId is provided
+};
+builder.CompleteNightPhase(inputs);
+
+// Or use the convenience overload:
+builder.CompleteNightPhase(werewolfIds, victimId, seerId, seerTargetId);
+```
+
 ### ResponseFactory
 Factory methods for creating `ModeratorResponse` instances:
 ```csharp
@@ -355,3 +371,41 @@ When adding support for additional roles, add corresponding test sections:
 - Test IDs use prefixes: GL (Lifecycle), PT (Transitions), NA (Night), DR (Dawn), DV (Day), VC (Victory), ES (Event Sourcing)
 - Each test should be independent and not rely on other tests' execution order
 - Use `GameTestBuilder` for consistent setup across tests
+
+### DiagnosticTestBase Pattern
+- All integration tests should extend `DiagnosticTestBase` for automatic state change logging on failure
+- Call `MarkTestCompleted()` at the end of each successful test to suppress diagnostic dump
+- Use `CreateBuilder()` to get a builder with diagnostics wired up
+- On test failure, the complete state change timeline is automatically dumped to test output
+
+### Victory Timing
+- Victory is checked at **phase transition boundaries** (entering Day or Night), not at sub-phases
+- `VictoryConditionMetLogEntry.CurrentPhase` reflects the *destination* phase of the transition
+- Dawn victory → logged as `GamePhase.Day`; Day victory → logged as `GamePhase.Night`
+
+### Role Knowledge and Instructions
+- Roles become "known" when a player performs a night action (werewolves wake, seer investigates, etc.)
+- When a player with a **known role** is eliminated (dawn or vote), expect `ConfirmationInstruction` (death announcement)
+- When a player with an **unknown role** is eliminated, expect `AssignRolesInstruction` (role reveal request)
+- Tests must account for which roles wake during night when expecting instruction types
+
+### Player Count Considerations
+- When testing specific victory timing (e.g., victory at day vote vs. dawn), ensure player counts don't trigger earlier victories
+- Example: Testing villager victory via day vote requires enough villagers to survive dawn without triggering werewolf victory
+- `WithSimpleGame(playerCount, werewolfCount, includeSeer)` assigns roles in order: werewolves first, then seer (if included), then villagers
+
+### Instruction Result Handling
+- When victory is detected mid-flow, the `FinishedGameConfirmationInstruction` may be in `ProcessResult.ModeratorInstruction`
+- Use `result.ModeratorInstruction` rather than `builder.GetCurrentInstruction()` when checking victory after processing
+
+### Night Action Order
+- Roles wake in a defined order during night, determined by `GameFlowManager.HookListeners[NightMainActionLoop]`
+- `CompleteNightPhase` iterates through this order dynamically, ensuring tests stay in sync with game logic
+- Night actions use a 3-step flow: **identify** (first night) → **select target** → **confirm sleep**
+- Deaths from night actions resolve at **Dawn**, not during night (targeted player still acts)
+- When adding a new role to `ListenerFactories`, also add its handler to `CompleteNightPhase`'s switch and extend `NightActionInputs`
+
+### Log Verification Patterns
+- Use LINQ with `OfType<TLogEntry>()` to filter the game history log
+- Filter by `TurnNumber` and `CurrentPhase` for precise log entry matching
+- Common pattern: `session.GameHistoryLog.OfType<NightActionLogEntry>().Where(e => e.ActionType == ...)`
