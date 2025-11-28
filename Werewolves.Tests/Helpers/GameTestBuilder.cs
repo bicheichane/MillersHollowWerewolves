@@ -293,8 +293,16 @@ public class GameTestBuilder
         var targetResponse = targetInstruction.CreateResponse([targetId]);
         var afterTarget = Process(targetResponse);
 
-        // Confirm sleep
-        var sleepInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
+        // Confirm result given to player
+
+        var resultInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
+            afterTarget,
+            "Seer result confirmation");
+        var resultResponse = resultInstruction.CreateResponse(true);
+        var afterResult = Process(resultResponse);
+
+		// Confirm sleep
+		var sleepInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
             afterTarget,
             "Seer sleep confirmation");
         var sleepResponse = sleepInstruction.CreateResponse(true);

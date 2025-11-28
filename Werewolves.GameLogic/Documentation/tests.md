@@ -19,6 +19,7 @@ Secondary roles (Sheriff, Lovers, etc.) and advanced roles are excluded from thi
 | Dawn Resolution | Victim calculation, eliminations, role reveals | `DawnResolutionTests.cs` |
 | Day Voting | Vote outcomes, ties, elimination flow | `DayVotingTests.cs` |
 | Victory Conditions | Both win conditions at correct moments | `VictoryConditionTests.cs` |
+| Input Validation | Invalid/unexpected input rejection | `InputValidationTests.cs` |
 | Event Sourcing | Log integrity and state reconstruction | `EventSourcingTests.cs` |
 
 ---
@@ -121,20 +122,34 @@ Tests for night phase role actions and logging.
   - Then: States transition: AwaitingAwake → AwaitingTarget → AwaitingSleep → Asleep
 
 ### 3.2 Seer Actions
-- **NA-010**: `Seer_ChecksWerewolf_ReceivesThumbsUp`
+- **NA-010**: `Seer_ChecksWerewolf_ReceivesFeedbackAndLogsAction`
   - Given: Night phase, Seer awake, known werewolf player
   - When: Seer selects the werewolf
-  - Then: Moderator receives "thumbs up" feedback instruction
+  - Then: 
+    - Moderator receives feedback instruction indicating target "wakes with werewolves" (thumbs up)
+    - `NightActionLogEntry` with `SeerCheck` is created
 
-- **NA-011**: `Seer_ChecksVillager_ReceivesThumbsDown`
+- **NA-011**: `Seer_ChecksVillager_ReceivesFeedbackAndLogsAction`
   - Given: Night phase, Seer awake, known villager player
   - When: Seer selects the villager
-  - Then: Moderator receives "thumbs down" feedback instruction
+  - Then:
+    - Moderator receives feedback instruction indicating target does NOT "wake with werewolves" (thumbs down)
+    - `NightActionLogEntry` with `SeerCheck` is created
 
 - **NA-012**: `Seer_ActionLogged_WithCorrectDetails`
   - Given: Seer performs check
   - When: Action completes
-  - Then: `NightActionLogEntry` with `SeerCheck` and target recorded
+  - Then: `NightActionLogEntry` with `SeerCheck` and target recorded, correct `TurnNumber` and `CurrentPhase`
+
+- **NA-013**: `Seer_CannotCheckSelf`
+  - Given: Night phase, Seer awake
+  - When: Target selection instruction is generated
+  - Then: Seer's own ID is excluded from selectable targets
+
+- **NA-014**: `Seer_CannotCheckDeadPlayers`
+  - Given: Night 2, one player is dead from Night 1
+  - When: Seer target selection instruction is generated
+  - Then: Dead player's ID is excluded from selectable targets
 
 ### 3.3 Edge Cases
 - **NA-020**: `Seer_TargetedNight1_StillActsBeforeDawn`
@@ -151,6 +166,11 @@ Tests for night phase role actions and logging.
   - Given: First night, Seer wakes
   - When: Seer identified by moderator input
   - Then: Player's `MainRole` is set to `Seer`
+
+- **NA-023**: `Werewolves_CannotTargetDeadPlayers`
+  - Given: Night 2, one player is dead from Night 1
+  - When: Werewolf victim selection instruction is generated
+  - Then: Dead player's ID is excluded from selectable targets
 
 ---
 
@@ -223,6 +243,12 @@ Tests for the voting phase and elimination outcomes.
   - When: Vote processed
   - Then: `VoteOutcomeReportedLogEntry` indicates tie
 
+### 5.3 Vote Target Validation
+- **DV-020**: `Vote_CannotSelectDeadPlayer`
+  - Given: Day phase after dawn elimination
+  - When: Vote outcome instruction is generated
+  - Then: Dead player's ID is excluded from selectable targets
+
 ---
 
 ## 6. Victory Condition Tests
@@ -280,7 +306,56 @@ Tests for both victory paths.
 
 ---
 
-## 7. Event Sourcing Tests
+## 7. Input Validation Tests
+
+Tests for handling invalid or unexpected moderator inputs. These tests verify that the game gracefully rejects bad inputs rather than entering invalid states.
+
+### 7.1 Response Type Validation
+- **IV-001**: `ProcessInstruction_WrongResponseType_ReturnsFailure`
+  - Given: Pending `SelectPlayersInstruction` (e.g., werewolf victim selection)
+  - When: Moderator provides a `ConfirmationResponse` instead of `SelectPlayersResponse`
+  - Then: `ProcessResult.IsSuccess` is `false`, game state unchanged
+
+- **IV-002**: `ProcessInstruction_NullResponse_ReturnsFailure`
+  - Given: Any pending instruction
+  - When: Moderator provides `null` response
+  - Then: `ProcessResult.IsSuccess` is `false`, game state unchanged
+
+### 7.2 Player Selection Validation
+- **IV-010**: `SelectPlayers_EmptySelection_WhenSingleRequired_ReturnsFailure`
+  - Given: `SelectPlayersInstruction` with `NumberRangeConstraint.Single`
+  - When: Moderator provides empty player selection
+  - Then: `ProcessResult.IsSuccess` is `false`
+
+- **IV-011**: `SelectPlayers_TooManyPlayers_ReturnsFailure`
+  - Given: `SelectPlayersInstruction` with `NumberRangeConstraint.Single`
+  - When: Moderator provides two player IDs
+  - Then: `ProcessResult.IsSuccess` is `false`
+
+- **IV-012**: `SelectPlayers_InvalidPlayerId_ReturnsFailure`
+  - Given: `SelectPlayersInstruction` with valid selectable player list
+  - When: Moderator provides a GUID not in the selectable list
+  - Then: `ProcessResult.IsSuccess` is `false`
+
+- **IV-013**: `SelectPlayers_NonSelectablePlayer_ReturnsFailure`
+  - Given: `SelectPlayersInstruction` excluding werewolves from selectable targets
+  - When: Moderator provides a werewolf player ID
+  - Then: `ProcessResult.IsSuccess` is `false`
+
+### 7.3 Role Assignment Validation
+- **IV-020**: `AssignRole_InvalidRole_ReturnsFailure`
+  - Given: `AssignRolesInstruction` requesting role for eliminated player
+  - When: Moderator provides a role not in `RolesInPlay`
+  - Then: `ProcessResult.IsSuccess` is `false`
+
+- **IV-021**: `AssignRole_WrongPlayer_ReturnsFailure`
+  - Given: `AssignRolesInstruction` for specific player (e.g., eliminated victim)
+  - When: Moderator provides a different player's ID
+  - Then: `ProcessResult.IsSuccess` is `false`
+
+---
+
+## 8. Event Sourcing Tests
 
 Tests for log integrity and state reconstruction.
 
@@ -368,7 +443,7 @@ When adding support for additional roles, add corresponding test sections:
 ## Conventions
 
 - Test method names follow: `MethodUnderTest_Scenario_ExpectedResult`
-- Test IDs use prefixes: GL (Lifecycle), PT (Transitions), NA (Night), DR (Dawn), DV (Day), VC (Victory), ES (Event Sourcing)
+- Test IDs use prefixes: GL (Lifecycle), PT (Transitions), NA (Night), DR (Dawn), DV (Day), VC (Victory), IV (Input Validation), ES (Event Sourcing)
 - Each test should be independent and not rely on other tests' execution order
 - Use `GameTestBuilder` for consistent setup across tests
 

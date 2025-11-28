@@ -1,4 +1,5 @@
 using Werewolves.GameLogic.Models.GameHookListeners;
+using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Enums;
@@ -11,7 +12,7 @@ namespace Werewolves.GameLogic.Roles.MainRoles;
 /// Seer role implementation using the polymorphic hook listener pattern.
 /// Inherits from StandardNightRoleHookListener for standard target selection workflow.
 /// </summary>
-internal class SeerRole : StandardNightRoleHookListener
+internal class SeerRole : ImmediateFeedbackNightRoleHookListener
 {
     public override ListenerIdentifier Id => ListenerIdentifier.Listener(MainRoleType.Seer);
     internal override string PublicName => GameStrings.SeerRoleName;
@@ -35,18 +36,18 @@ internal class SeerRole : StandardNightRoleHookListener
         );
     }
 
-    protected override void ProcessTargetSelection(GameSession session, ModeratorResponse input)
+    protected override ModeratorInstruction ProcessTargetSelectionWithFeedback(GameSession session, ModeratorResponse input)
     {
-        var seerPlayer = GetAliveRolePlayers(session)?.FirstOrDefault();
-
-        var targetId = input.SelectedPlayerIds!.First();
+		var targetId = input.SelectedPlayerIds!.First();
         var targetPlayer = session.GetPlayer(targetId);
 
         bool targetWakesWithWerewolves = targetPlayer.State.Team == Team.Werewolves;
-        
+
         string privateFeedback = targetWakesWithWerewolves ?
             GameStrings.SeerResultWerewolfTeam : GameStrings.SeerResultNotWerewolfTeam;
 
         session.PerformNightAction(NightActionType.SeerCheck, targetId);
-    }
+
+        return new ConfirmationInstruction(privateInstruction: privateFeedback);
+	}
 }

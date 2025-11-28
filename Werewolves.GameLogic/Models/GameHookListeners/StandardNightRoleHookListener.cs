@@ -25,12 +25,12 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 
 	protected abstract ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input);
 
-	protected abstract void ProcessTargetSelection(GameSession session, ModeratorResponse input);
+	protected abstract void ProcessTargetSelectionNoFeedback(GameSession session, ModeratorResponse input);
 
 	protected override HookListenerActionResult HandleNightPowerUse(GameSession session, ModeratorResponse input) =>
 		HandleTargetSelectionRequest(session, input);
 
-	private HookListenerActionResult HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
+	protected virtual HookListenerActionResult HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
 	{
 		var instruction = GenerateTargetSelectionInstruction(session, input);
 		return HookListenerActionResult.NeedInput(instruction, AwaitingTargetSelectionEnum);
@@ -39,7 +39,7 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 
 	private HookListenerActionResult HandleParseNightPowerConsequences(GameSession session, ModeratorResponse input)
 	{
-		ProcessTargetSelection(session, input);
+		ProcessTargetSelectionNoFeedback(session, input);
 		return PrepareSleepInstruction(session);
 	}
 }
