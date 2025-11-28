@@ -155,8 +155,7 @@ internal static class GameFlowManager
                 subPhase : DawnSubPhases.AnnounceVictims,
                 subPhaseStages: [
 					LogicStage(DawnSubPhaseStage.AnnounceVictimsAndRequestRoles, HandleVictimsAnnounceAndRoleRequest),
-					LogicStage(DawnSubPhaseStage.AssignVictimRoles, HandleVictimsAnnounceAndRoleResponse)
-                        .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
+					LogicStage(DawnSubPhaseStage.AssignVictimRoles, HandleVictimsAnnounceAndRoleResponse),
                     HookStage(PlayerRoleAssignedOnElimination),
                     NavigationEndStageSilent(DawnSubPhases.Finalize)
 					],
@@ -208,8 +207,7 @@ internal static class GameFlowManager
             new(
                 subPhase: DaySubPhases.HandleNonTieVote,
                 subPhaseStages: [ 
-                    NavigationEndStage(DaySubPhaseStage.VerifyLynchingOcurred, AssignRoleAndVerifyIfLynchingOcurred)
-                        .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
+                    NavigationEndStage(DaySubPhaseStage.VerifyLynchingOcurred, AssignRoleAndVerifyIfLynchingOcurred),
                 ],
                 possibleNextSubPhases:
                     [ DaySubPhases.ProcessVoteOutcome ]
@@ -423,15 +421,24 @@ internal static class GameFlowManager
     private static ModeratorInstruction HandleVictimsAnnounceAndRoleRequest(GameSession session, ModeratorResponse input)
     {
         var victimList = session.GetPlayersEliminatedThisDawn().ToImmutableHashSet();
-
         var victimNameList = string.Join(Environment.NewLine, victimList.Select(p => p.Name));
+        var announcement = GameStrings.MultipleVictimEliminatedAnnounce.Format(victimNameList);
+
+        // Check if any victims need role assignment
+        var victimsNeedingRoles = victimList.Where(p => p.State.MainRole == null).ToImmutableHashSet();
+
+        if (victimsNeedingRoles.Count == 0)
+        {
+            // All victims already have known roles - just announce
+            return new ConfirmationInstruction(publicAnnouncement: announcement);
+        }
 
         var unassignedRoles = session.GetUnassignedRoles();
 
         return new AssignRolesInstruction(
-            publicAnnouncement: GameStrings.MultipleVictimEliminatedAnnounce.Format(victimNameList),
+            publicAnnouncement: announcement,
             privateInstruction: GameStrings.RevealRolePromptSpecify,
-            playersForAssignment: victimList.Select(p => p.Id).ToImmutableHashSet(),
+            playersForAssignment: victimsNeedingRoles.Select(p => p.Id).ToImmutableHashSet(),
             rolesForAssignment: unassignedRoles
 		);
     }
@@ -441,6 +448,17 @@ internal static class GameFlowManager
     /// </summary>
     private static void HandleVictimsAnnounceAndRoleResponse(GameSession session, ModeratorResponse input)
     {
+        // Re-check if any victims need role assignment
+        var victimList = session.GetPlayersEliminatedThisDawn();
+        var victimsNeedingRoles = victimList.Where(p => p.State.MainRole == null).ToList();
+
+        if (victimsNeedingRoles.Count == 0)
+        {
+            // All victims already have known roles - nothing to do
+            return;
+        }
+
+        // Process role assignments from moderator response
         foreach (var entry in input.AssignedPlayerRoles!)
         {
             session.AssignRole(entry.Key, entry.Value);
@@ -503,6 +521,15 @@ internal static class GameFlowManager
             var playerId = selectedPlayer[0];
             session.PerformDayVote(playerId);
 
+            var votedPlayer = session.GetPlayer(playerId);
+
+            // Check if the voted player already has a known role
+            if (votedPlayer.State.MainRole != null)
+            {
+                // Role is already known - just confirm and proceed
+                return TransitionSubPhaseSilent(DaySubPhases.HandleNonTieVote);
+            }
+
             var availableRoles = session.GetUnassignedRoles();
             var instruction = new AssignRolesInstruction(
                 [playerId],
@@ -516,16 +543,16 @@ internal static class GameFlowManager
 
     private static SubPhaseHandlerResult AssignRoleAndVerifyIfLynchingOcurred(GameSession session, ModeratorResponse input)
     {
-        var entry = input.AssignedPlayerRoles!.Single();
-        var lynchedPlayerId = entry.Key;
-        var lynchedPlayerRole = entry.Value;
-        
+        // Get the voted player from the log, not from moderator input
+        var lynchedPlayerId = session.GetCurrentVoteTarget()!.Value;
         var lynchedPlayer = session.GetPlayer(lynchedPlayerId);
         var lynchedPlayerState = lynchedPlayer.State;
 
-        // only assign role if not already identified
-        if(lynchedPlayerState.MainRole == null)
+        // Only process role assignment if player doesn't already have a known role
+        if (lynchedPlayerState.MainRole == null)
         {
+            var entry = input.AssignedPlayerRoles!.Single();
+            var lynchedPlayerRole = entry.Value;
             session.AssignRole(lynchedPlayerId, lynchedPlayerRole);
         }
 

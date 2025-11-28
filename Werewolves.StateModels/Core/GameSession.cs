@@ -309,6 +309,23 @@ internal class GameSession : IGameSession
         _gameSessionKernel.AddEntryAndUpdateState(entry);
 	}
 
+    /// <summary>
+    /// Gets the player ID that was voted for in the most recent vote of the current turn.
+    /// Returns null if the vote was a tie (Guid.Empty in the log).
+    /// </summary>
+    internal Guid? GetCurrentVoteTarget()
+    {
+        var turnNumber = _gameSessionKernel.TurnNumber;
+        var voteEntry = _gameSessionKernel.FindLogEntries<VoteOutcomeReportedLogEntry>(
+            NumberRangeConstraint.Exact(turnNumber))
+            .LastOrDefault();
+
+        if (voteEntry == null || voteEntry.ReportedOutcomePlayerId == Guid.Empty)
+            return null;
+
+        return voteEntry.ReportedOutcomePlayerId;
+    }
+
 	internal void PerformDayVote(Guid? reportedOutcomePlayerId)
     {
         var entry = new VoteOutcomeReportedLogEntry
