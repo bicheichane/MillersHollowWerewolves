@@ -112,15 +112,16 @@ public class GameService
 			return ProcessResult.Failure(new ConfirmationInstruction(privateInstruction: "ERROR: Game not found"));
 		}
 
+        if (session.PendingModeratorInstruction is FinishedGameConfirmationInstruction)
+		{
+			_sessions.Remove(gameId, out _);
+            return new ProcessResult(true, null); // Game over, no further instructions
+		}
+
 		// --- Input Validation Against Last Instruction ---
 		EnsureInputTypeIsExpected(session, input);
 		
 		var result = GameFlowManager.HandleInput(session, input);
-
-		if (result.ModeratorInstruction is FinishedGameConfirmationInstruction)
-		{
-			_sessions.Remove(gameId, out _);
-		}
 
 		return result;
 	}

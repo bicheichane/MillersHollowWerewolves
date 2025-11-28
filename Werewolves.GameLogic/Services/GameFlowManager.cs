@@ -273,14 +273,16 @@ internal static class GameFlowManager
 
 	internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
     {
-        var currentPhase = session.GetCurrentPhase();
+        var oldPhase = session.GetCurrentPhase();
 
         // --- Execute Phase Handler ---
         PhaseHandlerResult handlerResult = RouteInputToPhaseHandler(session, input);
 
+        var newPhase = session.GetCurrentPhase();
+
 		var nextInstructionToSend = handlerResult.ModeratorInstruction;
 
-		if(TryGetVictoryInstructions(session, currentPhase, out var victoryInstruction))
+		if(TryGetVictoryInstructions(session, oldPhase, newPhase, out var victoryInstruction))
         {
             nextInstructionToSend = victoryInstruction;
 		}
@@ -296,14 +298,13 @@ internal static class GameFlowManager
 		return ProcessResult.Success(nextInstructionToSend);
     }
 
-    private static bool TryGetVictoryInstructions(GameSession session, GamePhase currentPhase,
-        out ModeratorInstruction? nextInstructionToSend)
+    private static bool TryGetVictoryInstructions(GameSession session, GamePhase oldPhase, GamePhase newPhase,
+		out ModeratorInstruction? nextInstructionToSend)
     {
         nextInstructionToSend = null;
-        // --- Post-Processing: Victory Check ---
-        // Check victory ONLY after specific resolution phases
-        if (currentPhase == GamePhase.Dawn || 
-            (currentPhase == GamePhase.Day && session.GetSubPhase<DaySubPhases>() == DaySubPhases.Finalize))
+		// --- Post-Processing: Victory Check ---
+		// Check victory ONLY at the starting point of Day and Night phases
+		if (oldPhase != newPhase && newPhase is GamePhase.Day or GamePhase.Night)
         {
             var victoryCheckResult = CheckVictoryConditions(session);
             if (victoryCheckResult != null)

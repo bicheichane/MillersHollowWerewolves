@@ -293,12 +293,13 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
     *   `GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)` (StartGameConfirmationInstruction): **Static factory method for bootstrapping.** Returns the initial instruction required to construct a valid `GameSession`. This pure function performs input validation and generates the startup instruction without creating any game state.
     *   `HandleInput(GameSession session, ModeratorResponse input)` (ProcessResult): **The central state machine orchestrator.**
         *   Delegates to `RouteInputToPhaseHandler` for phase-level processing.
-        *   After a phase handler completes, it checks for victory conditions.
+        *   Checks for victory conditions at **phase transition boundaries** (see Victory Check Timing below).
         *   Returns a `ProcessResult` with the next instruction.
     *   `RouteInputToPhaseHandler(GameSession session, ModeratorResponse input)` (`private static`): **Routes input to the appropriate phase handler and manages silent main phase transitions.**
         *   Retrieves the current phase and delegates to the appropriate `IPhaseDefinition` (`PhaseManager`).
         *   **Silent Transition Loop:** If a `PhaseManager` returns a `MainPhaseHandlerResult` with no instruction (a silent transition), this method loops and re-routes to the new phase's handler. This continues until an instruction is produced.
         *   **Defensive Null Check:** After the loop exits, an invariant check ensures no null instructions escape from non-`MainPhaseHandlerResult` results, as this would indicate a bug in sub-phase or hook stage logic.
+    *   `TryGetVictoryInstructions(GameSession session, GamePhase oldPhase, GamePhase newPhase, out ModeratorInstruction?)` (`private static`): Checks for victory conditions **only when transitioning between main phases** (entering Day or Night). This ensures victory is detected at natural game boundaries, preventing scenarios like sending the village to sleep only to immediately announce the game is over.
     *   `CheckVictoryConditions(GameSession session)` (`private static`, returns `(Team WinningTeam, string Description)?`): Evaluates win conditions based on the current game state. Returns `null` if no victory condition is met, or a tuple containing the winning team and description.
 *   **Declarative State Machine Architecture:** The game flow is defined by a hierarchy of declarative components:
     *   **`PhaseManager<TSubPhaseEnum>`**: Manages the flow between sub-phases for a single main `GamePhase`. It contains a dictionary of `SubPhaseManager`s. Each `PhaseManager` is **phase-aware**: it determines which `GamePhase` it manages by finding itself in the `PhaseDefinitions` dictionary (cached after first lookup). This enables clean exit when a silent main phase transition occurs—if the session's current phase no longer matches the owned phase, the manager returns immediately with a `MainPhaseHandlerResult(null, currentPhase)`, allowing `RouteInputToPhaseHandler` to continue processing in the correct new phase.
@@ -474,22 +475,20 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 3.  **Dawn Phase (`GamePhase.Dawn`):**
     *   The `PhaseManager` for `Dawn` is activated, starting at `DawnSubPhases.CalculateVictims`.
     *   **Calculate Victims:** The `NightInteractionResolver` is invoked to process all night actions, resolving conflicts (Witch vs Defender vs Infection) and applying eliminations/status effects. Navigates either to `AnnounceVictims` or `Finalize`, depending on whether or not there were any night deaths.
-    *   **Announce Victims:** If victims exist, the `AnnounceVictims` sub-phase requests role assignments for the victims, and fires `GameHook.PlayerRoleAssignedOnElimination`. Navigates to `Finalize`
-    *   **Finalize:** The `Finalize` sub-phase transitions to `GamePhase.Day`.
-    *   **Victory Check:** `GameFlowManager` checks for victory conditions.
+    *   **Announce Victims:** If victims exist, the `AnnounceVictims` sub-phase announces the deaths. Role assignment is **conditional**: if all victims already have known roles (e.g., from night actions), only a confirmation is requested; otherwise, an `AssignRolesInstruction` is sent for victims with unknown roles. Fires `GameHook.PlayerRoleAssignedOnElimination`. Navigates to `Finalize`.
+    *   **Finalize:** The `Finalize` sub-phase transitions to `GamePhase.Day`. Victory is checked at this transition.
 
 4.  **Day Phase (`GamePhase.Day`):**
     *   The `PhaseManager` for `Day` starts at `DaySubPhases.Debate`.
     *   **Debate:** Issues an instruction for discussion, then transitions to `DetermineVoteType`.
     *   **Determine Vote Type:** Determines what's the appropriate vote type, checking for active events or modifiers (defaults to `NormalVoting` sub-phase).
-    *   **Normal Voting:** Handles standard village voting to end the debate. Transitions to either `HandleNonTieVote` if there was no tie, or `ProcessVoteOutcome` if there was a tie.
+    *   **Normal Voting:** Handles standard village voting to end the debate. Role assignment is **conditional**: if the voted player's role is already known (e.g., werewolves who woke during night), it silently transitions to the next sub-phase; otherwise, an `AssignRolesInstruction` is sent. Transitions to either `HandleNonTieVote` if there was no tie, or `ProcessVoteOutcome` if there was a tie.
     *   **Accusation Voting:** *(Not yet implemented)* Reserved for accusation-based voting mechanics.
     *   **Friend Voting:** *(Not yet implemented)* Reserved for friend-based voting mechanics (e.g., Angel event).
     *   **Handle Non Tie Vote:** Handles checking if the voted for player is susceptible to be actually lynched due to the vote (i.e. Village Idiot), eliminates it if they are, otherwise applies `LynchImmunityUsed` status effect. Transitions to `ProcessVoteOutcome`
     *   **Process Vote Outcome:** Fires `GameHook.OnVoteConcluded`, and then checks where to navigate. Can loop back to `DetermineVoteType` if a re-vote was triggered (i.e. stuttering judge), advance to `ProcessVoteDeathLoop` if there were any voting deaths, or `Finalize` if not.
     *   **Process Vote Death Loop:** Fires `GameHook.PlayerRoleAssignedOnElimination`.
-    *   **Finalize:** Transitions to `GamePhase.Night`.
-    *   **Victory Check:** `GameFlowManager` checks for victory conditions.
+    *   **Finalize:** Transitions to `GamePhase.Night`. Victory is checked at this transition.
 
 # Game Logs 
 

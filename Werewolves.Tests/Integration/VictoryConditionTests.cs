@@ -38,9 +38,9 @@ public class VictoryConditionTests : DiagnosticTestBase
     [Fact]
     public void WerewolfEliminated_AtDay_VillagerVictory()
     {
-        // Arrange - 3 players: 1 WW, 2 Villagers (no Seer to simplify)
+        // Arrange - 4 players: 1 WW, 3 Villagers (need 3 villagers so game continues to Day after night kill)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 3, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -50,7 +50,6 @@ public class VictoryConditionTests : DiagnosticTestBase
         // Player 0 is the werewolf (first role assigned)
         var werewolf = players[0];
         var villager1 = players[1];
-        var villager2 = players[2];
 
         // Night 1: Werewolf kills a villager
         builder.ConfirmNightStart();
@@ -81,17 +80,14 @@ public class VictoryConditionTests : DiagnosticTestBase
             "Vote selection");
         builder.Process(voteInstruction.CreateResponse([werewolf.Id]));
 
-        // Assign werewolf role
-        var roleInstruction = InstructionAssert.ExpectType<AssignRolesInstruction>(
+        // Death announcement confirmation (role already known from night wake)
+        var deathAnnouncementInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
             builder.GetCurrentInstruction(),
-            "Werewolf role assignment");
-        builder.Process(roleInstruction.CreateResponse(new Dictionary<Guid, MainRoleType>
-        {
-            { werewolf.Id, MainRoleType.SimpleWerewolf }
-        }));
+            "Death announcement confirmation");
+        var result = builder.Process(deathAnnouncementInstruction.CreateResponse(true));
 
         // Assert - Should get FinishedGameConfirmationInstruction
-        var finalInstruction = builder.GetCurrentInstruction();
+        var finalInstruction = result.ModeratorInstruction;
         finalInstruction.Should().BeOfType<FinishedGameConfirmationInstruction>();
 
         // Verify victory log entry
@@ -317,7 +313,7 @@ public class VictoryConditionTests : DiagnosticTestBase
             "Vote selection");
         builder.Process(voteInstruction.CreateResponse([villager2.Id]));
 
-        // Assign villager role
+        // Assign villager role (SimpleVillager doesn't wake at night, so role is unknown)
         var roleInstruction = InstructionAssert.ExpectType<AssignRolesInstruction>(
             builder.GetCurrentInstruction(),
             "Villager role assignment");
@@ -325,6 +321,12 @@ public class VictoryConditionTests : DiagnosticTestBase
         {
             { villager2.Id, MainRoleType.SimpleVillager }
         }));
+
+        // Confirm death announcement
+        var deathAnnouncementInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Death announcement confirmation");
+        builder.Process(deathAnnouncementInstruction.CreateResponse(true));
 
         // Assert - Victory detected at Day.Finalize
         var finalInstruction = builder.GetCurrentInstruction();
@@ -384,13 +386,13 @@ public class VictoryConditionTests : DiagnosticTestBase
         var finalInstruction = builder.GetCurrentInstruction();
         finalInstruction.Should().BeOfType<FinishedGameConfirmationInstruction>();
 
-        // Verify we're still in Dawn phase (victory detected there)
+        // Verify victory detected at transition to Day phase (after dawn processing)
         var updatedState = builder.GetGameState()!;
         var victoryLog = updatedState.GameHistoryLog
             .OfType<VictoryConditionMetLogEntry>()
             .Single();
 
-        victoryLog.CurrentPhase.Should().Be(GamePhase.Dawn);
+        victoryLog.CurrentPhase.Should().Be(GamePhase.Day);
 
         MarkTestCompleted();
     }
@@ -445,19 +447,13 @@ public class VictoryConditionTests : DiagnosticTestBase
             "Vote selection");
         builder.Process(voteInstruction.CreateResponse([werewolf.Id]));
 
-        var roleInstruction = InstructionAssert.ExpectType<AssignRolesInstruction>(
+        var deathAnnouncementInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
             builder.GetCurrentInstruction(),
-            "Werewolf role assignment");
+            "Death announcement confirmation");
+        var result = builder.Process(deathAnnouncementInstruction.CreateResponse(true));
 
-        roleInstruction.RolesForAssignment.Should().Contain(MainRoleType.SimpleWerewolf);
-
-        builder.Process(roleInstruction.CreateResponse(new Dictionary<Guid, MainRoleType>
-        {
-            { werewolf.Id, MainRoleType.SimpleWerewolf }
-        }));
-
-        // Assert - Victory detected at Day phase
-        var finalInstruction = builder.GetCurrentInstruction();
+		// Assert - Victory detected at Day phase
+		var finalInstruction = result.ModeratorInstruction;
         finalInstruction.Should().BeOfType<FinishedGameConfirmationInstruction>();
 
         var updatedState = builder.GetGameState()!;
@@ -465,7 +461,7 @@ public class VictoryConditionTests : DiagnosticTestBase
             .OfType<VictoryConditionMetLogEntry>()
             .Single();
 
-        victoryLog.CurrentPhase.Should().Be(GamePhase.Day);
+        victoryLog.CurrentPhase.Should().Be(GamePhase.Night);
 
         MarkTestCompleted();
     }
