@@ -22,7 +22,7 @@ public record AssignRolesInstruction : ModeratorInstruction
     /// <param name="publicAnnouncement">The text to be read aloud to players.</param>
     /// <param name="privateInstruction">Private guidance for the moderator.</param>
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
-    public AssignRolesInstruction(
+    internal AssignRolesInstruction(
         ImmutableHashSet<Guid> playersForAssignment,
         IReadOnlyList<MainRoleType> rolesForAssignment,
 		string? publicAnnouncement = null,

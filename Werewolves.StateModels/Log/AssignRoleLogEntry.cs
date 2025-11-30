@@ -15,7 +15,7 @@ public record AssignRoleLogEntry : GameLogEntryBase
 	/// <summary>
 	/// The ID of the player assigned the role.
 	/// </summary>
-	public required List<Guid> PlayerIds { get; init; }
+	public required HashSet<Guid> PlayerIds { get; init; }
 
 	/// <summary>
 	/// The specific role type assigned.

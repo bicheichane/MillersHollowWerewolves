@@ -82,7 +82,7 @@ public class DawnResolutionTests : DiagnosticTestBase
 
         var gameState = builder.GetGameState()!;
         var players = gameState.GetPlayers().ToList();
-        var werewolves = new List<Guid> { players[0].Id, players[1].Id }; // First two are werewolves
+        var werewolves = new HashSet<Guid> { players[0].Id, players[1].Id }; // First two are werewolves
 
         // Get werewolf identification instruction and identify them
         var identifyInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(

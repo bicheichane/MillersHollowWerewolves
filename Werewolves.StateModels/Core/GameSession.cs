@@ -282,7 +282,7 @@ internal class GameSession : IGameSession
         AssignRole([playerId], mainRoleType);
 
 
-    internal void AssignRole(List<Guid> playerIds, MainRoleType mainRoleType)
+    internal void AssignRole(HashSet<Guid> playerIds, MainRoleType mainRoleType)
     {
         var entry = new AssignRoleLogEntry()
         {

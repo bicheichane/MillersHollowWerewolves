@@ -93,7 +93,7 @@ internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T :
 			session.GetPlayers().
 				WithHealth(PlayerHealth.Alive).
 				WithRole(null).
-				ToIdList();
+				ToIdSet();
 
 		var publicText = defaultInstruction.Instruction!.PublicAnnouncement!;
 		var privateInstruction = "";

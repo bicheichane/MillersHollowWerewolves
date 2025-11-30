@@ -53,14 +53,14 @@ public class PhaseTransitionTests : DiagnosticTestBase
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new List<Guid> { players[2].Id, players[3].Id };
+        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
 
         // Act: Complete night phase
         builder.CompleteNightPhase(
-            werewolfIds: new List<Guid> { werewolfId },
-            victimId: villagerIds[0],
+            werewolfIds: new HashSet<Guid> { werewolfId },
+            victimId: villagerIds.ElementAt(0),
             seerId: seerId,
-            seerTargetId: villagerIds[1]);
+            seerTargetId: villagerIds.ElementAt(1));
 
         // Assert: Should now be in Dawn phase
         var gameState = builder.GetGameState();
@@ -85,14 +85,14 @@ public class PhaseTransitionTests : DiagnosticTestBase
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new List<Guid> { players[2].Id, players[3].Id };
+        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
 
         // Complete night phase
         builder.CompleteNightPhase(
-            werewolfIds: new List<Guid> { werewolfId },
-            victimId: villagerIds[0],
+            werewolfIds: new HashSet<Guid> { werewolfId },
+            victimId: villagerIds.ElementAt(0),
             seerId: seerId,
-            seerTargetId: villagerIds[1]);
+            seerTargetId: villagerIds.ElementAt(1));
 
         // Act: Complete dawn phase
         builder.CompleteDawnPhase();
@@ -121,20 +121,20 @@ public class PhaseTransitionTests : DiagnosticTestBase
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new List<Guid> { players[2].Id, players[3].Id };
+        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
 
         // Complete night phase
         builder.CompleteNightPhase(
-            werewolfIds: new List<Guid> { werewolfId },
-            victimId: villagerIds[0],
+            werewolfIds: new HashSet<Guid> { werewolfId },
+            victimId: villagerIds.ElementAt(0),
             seerId: seerId,
-            seerTargetId: villagerIds[1]);
+            seerTargetId: villagerIds.ElementAt(1));
 
         // Complete dawn phase
         builder.CompleteDawnPhase();
 
         // Act: Complete day phase with a lynch (lynch a villager who is still alive)
-        builder.CompleteDayPhaseWithLynch(villagerIds[1]);
+        builder.CompleteDayPhaseWithLynch(villagerIds.ElementAt(1));
 
         // Assert: Should now be in Night phase with turn number incremented
         var gameState = builder.GetGameState();
@@ -165,7 +165,7 @@ public class PhaseTransitionTests : DiagnosticTestBase
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new List<Guid> { players[2].Id, players[3].Id };
+        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
 
         // Verify we're in Night phase with an active stage
         var session = (GameSession)builder.GetGameState()!;
@@ -173,10 +173,10 @@ public class PhaseTransitionTests : DiagnosticTestBase
 
         // Act: Complete night phase (transitions to Dawn)
         builder.CompleteNightPhase(
-            werewolfIds: new List<Guid> { werewolfId },
-            victimId: villagerIds[0],
+            werewolfIds: new HashSet<Guid> { werewolfId },
+            victimId: villagerIds.ElementAt(0),
             seerId: seerId,
-            seerTargetId: villagerIds[1]);
+            seerTargetId: villagerIds.ElementAt(1));
 
         // Assert: Verify the phase transitioned correctly
         session.GetCurrentPhase().Should().Be(GamePhase.Dawn);
@@ -210,14 +210,14 @@ public class PhaseTransitionTests : DiagnosticTestBase
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new List<Guid> { players[2].Id, players[3].Id };
+        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
 
         // Complete night phase to get to Dawn
         builder.CompleteNightPhase(
-            werewolfIds: new List<Guid> { werewolfId },
-            victimId: villagerIds[0],
+            werewolfIds: new HashSet<Guid> { werewolfId },
+            victimId: villagerIds.ElementAt(0),
             seerId: seerId,
-            seerTargetId: villagerIds[1]);
+            seerTargetId: villagerIds.ElementAt(1));
 
         var session = (GameSession)builder.GetGameState()!;
         session.GetCurrentPhase().Should().Be(GamePhase.Dawn);

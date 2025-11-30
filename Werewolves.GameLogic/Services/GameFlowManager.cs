@@ -496,7 +496,7 @@ internal static class GameFlowManager
         var alivePlayers = session.GetPlayers().WithHealth(PlayerHealth.Alive);
 
         var selectPlayerInstruction = new SelectPlayersInstruction(
-            alivePlayers.ToIdList(),
+            alivePlayers.ToIdSet(),
             NumberRangeConstraint.Optional,
             publicAnnouncement: GameStrings.VoteStartsPublicInstruction,
             privateInstruction: GameStrings.VoteStartsModeratorInstruction);
@@ -519,7 +519,7 @@ internal static class GameFlowManager
 		}
         else
         {
-            var playerId = selectedPlayer[0];
+            var playerId = selectedPlayer.First();
             session.PerformDayVote(playerId);
 
             var votedPlayer = session.GetPlayer(playerId);

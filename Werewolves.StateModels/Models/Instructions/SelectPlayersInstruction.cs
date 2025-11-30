@@ -11,7 +11,7 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// <summary>
     /// The list of player IDs that can be selected from.
     /// </summary>
-    public IReadOnlyList<Guid> SelectablePlayerIds { get; }
+    public HashSet<Guid> SelectablePlayerIds { get; }
 
     /// <summary>
     /// The constraint defining how many players must be selected.
@@ -26,8 +26,8 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// <param name="publicAnnouncement">The text to be read aloud to players.</param>
     /// <param name="privateInstruction">Private guidance for the moderator.</param>
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
-    public SelectPlayersInstruction(
-        IReadOnlyList<Guid> selectablePlayerIds,
+    internal SelectPlayersInstruction(
+        HashSet<Guid> selectablePlayerIds,
         NumberRangeConstraint countConstraint,
         string? publicAnnouncement = null,
         string? privateInstruction = null,
@@ -50,14 +50,14 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// <param name="selectedPlayerIds">The list of selected player IDs.</param>
     /// <returns>A validated ModeratorResponse.</returns>
     /// <exception cref="ArgumentException">Thrown when the selection violates the constraint.</exception>
-    public ModeratorResponse CreateResponse(IReadOnlyList<Guid> selectedPlayerIds)
+    public ModeratorResponse CreateResponse(HashSet<Guid> selectedPlayerIds)
     {
         ValidateSelection(selectedPlayerIds);
 
         return new ModeratorResponse
         {
             Type = ExpectedInputType.PlayerSelection,
-            SelectedPlayerIds = selectedPlayerIds.ToList()
+            SelectedPlayerIds = selectedPlayerIds
         };
     }
 
@@ -66,7 +66,7 @@ public record SelectPlayersInstruction : ModeratorInstruction
     /// </summary>
     /// <param name="selectedPlayerIds">The selection to validate.</param>
     /// <exception cref="ArgumentException">Thrown when validation fails.</exception>
-    private void ValidateSelection(IReadOnlyList<Guid> selectedPlayerIds)
+    private void ValidateSelection(HashSet<Guid> selectedPlayerIds)
     {
         if (selectedPlayerIds == null)
         {
@@ -78,18 +78,9 @@ public record SelectPlayersInstruction : ModeratorInstruction
         CountConstraint.Enforce(selectedPlayerIds.ToList());
 
         // Check that all selected players are in the selectable list
-        foreach (var playerId in selectedPlayerIds)
+        if(!selectedPlayerIds.IsSubsetOf(SelectablePlayerIds))
         {
-            if (!SelectablePlayerIds.Contains(playerId))
-            {
-                throw new ArgumentException($"Player ID {playerId} is not in the list of selectable players.");
-            }
-        }
-
-        // Check for duplicates
-        if (selectedPlayerIds.Distinct().Count() != count)
-        {
-            throw new ArgumentException("Selection contains duplicate player IDs.");
+            throw new ArgumentException("Selected player IDs are not valid.");
         }
     }
 }

@@ -755,7 +755,7 @@ public class NightActionTests : DiagnosticTestBase
     /// <summary>
     /// Completes the werewolf night action sequence: identify (if Night 1) → select victim → confirm sleep.
     /// </summary>
-    private static void CompleteWerewolfNightAction(GameTestBuilder builder, List<Guid> werewolfIds, Guid victimId)
+    private static void CompleteWerewolfNightAction(GameTestBuilder builder, HashSet<Guid> werewolfIds, Guid victimId)
     {
         // Identify werewolves
         var identifyInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(

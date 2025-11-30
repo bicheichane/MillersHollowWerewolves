@@ -15,7 +15,7 @@ public record ConfirmationInstruction : ModeratorInstruction
     /// <param name="publicAnnouncement">The text to be read aloud to players.</param>
     /// <param name="privateInstruction">Private guidance for the moderator.</param>
     /// <param name="affectedPlayerIds">Optional list of affected player IDs for context.</param>
-    public ConfirmationInstruction(
+    internal ConfirmationInstruction(
         string? publicAnnouncement = null,
         string? privateInstruction = null,
         IReadOnlyList<Guid>? affectedPlayerIds = null)

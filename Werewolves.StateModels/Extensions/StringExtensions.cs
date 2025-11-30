@@ -27,11 +27,11 @@ namespace Werewolves.StateModels.Extensions
         public static IEnumerable<IPlayer> FromTeam(this IEnumerable<IPlayer> players, Team team) =>
             players.Where(p => p.State.Team == team);
 
-		public static List<Guid> ToIdList(this Dictionary<Guid, IPlayer> players) =>
-			players.Select(p => p.Key).ToList();
+		public static HashSet<Guid> ToIdSet(this Dictionary<Guid, IPlayer> players) =>
+			players.Select(p => p.Key).ToHashSet();
 
-		public static List<Guid> ToIdList(this IEnumerable<IPlayer> players) =>
-			players.Select(p => p.Id).ToList();
+		public static HashSet<Guid> ToIdSet(this IEnumerable<IPlayer> players) =>
+			players.Select(p => p.Id).ToHashSet();
 	}
 
 	internal static class PlayerExtensionHelpers

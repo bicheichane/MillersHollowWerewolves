@@ -19,7 +19,7 @@ public class NightActionInputs
     /// <summary>
     /// Werewolf action: IDs of werewolf players to identify.
     /// </summary>
-    public List<Guid>? WerewolfIds { get; init; }
+    public HashSet<Guid>? WerewolfIds { get; init; }
 
     /// <summary>
     /// Werewolf action: ID of the victim to select.
@@ -243,7 +243,7 @@ public class GameTestBuilder
     /// <param name="werewolfIds">The IDs of all werewolf players to identify.</param>
     /// <param name="victimId">The ID of the player to select as the victim.</param>
     /// <returns>The result of the final sleep confirmation.</returns>
-    public ProcessResult CompleteWerewolfNightAction(List<Guid> werewolfIds, Guid victimId)
+    public ProcessResult CompleteWerewolfNightAction(HashSet<Guid> werewolfIds, Guid victimId)
     {
         EnsureGameStarted();
 
@@ -374,7 +374,7 @@ public class GameTestBuilder
     /// <param name="seerId">Optional: The ID of the Seer player. If null, Seer actions are skipped.</param>
     /// <param name="seerTargetId">Optional: The ID of the player for the Seer to investigate. Required if seerId is provided.</param>
     /// <returns>The result of the final action in the night phase.</returns>
-    public ProcessResult CompleteNightPhase(List<Guid> werewolfIds, Guid victimId, Guid? seerId = null, Guid? seerTargetId = null)
+    public ProcessResult CompleteNightPhase(HashSet<Guid> werewolfIds, Guid victimId, Guid? seerId = null, Guid? seerTargetId = null)
     {
         if (seerId.HasValue && !seerTargetId.HasValue)
             throw new ArgumentException("seerTargetId must be provided when seerId is specified", nameof(seerTargetId));
@@ -564,8 +564,8 @@ public class GameTestBuilder
     private ProcessResult HandleDayVotingInstruction(SelectPlayersInstruction instruction, Guid? lynchTargetId)
     {
         var selectedPlayers = lynchTargetId.HasValue
-            ? new List<Guid> { lynchTargetId.Value }
-            : new List<Guid>();
+            ? new HashSet<Guid> { lynchTargetId.Value }
+            : new HashSet<Guid>();
 
         var response = instruction.CreateResponse(selectedPlayers);
         return Process(response);

@@ -39,10 +39,10 @@ internal abstract class RoleHookListener : IGameHookListener
 
 	#region MainRole Helper functions
 
-	protected List<IPlayer>? GetAliveRolePlayers(GameSession session) =>
-		session.GetPlayers().WithRole(Id).WithHealth(Alive).ToList();
+	protected HashSet<IPlayer>? GetAliveRolePlayers(GameSession session) =>
+		session.GetPlayers().WithRole(Id).WithHealth(Alive).ToHashSet();
 
-	protected List<Guid> GetPotentialTargets(GameSession session, bool canTargetSelf)
+	protected HashSet<Guid> GetPotentialTargets(GameSession session, bool canTargetSelf)
 	{
 		var potentialTargets = session.GetPlayers()
 			.WithHealth(Alive);
@@ -50,14 +50,14 @@ internal abstract class RoleHookListener : IGameHookListener
 		if (canTargetSelf == false)
 			potentialTargets = potentialTargets.WithoutRole(Id);
 
-		var list = potentialTargets.ToIdList();
+		var hashSet = potentialTargets.ToIdSet();
 
-		if (!list.Any())
+		if (!hashSet.Any())
 		{
 			throw new InvalidOperationException($"No valid targets available for {Id} to select.");
 		}
 
-		return list;
+		return hashSet;
 	}
 
 	#endregion
