@@ -18,4 +18,7 @@ public record PlayerEliminatedLogEntry : GameLogEntryBase
         mutator.SetPlayerHealth(PlayerId, PlayerHealth.Dead);
         return this;
     }
+
+    public override string ToString() =>
+        $"PlayerEliminated: {PlayerId} ({Reason})";
 }

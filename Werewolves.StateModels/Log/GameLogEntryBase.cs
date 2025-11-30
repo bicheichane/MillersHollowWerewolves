@@ -29,4 +29,9 @@ public abstract record GameLogEntryBase
     /// </summary>
     /// <param name="mutator">The state mutator interface for applying changes</param>
     protected abstract GameLogEntryBase InnerApply(ISessionMutator mutator);
+
+    /// <summary>
+    /// Returns a diagnostic summary of this log entry focusing on "what" and "who".
+    /// </summary>
+    public abstract override string ToString();
 }

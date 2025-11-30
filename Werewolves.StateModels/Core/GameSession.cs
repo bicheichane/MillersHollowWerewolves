@@ -45,9 +45,9 @@ internal class GameSession : IGameSession
 	public Guid Id => _gameSessionKernel.Id;
 	public IEnumerable<GameLogEntryBase> GameHistoryLog => _gameSessionKernel.GetAllLogEntries();
 
-	internal GameSession(Guid id, ModeratorInstruction initialInstruction, List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
+	internal GameSession(Guid id, ModeratorInstruction initialInstruction, List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null, IStateChangeObserver? stateChangeObserver = null)
 	{
-		_gameSessionKernel = new GameSessionKernel(id, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
+		_gameSessionKernel = new GameSessionKernel(id, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck, stateChangeObserver);
 	}
 
 	#region Private Fields
@@ -71,6 +71,7 @@ internal class GameSession : IGameSession
 
 	internal T? GetSubPhase<T>() where T : struct, Enum => _gameSessionKernel.PhaseStateCache.GetSubPhase<T>();
     internal ListenerIdentifier? GetCurrentListener() => _gameSessionKernel.PhaseStateCache.GetCurrentListener();
+    internal string? GetActiveSubPhaseStage() => _gameSessionKernel.PhaseStateCache.GetActiveSubPhaseStage();
 
     internal T? GetCurrentListenerState<T>(ListenerIdentifier listener) where T : struct, Enum =>
         _gameSessionKernel.PhaseStateCache.GetCurrentListenerState<T>(listener);
@@ -128,6 +129,25 @@ internal class GameSession : IGameSession
 
 	internal void TransitionListenerStateCache(IHookSubPhaseKey key, ListenerIdentifier listener, string state)  =>
         _gameSessionKernel.TransitionListenerAndState(listener, state);
+
+	internal void ClearCurrentListenerCache(IHookSubPhaseKey key) =>
+		_gameSessionKernel.ClearCurrentListener();
+
+	/// <summary>
+	/// Gets or creates a listener instance for this session. Listeners are cached per-session
+	/// to ensure state machine isolation between games while maintaining consistency within a game.
+	/// </summary>
+	internal T GetOrCreateListener<T>(ListenerIdentifier id, Func<T> factory) where T : class
+	{
+		if (_gameSessionKernel.ListenerInstanceCache.TryGetValue(id, out var existing))
+		{
+			return (T)existing;
+		}
+
+		var instance = factory();
+		_gameSessionKernel.ListenerInstanceCache[id] = instance;
+		return instance;
+	}
 
     #endregion
 
@@ -288,6 +308,23 @@ internal class GameSession : IGameSession
         };
         _gameSessionKernel.AddEntryAndUpdateState(entry);
 	}
+
+    /// <summary>
+    /// Gets the player ID that was voted for in the most recent vote of the current turn.
+    /// Returns null if the vote was a tie (Guid.Empty in the log).
+    /// </summary>
+    internal Guid? GetCurrentVoteTarget()
+    {
+        var turnNumber = _gameSessionKernel.TurnNumber;
+        var voteEntry = _gameSessionKernel.FindLogEntries<VoteOutcomeReportedLogEntry>(
+            NumberRangeConstraint.Exact(turnNumber))
+            .LastOrDefault();
+
+        if (voteEntry == null || voteEntry.ReportedOutcomePlayerId == Guid.Empty)
+            return null;
+
+        return voteEntry.ReportedOutcomePlayerId;
+    }
 
 	internal void PerformDayVote(Guid? reportedOutcomePlayerId)
     {

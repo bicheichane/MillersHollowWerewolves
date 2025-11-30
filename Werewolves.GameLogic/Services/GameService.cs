@@ -26,14 +26,39 @@ public class GameService
     {
     }
 
+    public StartGameConfirmationInstruction StartNewGame(
+        List<string> playerNamesInOrder, 
+        List<MainRoleType> rolesInPlay, 
+        List<string>? eventCardIdsInDeck = null) => StartNewGameCore(
+            playerNamesInOrder, 
+            rolesInPlay, 
+            eventCardIdsInDeck, 
+            stateChangeObserver: null);
+
+    // Overload to accept state change observer for test suite diagnostics
+    internal StartGameConfirmationInstruction StartNewGameWithObserver(
+        List<string> playerNamesInOrder, 
+        List<MainRoleType> rolesInPlay, 
+        List<string>? eventCardIdsInDeck = null,
+        IStateChangeObserver? stateChangeObserver = null) => StartNewGameCore(
+            playerNamesInOrder, 
+            rolesInPlay, 
+            eventCardIdsInDeck, 
+            stateChangeObserver);            
+
     /// <summary>
     /// Starts a new game session.
     /// </summary>
     /// <param name="playerNamesInOrder">List of player names in clockwise seating order.</param>
     /// <param name="rolesInPlay">List of RoleTypes included in the game.</param>
     /// <param name="eventCardIdsInDeck">Optional list of event card IDs included.</param>
+    /// <param name="stateChangeObserver">Optional observer for state change diagnostics.</param>
     /// <returns>The unique ID for the newly created game session.</returns>
-    public StartGameConfirmationInstruction StartNewGame(List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null)
+    private StartGameConfirmationInstruction StartNewGameCore(
+        List<string> playerNamesInOrder, 
+        List<MainRoleType> rolesInPlay, 
+        List<string>? eventCardIdsInDeck = null,
+        IStateChangeObserver? stateChangeObserver = null)
     {
         // 1. Generate the game ID
         var gameId = Guid.NewGuid();
@@ -42,7 +67,7 @@ public class GameService
         var initialInstruction = GameFlowManager.GetInitialInstruction(rolesInPlay, gameId);
         
         // 3. Create the session with both the ID and instruction
-        var session = new GameSession(gameId, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck);
+        var session = new GameSession(gameId, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck, stateChangeObserver);
         
         // 4. Store the session
         _sessions.TryAdd(session.Id, session);
@@ -87,15 +112,16 @@ public class GameService
 			return ProcessResult.Failure(new ConfirmationInstruction(privateInstruction: "ERROR: Game not found"));
 		}
 
+        if (session.PendingModeratorInstruction is FinishedGameConfirmationInstruction)
+		{
+			_sessions.Remove(gameId, out _);
+            return new ProcessResult(true, null); // Game over, no further instructions
+		}
+
 		// --- Input Validation Against Last Instruction ---
 		EnsureInputTypeIsExpected(session, input);
 		
 		var result = GameFlowManager.HandleInput(session, input);
-
-		if (result.ModeratorInstruction is FinishedGameConfirmationInstruction)
-		{
-			_sessions.Remove(gameId, out _);
-		}
 
 		return result;
 	}

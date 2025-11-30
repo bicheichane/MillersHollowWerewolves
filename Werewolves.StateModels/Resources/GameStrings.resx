@@ -117,8 +117,8 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="SetupCompletePrompt" xml:space="preserve">
-    <value>Setup complete. Proceed to Night 1?</value>
+  <data name="GameStartPrompt" xml:space="preserve">
+    <value>Game ready. Proceed to Night 1?</value>
     <comment/>
   </data>
   <data name="NightStartsPrompt" xml:space="preserve">

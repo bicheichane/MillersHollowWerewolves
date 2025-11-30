@@ -1,10 +1,5 @@
 namespace Werewolves.GameLogic.Models.StateMachine;
 
-internal enum SetupSubPhaseStage
-{
-    ConfirmSetup
-}
-
 internal enum NightSubPhaseStage
 {
     NightStart,

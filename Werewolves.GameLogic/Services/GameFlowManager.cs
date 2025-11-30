@@ -30,29 +30,6 @@ internal static class GameFlowManager
 
     private static readonly GameFlowManagerKey Key = new();
 
-    #region Static Factory Methods
-
-    /// <summary>
-    /// Gets the initial instruction to bootstrap a new game session.
-    /// This is a pure function that generates the startup instruction without creating any game state.
-    /// </summary>
-    /// <param name="rolesInPlay">The roles that will be used in this game.</param>
-    /// <param name="gameId">The unique identifier for the game session.</param>
-    /// <returns>The initial instruction prompting the moderator to confirm game start.</returns>
-    public static StartGameConfirmationInstruction GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)
-    {
-        // Validate inputs
-        ArgumentNullException.ThrowIfNull(rolesInPlay);
-        if (!rolesInPlay.Any())
-        {
-            throw new ArgumentException("Role list cannot be empty", nameof(rolesInPlay));
-        }
-
-        return new StartGameConfirmationInstruction(gameId);
-    }
-
-    #endregion
-
     #region Static Flow Definitions
     internal static readonly Dictionary<GameHook, List<ListenerIdentifier>> HookListeners = new()
     {
@@ -134,26 +111,20 @@ internal static class GameFlowManager
         ],
 	};
 
-    internal static readonly Dictionary<ListenerIdentifier, IGameHookListener> ListenerImplementations = new()
+    /// <summary>
+    /// Factory functions for creating listener instances. Each game session gets its own fresh instances.
+    /// This ensures listener state machines are isolated between games (fixing test isolation bugs).
+    /// </summary>
+    internal static readonly Dictionary<ListenerIdentifier, Func<IGameHookListener>> ListenerFactories = new()
     {
-        // Define listener implementations here
-        [Listener(SimpleWerewolf)] = new SimpleWerewolfRole(),
-        [Listener(Seer)] = new SeerRole(),
-        [Listener(SimpleVillager)] = new SimpleVillagerRole()
+        // Define listener factories here - each invocation creates a fresh instance
+        [Listener(SimpleWerewolf)] = () => new SimpleWerewolfRole(),
+        [Listener(Seer)] = () => new SeerRole(),
+        [Listener(SimpleVillager)] = () => new SimpleVillagerRole()
     };
 
     internal static readonly Dictionary<GamePhase, IPhaseDefinition> PhaseDefinitions = new()
     {
-        [GamePhase.Setup] = new PhaseManager<SetupSubPhases>(
-        entrySubPhase: SetupSubPhases.Confirm,
-        subPhaseList: [
-            new(subPhase: SetupSubPhases.Confirm, //Handler = HandleSetupConfirmation,
-                subPhaseStages: 
-                    [NavigationEndStage(SetupSubPhaseStage.ConfirmSetup, HandleSetupPhase)], 
-                possibleNextMainPhaseTransitions: 
-                    [new(GamePhase.Night)])
-        ]),
-
         [GamePhase.Night] = new PhaseManager<NightSubPhases>(
         entrySubPhase: NightSubPhases.Start,
         subPhaseList: [
@@ -184,8 +155,7 @@ internal static class GameFlowManager
                 subPhase : DawnSubPhases.AnnounceVictims,
                 subPhaseStages: [
 					LogicStage(DawnSubPhaseStage.AnnounceVictimsAndRequestRoles, HandleVictimsAnnounceAndRoleRequest),
-					LogicStage(DawnSubPhaseStage.AssignVictimRoles, HandleVictimsAnnounceAndRoleResponse)
-                        .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
+					LogicStage(DawnSubPhaseStage.AssignVictimRoles, HandleVictimsAnnounceAndRoleResponse),
                     HookStage(PlayerRoleAssignedOnElimination),
                     NavigationEndStageSilent(DawnSubPhases.Finalize)
 					],
@@ -237,8 +207,7 @@ internal static class GameFlowManager
             new(
                 subPhase: DaySubPhases.HandleNonTieVote,
                 subPhaseStages: [ 
-                    NavigationEndStage(DaySubPhaseStage.VerifyLynchingOcurred, AssignRoleAndVerifyIfLynchingOcurred)
-                        .RequiresInputType(ExpectedInputType.AssignPlayerRoles),
+                    NavigationEndStage(DaySubPhaseStage.VerifyLynchingOcurred, AssignRoleAndVerifyIfLynchingOcurred),
                 ],
                 possibleNextSubPhases:
                     [ DaySubPhases.ProcessVoteOutcome ]
@@ -275,20 +244,45 @@ internal static class GameFlowManager
         ]),
 
     };
+	#endregion
+
+	#region Static Factory Methods
+
+    /// <summary>
+    /// Gets the initial instruction to bootstrap a new game session.
+    /// This is a pure function that generates the startup instruction without creating any game state.
+    /// </summary>
+    /// <param name="rolesInPlay">The roles that will be used in this game.</param>
+    /// <param name="gameId">The unique identifier for the game session.</param>
+    /// <returns>The initial instruction prompting the moderator to confirm game start</returns>
+    public static StartGameConfirmationInstruction GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)
+    {
+        // Validate inputs
+        ArgumentNullException.ThrowIfNull(rolesInPlay);
+        if (!rolesInPlay.Any())
+        {
+            throw new ArgumentException("Role list cannot be empty", nameof(rolesInPlay));
+        }
+
+        return new StartGameConfirmationInstruction(gameId);
+    }
+
     #endregion
 
-    #region State Machine
+	#region State Machine
 
-    internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
+	internal static ProcessResult HandleInput(GameSession session, ModeratorResponse input)
     {
-        var currentPhase = session.GetCurrentPhase();
+        var oldPhase = session.GetCurrentPhase();
 
         // --- Execute Phase Handler ---
         PhaseHandlerResult handlerResult = RouteInputToPhaseHandler(session, input);
 
+        var newPhase = session.GetCurrentPhase();
+
 		var nextInstructionToSend = handlerResult.ModeratorInstruction;
 
-		if(TryGetVictoryInstructions(session, currentPhase, out var victoryInstruction))
+		if(TryGetVictoryInstructions(session, oldPhase, newPhase, out var victoryInstruction))
         {
             nextInstructionToSend = victoryInstruction;
 		}
@@ -304,14 +298,13 @@ internal static class GameFlowManager
 		return ProcessResult.Success(nextInstructionToSend);
     }
 
-    private static bool TryGetVictoryInstructions(GameSession session, GamePhase currentPhase,
-        out ModeratorInstruction? nextInstructionToSend)
+    private static bool TryGetVictoryInstructions(GameSession session, GamePhase oldPhase, GamePhase newPhase,
+		out ModeratorInstruction? nextInstructionToSend)
     {
         nextInstructionToSend = null;
-        // --- Post-Processing: Victory Check ---
-        // Check victory ONLY after specific resolution phases
-        if (currentPhase == GamePhase.Dawn || 
-            (currentPhase == GamePhase.Day && session.GetSubPhase<DaySubPhases>() == DaySubPhases.Finalize))
+		// --- Post-Processing: Victory Check ---
+		// Check victory ONLY at the starting point of Day and Night phases
+		if (oldPhase != newPhase && newPhase is GamePhase.Day or GamePhase.Night)
         {
             var victoryCheckResult = CheckVictoryConditions(session);
             if (victoryCheckResult != null)
@@ -330,14 +323,31 @@ internal static class GameFlowManager
 
     private static PhaseHandlerResult RouteInputToPhaseHandler(GameSession session, ModeratorResponse input)
     {
-        var currentPhase = session.GetCurrentPhase();
-        
-        if (!PhaseDefinitions.TryGetValue(currentPhase, out var phaseDef))
+        PhaseHandlerResult result;
+        do
         {
-            throw new InvalidOperationException($"No phase definition found for phase: {currentPhase}");
+            var currentPhase = session.GetCurrentPhase();
+            
+            if (!PhaseDefinitions.TryGetValue(currentPhase, out var phaseDef))
+            {
+                throw new InvalidOperationException($"No phase definition found for phase: {currentPhase}");
+            }
+
+            result = phaseDef.ProcessInputAndUpdatePhase(session, input);
+        } 
+        while (result is MainPhaseHandlerResult { ModeratorInstruction: null });
+
+        // Defensive check: null instructions should only bubble up from MainPhaseHandlerResult
+        // during silent phase transitions (handled by the loop above). If we get here with a null
+        // instruction, something has gone wrong at the sub-phase or hook level.
+        if (result.ModeratorInstruction == null)
+        {
+            throw new InvalidOperationException(
+                $"Internal State Machine Error: Received null ModeratorInstruction from non-MainPhaseHandlerResult. " +
+                $"Result type: {result.GetType().Name}, Current phase: {session.GetCurrentPhase()}");
         }
 
-        return phaseDef.ProcessInputAndUpdatePhase(session, input);
+        return result;
     }
 
     private static (Team WinningTeam, string Description)? CheckVictoryConditions(GameSession session)
@@ -363,21 +373,6 @@ internal static class GameFlowManager
 
 	#endregion
 
-	#region Setup Phase Handlers
-
-	private static MajorNavigationPhaseHandlerResult HandleSetupPhase(GameSession session, ModeratorResponse input)
-    {
-        var nightStartInstruction = new ConfirmationInstruction(
-            publicAnnouncement: GameStrings.NightStartsPrompt,
-            privateInstruction: GameStrings.ConfirmNightStarted
-        );
-        // Transition happens, specific instruction provided.
-
-        return TransitionPhase(nightStartInstruction, GamePhase.Night);
-    }
-
-	#endregion
-
 	#region Night Phase Handler Methods
 
 	/// <summary>
@@ -386,10 +381,11 @@ internal static class GameFlowManager
 	private static ModeratorInstruction HandleNightStart(GameSession session, ModeratorResponse input)
     {
         var instruction = new ConfirmationInstruction(
-            publicAnnouncement: "Village goes to sleep. Night actions begin."
+            publicAnnouncement: GameStrings.NightStartsPrompt,
+            privateInstruction: GameStrings.ConfirmNightStarted
         );
 
-        return instruction;
+		return instruction;
     }
 
     private static MainPhaseHandlerResult HandleNightActionLoopFinish(GameSession session, ModeratorResponse input)
@@ -426,15 +422,24 @@ internal static class GameFlowManager
     private static ModeratorInstruction HandleVictimsAnnounceAndRoleRequest(GameSession session, ModeratorResponse input)
     {
         var victimList = session.GetPlayersEliminatedThisDawn().ToImmutableHashSet();
-
         var victimNameList = string.Join(Environment.NewLine, victimList.Select(p => p.Name));
+        var announcement = GameStrings.MultipleVictimEliminatedAnnounce.Format(victimNameList);
+
+        // Check if any victims need role assignment
+        var victimsNeedingRoles = victimList.Where(p => p.State.MainRole == null).ToImmutableHashSet();
+
+        if (victimsNeedingRoles.Count == 0)
+        {
+            // All victims already have known roles - just announce
+            return new ConfirmationInstruction(publicAnnouncement: announcement);
+        }
 
         var unassignedRoles = session.GetUnassignedRoles();
 
         return new AssignRolesInstruction(
-            publicAnnouncement: GameStrings.MultipleVictimEliminatedAnnounce.Format(victimNameList),
+            publicAnnouncement: announcement,
             privateInstruction: GameStrings.RevealRolePromptSpecify,
-            playersForAssignment: victimList.Select(p => p.Id).ToImmutableHashSet(),
+            playersForAssignment: victimsNeedingRoles.Select(p => p.Id).ToImmutableHashSet(),
             rolesForAssignment: unassignedRoles
 		);
     }
@@ -444,6 +449,17 @@ internal static class GameFlowManager
     /// </summary>
     private static void HandleVictimsAnnounceAndRoleResponse(GameSession session, ModeratorResponse input)
     {
+        // Re-check if any victims need role assignment
+        var victimList = session.GetPlayersEliminatedThisDawn();
+        var victimsNeedingRoles = victimList.Where(p => p.State.MainRole == null).ToList();
+
+        if (victimsNeedingRoles.Count == 0)
+        {
+            // All victims already have known roles - nothing to do
+            return;
+        }
+
+        // Process role assignments from moderator response
         foreach (var entry in input.AssignedPlayerRoles!)
         {
             session.AssignRole(entry.Key, entry.Value);
@@ -506,6 +522,15 @@ internal static class GameFlowManager
             var playerId = selectedPlayer[0];
             session.PerformDayVote(playerId);
 
+            var votedPlayer = session.GetPlayer(playerId);
+
+            // Check if the voted player already has a known role
+            if (votedPlayer.State.MainRole != null)
+            {
+                // Role is already known - just confirm and proceed
+                return TransitionSubPhaseSilent(DaySubPhases.HandleNonTieVote);
+            }
+
             var availableRoles = session.GetUnassignedRoles();
             var instruction = new AssignRolesInstruction(
                 [playerId],
@@ -519,16 +544,16 @@ internal static class GameFlowManager
 
     private static SubPhaseHandlerResult AssignRoleAndVerifyIfLynchingOcurred(GameSession session, ModeratorResponse input)
     {
-        var entry = input.AssignedPlayerRoles!.Single();
-        var lynchedPlayerId = entry.Key;
-        var lynchedPlayerRole = entry.Value;
-        
+        // Get the voted player from the log, not from moderator input
+        var lynchedPlayerId = session.GetCurrentVoteTarget()!.Value;
         var lynchedPlayer = session.GetPlayer(lynchedPlayerId);
         var lynchedPlayerState = lynchedPlayer.State;
 
-        // only assign role if not already identified
-        if(lynchedPlayerState.MainRole == null)
+        // Only process role assignment if player doesn't already have a known role
+        if (lynchedPlayerState.MainRole == null)
         {
+            var entry = input.AssignedPlayerRoles!.Single();
+            var lynchedPlayerRole = entry.Value;
             session.AssignRole(lynchedPlayerId, lynchedPlayerRole);
         }
 

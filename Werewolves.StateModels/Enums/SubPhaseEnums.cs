@@ -15,13 +15,6 @@ namespace Werewolves.StateModels.Enums;
 /// sub-phase, or main-phase.
 /// *****************************************************************
 
-/// <summary>
-/// Internal sub-phases for Setup phase.
-/// </summary>
-public enum SetupSubPhases
-{
-    Confirm            // Moderator confirms setup is complete
-}
 
 /// <summary>
 /// Internal sub-phases for the consolidated Night phase.

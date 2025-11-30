@@ -18,4 +18,7 @@ public record PhaseTransitionLogEntry : GameLogEntryBase
 		//current turn number may have changed if we transitioned from Day to Night
 		return this with {TurnNumber = mutator.CurrentTurnNumber};
     }
+
+    public override string ToString() =>
+        $"PhaseTransition: → {CurrentPhase}";
 }

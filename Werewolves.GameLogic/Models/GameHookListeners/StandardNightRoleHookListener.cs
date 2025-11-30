@@ -18,19 +18,19 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 	[
 		CreateStage(GameHook.NightMainActionLoop, null, WokenUpStateEnum, HandleRoleWakeupAndId),
 		CreateStage(GameHook.NightMainActionLoop, WokenUpStateEnum, AwaitingTargetSelectionEnum, HandleNightPowerUse_AndId),
-		CreateStage(GameHook.NightMainActionLoop, AwaitingTargetSelectionEnum, AsleepStateEnum, HandleParseNightPowerConsequences),
+		CreateStage(GameHook.NightMainActionLoop, AwaitingTargetSelectionEnum, ReadyToSleepStateEnum, HandleParseNightPowerConsequences),
 		CreateStage(GameHook.NightMainActionLoop, ReadyToSleepStateEnum, AsleepStateEnum, HandleAsleepConfirmation),
 		CreateEndStage(GameHook.NightMainActionLoop, AsleepStateEnum, (_, _) => HookListenerActionResult.Complete(AsleepStateEnum)),
 	];
 
 	protected abstract ModeratorInstruction GenerateTargetSelectionInstruction(GameSession session, ModeratorResponse input);
 
-	protected abstract void ProcessTargetSelection(GameSession session, ModeratorResponse input);
+	protected abstract void ProcessTargetSelectionNoFeedback(GameSession session, ModeratorResponse input);
 
 	protected override HookListenerActionResult HandleNightPowerUse(GameSession session, ModeratorResponse input) =>
 		HandleTargetSelectionRequest(session, input);
 
-	private HookListenerActionResult HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
+	protected virtual HookListenerActionResult HandleTargetSelectionRequest(GameSession session, ModeratorResponse input)
 	{
 		var instruction = GenerateTargetSelectionInstruction(session, input);
 		return HookListenerActionResult.NeedInput(instruction, AwaitingTargetSelectionEnum);
@@ -39,7 +39,7 @@ internal abstract class StandardNightRoleHookListener<T> : NightRoleHookListener
 
 	private HookListenerActionResult HandleParseNightPowerConsequences(GameSession session, ModeratorResponse input)
 	{
-		ProcessTargetSelection(session, input);
+		ProcessTargetSelectionNoFeedback(session, input);
 		return PrepareSleepInstruction(session);
 	}
 }

@@ -27,6 +27,7 @@ The system distinguishes between two types of state:
     *   **Mechanism:** Changes occur **exclusively** via `GameLogEntryBase` (e.g., `AssignRoleLogEntry`, `VictoryConditionMetLogEntry`).
     *   **Purpose:** Represents the permanent historical record of the game. If the application restarts, the *consequences* of previous actions are preserved.
     *   **Replayability:** The `GameHistoryLog` is sufficient to reconstruct the **Game Status**, but not the **Execution Pointer**. Replaying the log restores the game to the start of the current Main Phase.
+    *   **Initial State:** Games begin in the Night phase. There is no Setup phase; the `StartGameConfirmationInstruction` directly triggers Night phase execution when confirmed.
 
 2.  **Transient Execution State (In-Memory):**
     *   **Scope:** `_phaseStateCache` (SubPhase, ActiveStage, ListenerState), `_pendingInstruction`.
@@ -89,6 +90,7 @@ The hermetically sealed kernel that owns the game's mutable memory. It is not vi
     *   `Players` (Dictionary of concrete `Player` objects)
     *   `SeatingOrder` (List of Guids)
     *   `RolesInPlay` (List of roles)
+    *   `ListenerInstanceCache` (Dictionary of session-scoped listener instances)
 *   **Private Nested Classes:**
     *   **`Player` & `PlayerState`:** Concrete implementations of `IPlayer` and `IPlayerState` are defined as **private nested classes** within the Kernel. This ensures their setters are physically inaccessible to any code outside the Kernel file.
     *   **`SessionMutator`:** A **private nested class** implementing `ISessionMutator`. This is the "Proxy Mutator" that bridges the gap between the log entry and the private state.
@@ -130,6 +132,9 @@ A lightweight, stateless wrapper that implements `IGameSession` and delegates al
         *   `TryEnterSubPhaseStage(ISubPhaseManagerKey key, string subPhaseStageId)` (bool): Attempts to enter a sub-phase stage atomically. Returns `false` if already in a different stage or if the stage has already been completed.
         *   `CompleteSubPhaseStageCache(IPhaseManagerKey key)`: Marks the current sub-phase stage as completed.
         *   `TransitionListenerStateCache(IHookSubPhaseKey key, ListenerIdentifier listener, string state)`: Updates listener and its state.
+        *   `ClearCurrentListenerCache(IHookSubPhaseKey key)`: Clears the current listener and its state.
+    *   **Listener Instance Management** (session-scoped listener caching):
+        *   `GetOrCreateListener<T>(ListenerIdentifier id, Func<T> factory)` (T): Gets or creates a listener instance for this session. Listeners are cached per-session to ensure state machine isolation between games while maintaining consistency within a game.
     *   **Query Methods** (read derived state from log):
         *   `GetPlayersTargetedLastNight(NightActionType actionType, NumberRangeConstraint countConstraint, NumberRangeConstraint? turnsAgoConstraint)` (IEnumerable<IPlayer>): Returns players targeted by a specific night action type.
         *   `WasDayAbilityTriggeredThisTurn(DayPowerType powerType)` (bool): Checks if a specific day power was used this turn.
@@ -282,19 +287,22 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
 
 *   **Core Components:**
     *   `HookListeners` (static Dictionary<GameHook, List<ListenerIdentifier>>): Declarative mapping of hooks to the ordered list of listeners that respond to them.
-    *   `ListenerImplementations` (static Dictionary<ListenerIdentifier, IGameHookListener>): Lookup for concrete listener implementations (i.e., the role classes).
+    *   `ListenerFactories` (static Dictionary<ListenerIdentifier, Func<IGameHookListener>>): Factory functions for creating listener instances. Each game session gets its own fresh instances via `GameSession.GetOrCreateListener`, ensuring listener state machine isolation between games.
     *   `PhaseDefinitions` (static Dictionary<GamePhase, IPhaseDefinition>): Declarative mapping of each main `GamePhase` to its corresponding `PhaseManager`.
 *   **Primary Methods:**
     *   `GetInitialInstruction(List<MainRoleType> rolesInPlay, Guid gameId)` (StartGameConfirmationInstruction): **Static factory method for bootstrapping.** Returns the initial instruction required to construct a valid `GameSession`. This pure function performs input validation and generates the startup instruction without creating any game state.
     *   `HandleInput(GameSession session, ModeratorResponse input)` (ProcessResult): **The central state machine orchestrator.**
-        *   Retrieves the current phase and delegates to the appropriate `IPhaseDefinition` (`PhaseManager`).
-        *   The `PhaseManager` loops, executing the current `SubPhaseManager`'s sequence of atomic stages until an instruction is generated for the moderator.
-        *   It validates all transitions (both sub-phase and main-phase) against the declarative rules.
-        *   After a phase handler completes, it checks for victory conditions.
+        *   Delegates to `RouteInputToPhaseHandler` for phase-level processing.
+        *   Checks for victory conditions at **phase transition boundaries** (see Victory Check Timing below).
         *   Returns a `ProcessResult` with the next instruction.
+    *   `RouteInputToPhaseHandler(GameSession session, ModeratorResponse input)` (`private static`): **Routes input to the appropriate phase handler and manages silent main phase transitions.**
+        *   Retrieves the current phase and delegates to the appropriate `IPhaseDefinition` (`PhaseManager`).
+        *   **Silent Transition Loop:** If a `PhaseManager` returns a `MainPhaseHandlerResult` with no instruction (a silent transition), this method loops and re-routes to the new phase's handler. This continues until an instruction is produced.
+        *   **Defensive Null Check:** After the loop exits, an invariant check ensures no null instructions escape from non-`MainPhaseHandlerResult` results, as this would indicate a bug in sub-phase or hook stage logic.
+    *   `TryGetVictoryInstructions(GameSession session, GamePhase oldPhase, GamePhase newPhase, out ModeratorInstruction?)` (`private static`): Checks for victory conditions **only when transitioning between main phases** (entering Day or Night). This ensures victory is detected at natural game boundaries, preventing scenarios like sending the village to sleep only to immediately announce the game is over.
     *   `CheckVictoryConditions(GameSession session)` (`private static`, returns `(Team WinningTeam, string Description)?`): Evaluates win conditions based on the current game state. Returns `null` if no victory condition is met, or a tuple containing the winning team and description.
 *   **Declarative State Machine Architecture:** The game flow is defined by a hierarchy of declarative components:
-    *   **`PhaseManager<TSubPhaseEnum>`**: Manages the flow between sub-phases for a single main `GamePhase`. It contains a dictionary of `SubPhaseManager`s.
+    *   **`PhaseManager<TSubPhaseEnum>`**: Manages the flow between sub-phases for a single main `GamePhase`. It contains a dictionary of `SubPhaseManager`s. Each `PhaseManager` is **phase-aware**: it determines which `GamePhase` it manages by finding itself in the `PhaseDefinitions` dictionary (cached after first lookup). This enables clean exit when a silent main phase transition occurs—if the session's current phase no longer matches the owned phase, the manager returns immediately with a `MainPhaseHandlerResult(null, currentPhase)`, allowing `RouteInputToPhaseHandler` to continue processing in the correct new phase.
     *   **`SubPhaseManager<TSubPhase>`**: Defines a single sub-phase. It contains a linear sequence of `SubPhaseStage`s that are executed in order. It also declares all valid transitions to other sub-phases or main phases.
     *   **`SubPhaseStage`**: An abstract class representing a single, **atomic, non-re-entrant** unit of work. The `GamePhaseStateCache` ensures each stage is executed at most once per sub-phase entry.
         *   `LogicSubPhaseStage`: Executes a custom logic handler.
@@ -341,7 +349,9 @@ A hierarchy of records represents the outcome of a `SubPhaseStage`'s execution, 
 *   `MajorNavigationPhaseHandlerResult`: Abstract record for results that cause a transition.
     *   `MainPhaseHandlerResult(ModeratorInstruction?, GamePhase)`: Signals a transition to a new main phase.
     *   `SubPhaseHandlerResult(ModeratorInstruction?, Enum)`: Signals a transition to a new sub-phase within the current main phase.
-*   `StayInSubPhaseHandlerResult(ModeratorInstruction?)`: Signals that the state machine should remain in the current sub-phase. If the instruction is `null`, the `PhaseManager` will immediately attempt to execute the next stage in the sequence. If an instruction is provided, processing pauses until the moderator responds.
+*   `StayInSubPhaseHandlerResult(ModeratorInstruction?, bool StageComplete)`: Signals that the state machine should remain in the current sub-phase.
+    *   **`StageComplete = true`:** The current stage is marked complete and will not be re-entered. If `ModeratorInstruction` is `null`, the `PhaseManager` immediately executes the next stage. Created via `CompleteSubPhaseStage(instruction)`.
+    *   **`StageComplete = false`:** The current stage remains active for re-entry on the next input. Used when pausing mid-stage to await moderator input (e.g., during hook listener execution). Created via `PauseSubPhaseStage(instruction)`.
 
 ## Hook System Components
  
@@ -408,7 +418,7 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 ## Enums
 
 ### Core Game Flow Enums
-*   `GamePhase`: `Setup`, `Night`, `Dawn`, `Day`.
+*   `GamePhase`: `Night`, `Dawn`, `Day`.
 *   `GameHook`: `NightMainActionLoop`, `PlayerRoleAssignedOnElimination`, `OnVoteConcluded`, `DawnMainActionLoop`.
 *   `PlayerHealth`: `Alive`, `Dead`. 
 *   `ExpectedInputType`: `PlayerSelection`, `PlayerSelectionSingle`, `PlayerSelectionMultiple`, `AssignPlayerRoles`, `OptionSelection`, `Confirmation`.
@@ -438,7 +448,6 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 *   `ImmediateFeedbackNightRoleState`: `AwaitingAwakeConfirmation`, `AwaitingTargetSelection`, `AwaitingModeratorFeedback`, `AwaitingSleepConfirmation`, `Asleep`. Extended state machine for roles requiring immediate moderator feedback during target selection.
 
 ### Sub-Phase Enums
-*   `SetupSubPhases`: `Confirm`.
 *   `NightSubPhases`: `Start`.
 *   `DawnSubPhases`: `CalculateVictims`, `AnnounceVictims`, `ProcessRoleReveals`, `Finalize`.
 *   `DaySubPhases`: `Debate`, `DetermineVoteType`, `NormalVoting`, `AccusationVoting`, `FriendVoting`, `HandleNonTieVote`, `ProcessVoteOutcome`, `ProcessVoteDeathLoop`, `Finalize`.
@@ -452,41 +461,34 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
     *   `GameService` calls `GameFlowManager.GetInitialInstruction(rolesInPlay, gameId)` to obtain the startup instruction.
     *   `GameService` constructs `GameSession` with the ID and instruction, ensuring atomic validity.
     *   The initial instruction (`StartGameConfirmationInstruction`) is returned to the caller.
+    *   When the moderator confirms this instruction, the game begins directly in the Night phase.
 
-2.  **Setup Phase (`GamePhase.Setup`):**
-    *   The moderator confirms the initial instruction, triggering `GameService.ProcessInstruction`.
-    *   The `PhaseManager` for `Setup` executes its single `SubPhaseManager`.
-    *   Its `EndNavigationSubPhaseStage` runs, processing the moderator's confirmation.
-    *   If confirmed, it returns a `MainPhaseHandlerResult` to transition to `GamePhase.Night`.
-
-3.  **Night Phase (`GamePhase.Night`):**
+2.  **Night Phase (`GamePhase.Night`):**
     *   The `PhaseManager` for `Night` is activated. It begins executing the `NightSubPhases.Start` sub-phase.
     *   The `SubPhaseManager` for `Start` runs its sequence of atomic stages:
         1.  A `LogicSubPhaseStage` issues the "Village goes to sleep" instruction and increments the turn number.
         2.  A `HookSubPhaseStage` fires the `GameHook.NightMainActionLoop`. It iterates through all registered role listeners (`SimpleWerewolfRole`, `SeerRole`, etc.), calling `Execute` on each.
-        3.  If a listener needs input, it returns `HookListenerActionResult.NeedInput`, which becomes a `StayInSubPhaseHandlerResult` with an instruction. The `PhaseManager` pauses.
-        4.  Once all listeners complete, the `HookSubPhaseStage`'s `onComplete` delegate runs.
+        3.  If a listener needs input, it returns `HookListenerActionResult.NeedInput`, which becomes a `StayInSubPhaseHandlerResult` via `PauseSubPhaseStage(instruction)`. The stage remains active for re-entry, and the `PhaseManager` pauses.
+        4.  Once all listeners complete, the `HookSubPhaseStage`'s `onComplete` delegate runs, returning `CompleteSubPhaseStage(null)` to mark the stage complete.
         5.  The final `EndNavigationSubPhaseStage` executes, returning a `MainPhaseHandlerResult` to transition to `GamePhase.Dawn`.
 
-4.  **Dawn Phase (`GamePhase.Dawn`):**
+3.  **Dawn Phase (`GamePhase.Dawn`):**
     *   The `PhaseManager` for `Dawn` is activated, starting at `DawnSubPhases.CalculateVictims`.
     *   **Calculate Victims:** The `NightInteractionResolver` is invoked to process all night actions, resolving conflicts (Witch vs Defender vs Infection) and applying eliminations/status effects. Navigates either to `AnnounceVictims` or `Finalize`, depending on whether or not there were any night deaths.
-    *   **Announce Victims:** If victims exist, the `AnnounceVictims` sub-phase requests role assignments for the victims, and fires `GameHook.PlayerRoleAssignedOnElimination`. Navigates to `Finalize`
-    *   **Finalize:** The `Finalize` sub-phase transitions to `GamePhase.Day`.
-    *   **Victory Check:** `GameFlowManager` checks for victory conditions.
+    *   **Announce Victims:** If victims exist, the `AnnounceVictims` sub-phase announces the deaths. Role assignment is **conditional**: if all victims already have known roles (e.g., from night actions), only a confirmation is requested; otherwise, an `AssignRolesInstruction` is sent for victims with unknown roles. Fires `GameHook.PlayerRoleAssignedOnElimination`. Navigates to `Finalize`.
+    *   **Finalize:** The `Finalize` sub-phase transitions to `GamePhase.Day`. Victory is checked at this transition.
 
-5.  **Day Phase (`GamePhase.Day`):**
+4.  **Day Phase (`GamePhase.Day`):**
     *   The `PhaseManager` for `Day` starts at `DaySubPhases.Debate`.
     *   **Debate:** Issues an instruction for discussion, then transitions to `DetermineVoteType`.
     *   **Determine Vote Type:** Determines what's the appropriate vote type, checking for active events or modifiers (defaults to `NormalVoting` sub-phase).
-    *   **Normal Voting:** Handles standard village voting to end the debate. Transitions to either `HandleNonTieVote` if there was no tie, or `ProcessVoteOutcome` if there was a tie.
+    *   **Normal Voting:** Handles standard village voting to end the debate. Role assignment is **conditional**: if the voted player's role is already known (e.g., werewolves who woke during night), it silently transitions to the next sub-phase; otherwise, an `AssignRolesInstruction` is sent. Transitions to either `HandleNonTieVote` if there was no tie, or `ProcessVoteOutcome` if there was a tie.
     *   **Accusation Voting:** *(Not yet implemented)* Reserved for accusation-based voting mechanics.
     *   **Friend Voting:** *(Not yet implemented)* Reserved for friend-based voting mechanics (e.g., Angel event).
     *   **Handle Non Tie Vote:** Handles checking if the voted for player is susceptible to be actually lynched due to the vote (i.e. Village Idiot), eliminates it if they are, otherwise applies `LynchImmunityUsed` status effect. Transitions to `ProcessVoteOutcome`
     *   **Process Vote Outcome:** Fires `GameHook.OnVoteConcluded`, and then checks where to navigate. Can loop back to `DetermineVoteType` if a re-vote was triggered (i.e. stuttering judge), advance to `ProcessVoteDeathLoop` if there were any voting deaths, or `Finalize` if not.
     *   **Process Vote Death Loop:** Fires `GameHook.PlayerRoleAssignedOnElimination`.
-    *   **Finalize:** Transitions to `GamePhase.Night`.
-    *   **Victory Check:** `GameFlowManager` checks for victory conditions.
+    *   **Finalize:** Transitions to `GamePhase.Night`. Victory is checked at this transition.
 
 # Game Logs 
 
@@ -531,3 +533,43 @@ The `GameFlowManager` implements automatic victory condition checking to ensure 
     *   Solo role win conditions (Angel, Piper, White Werewolf, Prejudiced Manipulator) 
     *   Event-specific win conditions 
     *   Complex role interactions (Charmed players, infected players, etc.) 
+
+### Diagnostic State Observation
+
+For integration testing, an optional `IStateChangeObserver` can be injected into `GameSessionKernel` at construction time. This observer receives callbacks for all state mutations, enabling tests to capture a complete timeline of changes.
+
+**Tracked State Changes:**
+- Main phase transitions (`OnMainPhaseChanged`)
+- Sub-phase transitions (`OnSubPhaseChanged`)
+- Sub-phase stage changes (`OnSubPhaseStageChanged`)
+- Listener and listener state changes (`OnListenerChanged`)
+- Turn number increments (`OnTurnNumberChanged`)
+- Pending instruction updates (`OnPendingInstructionChanged`)
+- Game log entry applications (`OnLogEntryApplied`)
+
+**Test Integration:**
+- `DiagnosticStateObserver` captures all state changes to a timestamped log
+- `GameTestBuilder.Create(output)` automatically injects the observer when an `ITestOutputHelper` is provided
+- `DiagnosticTestBase` automatically dumps the state change log when a test fails (via `IDisposable`)
+
+**Production Overhead:** Zero. The observer is null by default; null-conditional calls (`?.`) have negligible cost.
+
+**Usage Example:**
+```csharp
+public class MyTests : DiagnosticTestBase
+{
+    public MyTests(ITestOutputHelper output) : base(output) { }
+
+    [Fact]
+    public void MyTest()
+    {
+        var builder = CreateBuilder()
+            .WithSimpleGame(4, werewolfCount: 1);
+        builder.StartGame();
+        
+        // Test logic...
+        
+        MarkTestCompleted(); // Suppresses diagnostic dump on success
+    }
+}
+``` 

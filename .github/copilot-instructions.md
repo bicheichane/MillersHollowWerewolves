@@ -1,42 +1,90 @@
 # Copilot Instructions for MillersHollowWerewolves
 
-## Architecture & Design Philosophy
-- **Two-Assembly Structure**: 
-  - `Werewolves.StateModels`: Pure state representation, data models, and enums. Contains NO game logic.
-  - `Werewolves.GameLogic`: Rules engine, flow management, and `IGameHookListener` implementations.
-- **State Management (Facade/Kernel Pattern)**:
-  - **GameSession (Facade)**: A stateless wrapper implementing `IGameSession`. Delegates all state queries to the Kernel.
-  - **GameSessionKernel (Kernel)**: The "Fort Knox" of state. Holds `GameHistoryLog`, `Player` objects, and caches.
-  - **Zero-Leakage Mutation**: Direct state modification is compile-time impossible. All changes MUST occur via `GameLogEntryBase` applied through the `ISessionMutator`.
-  - **Event Sourcing**: `GameSessionKernel.GameHistoryLog` is the SINGLE source of truth.
-- **Game Loop**:
-  - Driven by `GameFlowManager` using a declarative hook system.
-  - Roles and Events implement `IGameHookListener` to respond to specific game phases (hooks).
-- **UI Agnostic**:
-  - Communication is strictly via `ModeratorInstruction` (Output) and `ModeratorInput` (Input).
-  - Do not introduce UI-specific dependencies into the Core or GameLogic assemblies.
+## Architecture Overview
+Two-assembly .NET 10 class library implementing Werewolves of Miller's Hollow game logic as a moderator helper.
+
+### Assembly Responsibilities
+- **`Werewolves.StateModels`**: Pure state/data models, enums, log entries, instructions. NO game logic. Uses `[InternalsVisibleTo("Werewolves.GameLogic")]`.
+- **`Werewolves.GameLogic`**: Rules engine, `IGameHookListener` implementations, flow management.
+
+### State Management (Kernel-Facade Pattern with Event Sourcing)
+- **GameSession (Facade)**: Read-only `IGameSession` for UI. Internal mutation methods for GameLogic.
+- **GameSessionKernel (Kernel)**: Owns mutable state. `Player`/`PlayerState` are **private nested classes**.
+- **Event Sourcing**: `GameHistoryLog` is the SINGLE source of truth. All persistent mutations via `GameLogEntryBase.InnerApply(ISessionMutator)`.
+- **Two-Speed State**: Persistent (event-sourced) vs Transient (`_phaseStateCache` for execution pointer—not logged).
+
+### Hook System
+```
+GameService.ProcessInstruction → GameFlowManager.HandleInput → PhaseManager → SubPhaseManager → HookSubPhaseStage → IGameHookListener.Execute
+```
+- Hooks (`GameHook` enum): `NightMainActionLoop`, `DawnMainActionLoop`, `PlayerRoleAssignedOnElimination`, `OnVoteConcluded`
+- Listeners registered in `GameFlowManager.HookListeners` (order matters!) and `ListenerImplementations`
+
+## Developer Workflows
+
+### Build & Test
+```powershell
+dotnet build MillersHollowWerewolves.sln
+dotnet test    # Uses xUnit + FluentAssertions
+```
+
+### Adding a New Role
+1. Create class in `Werewolves.GameLogic/Roles/MainRoles/` extending appropriate base:
+   - `StandardNightRoleHookListener` for simple target→action roles (see `SimpleWerewolfRole.cs`)
+   - `NightRoleHookListener<T>` for custom state machines
+   - `RoleHookListener` for non-night roles
+2. Register in `GameFlowManager.HookListeners[GameHook.X]` (order = wake order)
+3. Register in `GameFlowManager.ListenerImplementations`
+4. Add enum value to `MainRoleType` if needed
+
+**Note:** Many roles are defined in `HookListeners` but not yet implemented in `ListenerImplementations` (WIP).
+
+### Modifying Persistent State
+1. Create `GameLogEntryBase` subclass in `Werewolves.StateModels/Log/`
+2. Implement `InnerApply(ISessionMutator mutator)` for mutations
+3. Call via `GameSession` methods (e.g., `session.EliminatePlayer()`, `session.PerformNightAction()`)
+
+### Writing Tests
+Use the fluent `GameTestBuilder` pattern:
+```csharp
+var builder = GameTestBuilder.Create()
+    .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+builder.StartGame();
+builder.ConfirmGameStart();
+// Use InstructionAssert.ExpectType<T>() to validate instructions
+// Use ResponseFactory helpers to get players and create responses
+```
+
+**Test helpers in `Tests/Helpers/`:**
+- `GameTestBuilder`: Fluent game setup with `WithPlayers()`, `WithRoles()`, `WithSimpleGame()`
+- `InstructionAssert.ExpectType<T>()`: Assert and cast instruction types
+- `InstructionAssert.ExpectSuccessWithType<T>()`: Assert `ProcessResult` success + type
+- `ResponseFactory.GetPlayer(session, index|name)`: Find players by index or name
+- `ResponseFactory.GetPlayerByRole(session, role)`: Find first player with role
+
+**Log verification pattern:**
+```csharp
+var nightActions = session.GameHistoryLog
+    .OfType<NightActionLogEntry>()
+    .Where(e => e.ActionType == NightActionType.WerewolfVictimSelection)
+    .ToList();
+nightActions.Should().HaveCount(1);  // FluentAssertions
+```
 
 ## Coding Conventions
-- **String Management**: All user-facing strings MUST be in `Werewolves.StateModels/Resources/GameStrings.resx`. Use `GameStrings` class for access.
-- **Enums**: Use `enum` types for internal logic identifiers, not strings.
-- **Encapsulation**: 
-  - `Player` and `PlayerState` are `private nested` classes within `GameSessionKernel`, exposed only via `IPlayer`/`IPlayerState` interfaces.
-  - Use `internal` visibility to hide implementation details from the UI layer.
-- **Error Handling**: Use `ProcessResult` to return success/failure with instructions, rather than throwing exceptions for game logic errors.
-
-## Critical Workflows
-- **Adding a Role/Event**:
-  1. Create a class implementing `IGameHookListener` in `Werewolves.GameLogic`.
-  2. Register it in `GameFlowManager.HookListeners` and `ListenerImplementations`.
-  3. Implement `AdvanceStateMachine` to handle state transitions.
-- **Modifying State**:
-  1. Define a new `GameLogEntryBase` in `Werewolves.StateModels/Log`.
-  2. Implement `InnerApply(ISessionMutator mutator)` to perform the actual state mutation.
-  3. Append this entry to the log via `GameSession` (which delegates to Kernel).
+- **Strings**: All user-facing text in `Werewolves.StateModels/Resources/GameStrings.resx`
+- **Visibility**: `internal` for GameLogic internals, `public` only for `IGameSession`/`IPlayer`/`IPlayerState` interfaces
+- **Enums over strings**: Use `MainRoleType`, `NightActionType`, etc. for logic identifiers
+- **Error Handling**: Return `ProcessResult.Failure()` for recoverable errors; exceptions for internal logic bugs
+- **Key Pattern**: Mutation methods require specific interface keys (`IGameFlowManagerKey`, `IPhaseManagerKey`) to prevent unauthorized access
 
 ## Key Files
-- `Werewolves.StateModels/Core/GameSession.cs`: Public API facade.
-- `Werewolves.StateModels/Core/GameSessionKernel.cs`: Internal state container and mutation engine.
-- `Werewolves.GameLogic/Services/GameFlowManager.cs`: Central hub for game phases and hook listeners.
-- `Werewolves.GameLogic/Services/GameService.cs`: Main entry point for the application.
-- `Werewolves.GameLogic/Documentation/architecture.md`: Detailed architectural reference.
+| File | Purpose |
+|------|---------|
+| `GameLogic/Services/GameFlowManager.cs` | Hook definitions, phase state machine, `HandleInput()` |
+| `GameLogic/Services/GameService.cs` | Public entry point, session management |
+| `StateModels/Core/GameSession.cs` | Facade API, mutation gatekeeper |
+| `StateModels/Core/GameSessionKernel.cs` | Internal state container |
+| `StateModels/Log/*.cs` | Event sourcing log entries |
+| `GameLogic/Documentation/architecture.md` | Full architectural reference |
+| `Tests/Helpers/GameTestBuilder.cs` | Fluent test scenario builder |

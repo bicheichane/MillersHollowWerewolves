@@ -48,6 +48,7 @@ public interface IPlayerState
 			{
 				case MainRoleType.SimpleWerewolf:
 					return Team.Werewolves;
+                case null:
 				default:
 					return Team.Villagers;
 			}

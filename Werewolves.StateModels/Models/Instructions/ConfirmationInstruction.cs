@@ -39,7 +39,7 @@ public record ConfirmationInstruction : ModeratorInstruction
     }
 }
 
-public record StartGameConfirmationInstruction(Guid GameGuid) : ConfirmationInstruction(GameStrings.SetupCompletePrompt)
+public record StartGameConfirmationInstruction(Guid GameGuid) : ConfirmationInstruction(GameStrings.GameStartPrompt)
 {
     public Guid GameGuid { get; } = GameGuid;
 }

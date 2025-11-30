@@ -36,7 +36,7 @@ internal class SimpleWerewolfRole : StandardNightRoleHookListener
         );
     }
 
-    protected override void ProcessTargetSelection(GameSession session, ModeratorResponse input)
+    protected override void ProcessTargetSelectionNoFeedback(GameSession session, ModeratorResponse input)
     {
         var victimId = input.SelectedPlayerIds!.First();
 

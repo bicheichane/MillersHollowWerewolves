@@ -24,4 +24,9 @@ public record NightActionLogEntry : GameLogEntryBase
 		//no state change, just logging of who used what power on whom
 		return this;
 	}
+
+    public override string ToString() =>
+        TargetIds is { Count: > 0 }
+            ? $"NightAction: {ActionType} targeting [{string.Join(", ", TargetIds)}]"
+            : $"NightAction: {ActionType}";
 }

@@ -10,17 +10,17 @@ public record DayActionLogEntry : GameLogEntryBase
 {
 	public List<Guid>? TargetIds { get; init; } // ID of the player targeted, if applicable
 
-	/// Example: "WerewolfVictimSelection", "SeerCheck", "WitchSave", "WitchKill"
 	public required DayPowerType ActionType { get; init; }
 
-	/// <summary>
-	/// Applies the night action to the game state.
-	/// Note: This is primarily for logging purposes as individual night actions
-	/// don't directly change game state - their effects are processed during dawn resolution.
-	/// </summary>
+
 	protected override GameLogEntryBase InnerApply(ISessionMutator mutator)
 	{
 		//no state change, just logging
 		return this;
 	}
+
+	public override string ToString() =>
+		TargetIds is { Count: > 0 }
+			? $"DayAction: {ActionType} targeting [{string.Join(", ", TargetIds)}]"
+			: $"DayAction: {ActionType}";
 }

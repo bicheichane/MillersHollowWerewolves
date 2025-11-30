@@ -25,7 +25,7 @@ namespace Werewolves.StateModels.Extensions
 			PlayerExtensionHelpers.WithRole(players.Values, mainRoleType);
 
         public static IEnumerable<IPlayer> FromTeam(this IEnumerable<IPlayer> players, Team team) =>
-            players.Where(p => p.State.MainRole.HasValue && p.State.Team == team);
+            players.Where(p => p.State.Team == team);
 
 		public static List<Guid> ToIdList(this Dictionary<Guid, IPlayer> players) =>
 			players.Select(p => p.Key).ToList();
@@ -51,7 +51,7 @@ namespace Werewolves.StateModels.Extensions
 			players.Where(p => p.State.Health == health);
 
             internal static IEnumerable<T> FromTeam<T>(this IEnumerable<T> players, Team team) where T : IPlayer =>
-            players.Where(p => p.State.MainRole.HasValue && p.State.Team == team);
+            players.Where(p => p.State.Team == team);
 	}
 
 	/*

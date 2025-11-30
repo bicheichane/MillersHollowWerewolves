@@ -129,7 +129,7 @@ internal sealed class LogicSubPhaseStage : SubPhaseStage
         _handler = (gameSession, moderatorResponse) =>
         {
             var instruction = handler(gameSession, moderatorResponse);
-            return StayInSubPhase(instruction);
+            return CompleteSubPhaseStage(instruction);
         };
     }
 
@@ -162,7 +162,7 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
     private HookSubPhaseStage(GameHook hook) : base(hook)
     {
         _hook = hook;
-        _onComplete = (gameSession, moderatorResponse) => StayInSubPhase(null);
+        _onComplete = (gameSession, moderatorResponse) => CompleteSubPhaseStage(null);
     }
 
     protected override PhaseHandlerResult InnerExecute(GameSession session, ModeratorResponse input) =>
@@ -181,20 +181,24 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
             return onComplete(session, input);
         }
 
-		// Check if we have a currently paused listener
-        var currentListener = session.GetCurrentListener();
+		
 
 		// Dispatch to each listener in sequence
         foreach (var listenerId in listeners)
         {
-            if (!GameFlowManager.ListenerImplementations.TryGetValue(listenerId, out var listener))
+            // Get or create listener instance for this session (factory pattern for test isolation)
+            if (!GameFlowManager.ListenerFactories.TryGetValue(listenerId, out var factory))
             {
-				//throw new InvalidOperationException($"Listener implementation not found for listener ID: {listenerId}");
+				//throw new InvalidOperationException($"Listener factory not found for listener ID: {listenerId}");
 				// TODO: Skip unimplemented listeners for now
                 continue;
             }
+            var listener = session.GetOrCreateListener(listenerId, factory);
 
-            if (currentListener != null && currentListener != listenerId)
+            // Check if we have a currently paused listener
+            var currentListener = session.GetCurrentListener();
+
+			if (currentListener != null && currentListener != listenerId)
             {
 				// Another listener is currently paused, skip until resumed
                 continue;
@@ -211,12 +215,13 @@ internal sealed class HookSubPhaseStage : SubPhaseStage
 			switch (hookResult.Outcome)
             {
                 case HookListenerOutcome.NeedInput:
-					// Handler needs input, pause processing
-                    return StayInSubPhase(hookResult.Instruction!);
+					// Handler needs input, pause processing but keep stage active for re-entry
+                    return PauseSubPhaseStage(hookResult.Instruction!);
 
                 case HookListenerOutcome.Complete:
 					// Listener completed successfully, continue to next
-                    continue;
+                    session.ClearCurrentListenerCache(Key);
+					continue;
 
                 case HookListenerOutcome.Skip:
                     continue;
