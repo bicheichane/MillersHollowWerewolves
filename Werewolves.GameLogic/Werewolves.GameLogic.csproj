@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- GitHub Packages requires a Repository URL to associate the package -->
+    <RepositoryUrl>https://github.com/bicheichane/Werewolves.Core</RepositoryUrl>
+    <PackageId>bicheichane.WerewolvesCore</PackageId>
+    <!-- Namespace convention matters here -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +23,11 @@
 
   <ItemGroup>
     <Folder Include="Roles\SecondaryRoles\" />
+  </ItemGroup>
+
+  <!-- Add MinVer for automatic versioning based on Git Tags -->
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="5.0.0" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>
