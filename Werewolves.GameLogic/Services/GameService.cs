@@ -128,13 +128,6 @@ public class GameService
 
 	// --- Helper Methods ---
 	#region Helpers
-	/// <summary>
-	/// Generates the next instruction during the Night phase.
-	/// Handles role ordering, identification, action prompts, and phase transition.
-	/// Updates session state (CurrentNightActingRoleIndex, PendingNight1IdentificationForRole, GetCurrentPhase).
-	/// </summary>
-
-
 	
     /// <summary>
     /// Validates moderator input against the expected instruction type.
