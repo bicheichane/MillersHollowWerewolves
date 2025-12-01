@@ -1,3 +1,5 @@
+using Werewolves.Core.StateModels.Enums;
+
 namespace Werewolves.StateModels.Models;
 
 /// <summary>
@@ -22,6 +24,12 @@ public abstract record ModeratorInstruction
     /// or who is the target of a specific action being prompted.
     /// </summary>
     public IReadOnlyList<Guid>? AffectedPlayerIds { get; protected set; }
+
+	/// <summary>
+	/// Placeholder for future sound effects associated with the instruction.
+	/// It's a flag enum to allow for multiple sound effects to be combined.
+	/// </summary>
+	public SoundEffectsEnum SoundEffects { get; protected set; }
 
     /// <summary>
     /// Initializes a new instance of ModeratorInstruction.
