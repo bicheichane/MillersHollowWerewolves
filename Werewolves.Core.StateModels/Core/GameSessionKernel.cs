@@ -137,5 +137,10 @@ namespace Werewolves.StateModels.Core
 			_pendingModeratorInstruction = instruction;
 			_stateChangeObserver?.OnPendingInstructionChanged(instruction);
 		}
+
+		public static GameSessionKernel Deserialize(string json)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

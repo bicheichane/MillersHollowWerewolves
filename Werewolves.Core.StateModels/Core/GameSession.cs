@@ -14,6 +14,11 @@ public interface IGameSession
     public IPlayerState GetPlayerState(Guid playerId);
     public IEnumerable<IPlayer> GetPlayers();
     public int RoleInPlayCount(MainRoleType type);
+
+    /// <summary>
+    /// To support GameSession rehydration
+    /// </summary>
+	public string Serialize();
 }
 
 /// <summary>
@@ -48,6 +53,15 @@ internal class GameSession : IGameSession
 	internal GameSession(Guid id, ModeratorInstruction initialInstruction, List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay, List<string>? eventCardIdsInDeck = null, IStateChangeObserver? stateChangeObserver = null)
 	{
 		_gameSessionKernel = new GameSessionKernel(id, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck, stateChangeObserver);
+	}
+
+	/// <summary>
+	/// To support GameSession rehydration
+	/// </summary>
+	/// <returns></returns>
+	internal GameSession(string json)
+	{
+		_gameSessionKernel = GameSessionKernel.Deserialize(json);
 	}
 
 	#region Private Fields
@@ -163,8 +177,17 @@ internal class GameSession : IGameSession
     public IEnumerable<IPlayer> GetPlayers() => _gameSessionKernel.GetIPlayers();
 
     public int RoleInPlayCount(MainRoleType type) => _gameSessionKernel.GetRolesInPlay().Count(r => r == type);
+    
+    /// <summary>
+    /// To support GameSession rehydration
+    /// </summary>
+    /// <returns></returns>
+    public string Serialize()
+    {
+	    throw new NotImplementedException();
+    }
 
-	#endregion
+    #endregion
 
 	#region Internal Command API
 

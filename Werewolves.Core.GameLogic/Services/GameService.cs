@@ -22,9 +22,7 @@ public class GameService
 	// Simple in-memory storage for game sessions. Replaceable with DI.
 	private readonly ConcurrentDictionary<Guid, GameSession> _sessions = new();
 
-	public GameService()
-    {
-    }
+	public GameService() {}
 
     public StartGameConfirmationInstruction StartNewGame(
         List<string> playerNamesInOrder, 
@@ -44,17 +42,29 @@ public class GameService
             playerNamesInOrder, 
             rolesInPlay, 
             eventCardIdsInDeck, 
-            stateChangeObserver);            
+            stateChangeObserver);
 
     /// <summary>
-    /// Starts a new game session.
+    /// Restores a game session from its serialized representation and adds it to the active session collection.
     /// </summary>
-    /// <param name="playerNamesInOrder">List of player names in clockwise seating order.</param>
-    /// <param name="rolesInPlay">List of RoleTypes included in the game.</param>
-    /// <param name="eventCardIdsInDeck">Optional list of event card IDs included.</param>
-    /// <param name="stateChangeObserver">Optional observer for state change diagnostics.</param>
-    /// <returns>The unique ID for the newly created game session.</returns>
-    private StartGameConfirmationInstruction StartNewGameCore(
+    /// <param name="serializedSession">The serialized data representing the game session to be restored. Cannot be null or empty.</param>
+    /// <returns>The unique ID of the rehydrated game session.</returns>
+    internal Guid RehydrateSession(string serializedSession)
+    {
+        var session = new GameSession(serializedSession);
+        _sessions.TryAdd(session.Id, session);
+        return session.Id;
+	}
+
+	/// <summary>
+	/// Starts a new game session.
+	/// </summary>
+	/// <param name="playerNamesInOrder">List of player names in clockwise seating order.</param>
+	/// <param name="rolesInPlay">List of RoleTypes included in the game.</param>
+	/// <param name="eventCardIdsInDeck">Optional list of event card IDs included.</param>
+	/// <param name="stateChangeObserver">Optional observer for state change diagnostics.</param>
+	/// <returns>The unique ID for the newly created game session.</returns>
+	private StartGameConfirmationInstruction StartNewGameCore(
         List<string> playerNamesInOrder, 
         List<MainRoleType> rolesInPlay, 
         List<string>? eventCardIdsInDeck = null,

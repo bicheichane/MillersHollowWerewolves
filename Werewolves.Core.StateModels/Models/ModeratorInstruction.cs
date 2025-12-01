@@ -27,9 +27,10 @@ public abstract record ModeratorInstruction
 
 	/// <summary>
 	/// Placeholder for future sound effects associated with the instruction.
-	/// It's a flag enum to allow for multiple sound effects to be combined.
+	/// Allows for multiple sound effects to be specified.
+	/// Only the sound effects in this list should be played. All others should be stopped if playing.
 	/// </summary>
-	public SoundEffectsEnum SoundEffects { get; protected set; }
+	public List<SoundEffectsEnum> SoundEffects { get; protected set; }
 
     /// <summary>
     /// Initializes a new instance of ModeratorInstruction.

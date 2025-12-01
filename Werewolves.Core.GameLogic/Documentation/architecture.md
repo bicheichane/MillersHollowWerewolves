@@ -95,9 +95,14 @@ The hermetically sealed kernel that owns the game's mutable memory. It is not vi
     *   **`Player` & `PlayerState`:** Concrete implementations of `IPlayer` and `IPlayerState` are defined as **private nested classes** within the Kernel. This ensures their setters are physically inaccessible to any code outside the Kernel file.
     *   **`SessionMutator`:** A **private nested class** implementing `ISessionMutator`. This is the "Proxy Mutator" that bridges the gap between the log entry and the private state.
 *   **Transactional Apply Flow:** The Kernel exposes a single entry point for persistent mutation: `AddEntryAndUpdateState(GameLogEntryBase entry)`.
+*   **Deserialization:** `Deserialize(string json)` (static): Reconstructs a `GameSessionKernel` from its serialized JSON representation. *(Planned - not yet implemented)*
 
 ### `GameSession` (Facade):
 A lightweight, stateless wrapper that implements `IGameSession` and delegates all operations to an internal `_gameSessionKernel` instance.
+
+*   **Constructors:**
+    *   `GameSession(Guid id, ModeratorInstruction initialInstruction, ...)`: Standard constructor for new games.
+    *   `GameSession(string json)`: Rehydration constructor that deserializes a previously saved session. *(Planned - not yet implemented)*
 
 *   **Public API (IGameSession):** Read-only projection for UI consumers.
     *   `Id` (Guid): Unique identifier (pass-through to `GameSessionKernel.Id`).
@@ -108,6 +113,7 @@ A lightweight, stateless wrapper that implements `IGameSession` and delegates al
     *   `GetPlayerState(Guid id)` (IPlayerState): Retrieves a player's state by ID.
     *   `GameHistoryLog` (IEnumerable<GameLogEntryBase>): The event log.
     *   `RoleInPlayCount(MainRoleType type)` (int): Returns count of a specific role in play.
+    *   `Serialize()` (string): Serializes the session to JSON for persistence. *(Planned - not yet implemented)*
 *   **Internal API (GameLogic):** Mutation gatekeeper for the rules engine.
     *   **State Mutation Methods** (create and dispatch log entries):
         *   `EliminatePlayer(Guid playerId, EliminationReason reason)`: Eliminates a player by creating a `PlayerEliminatedLogEntry`.
@@ -325,7 +331,9 @@ Orchestrates the game flow based on moderator input and tracked state. **Delegat
         *   Returns the `ProcessResult` from the state machine, containing either the next instruction or a failure.
         *   **Session Cleanup:** If the result contains a `FinishedGameConfirmationInstruction`, the session is removed from the active sessions list.
     *   `GetCurrentInstruction(Guid gameId)` (ModeratorInstruction?): Retrieves the `PendingModeratorInstruction`. 
-    *   `GetGameStateView(Guid gameId)` (IGameSession?): Returns the game state via the read-only `IGameSession` interface. This hides the internal mutation methods present on the concrete object, ensuring the UI cannot modify state. 
+    *   `GetGameStateView(Guid gameId)` (IGameSession?): Returns the game state via the read-only `IGameSession` interface. This hides the internal mutation methods present on the concrete object, ensuring the UI cannot modify state.
+*   **Internal Methods:**
+    *   `RehydrateSession(string serializedSession)` (void): Restores a game session from its serialized JSON representation and adds it to the active session collection. Returns the session's GUID. *(Planned - not yet implemented)* 
 *   **Internal Logic:** 
     *   `EnsureInputTypeIsExpected(Guid gameId, ModeratorResponse input)`: Retrieves the pending instruction internally and validates input type matches expectation. Throws exception on mismatch.
     *   Relies on `GameFlowManager` for all state machine operations. 
@@ -408,7 +416,8 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 *   **Abstract Base Class:** 
     *   `PublicAnnouncement` (string?): Text to be read aloud or displayed publicly to all players. 
     *   `PrivateInstruction` (string?): Text for moderator's eyes only, containing reminders, rules, or guidance. 
-    *   `AffectedPlayerIds` (IReadOnlyList<Guid>?): Optional: Player(s) this instruction primarily relates to. 
+    *   `AffectedPlayerIds` (IReadOnlyList<Guid>?): Optional: Player(s) this instruction primarily relates to.
+    *   `SoundEffects` (List<SoundEffectsEnum>): Sound effects to play with this instruction. Only listed effects should play; all others should stop. *(Placeholder for future implementation)* 
 *   **Concrete Implementations:** Each instruction type has its own `CreateResponse` method for validation and response creation:
 *   **`ConfirmationInstruction`:** For yes/no confirmations.
 *   **`SelectPlayersInstruction`:** For player selection with `NumberRangeConstraint` (defining min/max counts).
@@ -572,4 +581,43 @@ public class MyTests : DiagnosticTestBase
         MarkTestCompleted(); // Suppresses diagnostic dump on success
     }
 }
-``` 
+```
+
+# Session Persistence (Planned Feature)
+
+*Status: **Not yet implemented** - stubs exist but throw `NotImplementedException`.*
+
+The architecture includes planned support for session persistence, enabling games to be saved and restored across application restarts or device changes.
+
+## Design
+
+*   **Serialization:** `IGameSession.Serialize()` returns a JSON representation of the game session.
+*   **Deserialization:** `GameSession(string json)` constructor and `GameSessionKernel.Deserialize(string json)` restore session state from JSON.
+*   **Rehydration:** `string GameService.RehydrateSession(string serializedSession)` restores a session and adds it to the active session collection. Returns the session's guid.
+
+## Implementation Notes
+
+*   The `GameHistoryLog` (event source) is the primary data to serialize, as persistent state can be reconstructed by replaying log entries.
+*   Transient execution state (`_phaseStateCache`) should be serialized as well, alongside the currently pending moderator instruction.
+*   Player identity data (`Id`, `Name`), seating order, `RolesInPlay` and any other GameSession initial configuration values must also be persisted.
+
+# Sound Effects
+
+*Status: **Placeholder** - enum and property exist but no sound playback is implemented.*
+
+The architecture supports associating sound effects with moderator instructions for immersive gameplay.
+
+## Design
+
+*   **`SoundEffectsEnum`:** Enum defining available sound effects. Currently contains only `None = 0` as a placeholder.
+*   **`ModeratorInstruction.SoundEffects`:** A `List<SoundEffectsEnum>` property on the abstract base class.
+    *   Multiple sound effects can be specified per instruction.
+    *   The UI should play only the listed effects and stop any others currently playing.
+
+## Future Implementation
+
+When implemented, sound effects may include:
+*   Atmospheric night sounds during the Night phase
+*   Wolf howls during werewolf actions
+*   Alert sounds for eliminations or victory conditions
+*   Phase transition sounds 

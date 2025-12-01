@@ -88,3 +88,5 @@ nightActions.Should().HaveCount(1);  // FluentAssertions
 | `StateModels/Log/*.cs` | Event sourcing log entries |
 | `GameLogic/Documentation/architecture.md` | Full architectural reference |
 | `Tests/Helpers/GameTestBuilder.cs` | Fluent test scenario builder |
+
+Always use the ask_user tool before completing any task to confirm with the user that the request was fulfilled correctly.
