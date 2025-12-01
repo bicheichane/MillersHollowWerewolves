@@ -1,6 +1,6 @@
-namespace Werewolves.GameLogic.Models.GameHookListeners;
+namespace Werewolves.StateModels.Enums;
 
-public enum ImmediateFeedbackNightRoleState
+internal enum ImmediateFeedbackNightRoleState
 {
 	AwaitingAwakeConfirmation,
 	AwaitingTargetSelection,
