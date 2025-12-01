@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11111.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Werewolves.StateModels", "Werewolves.StateModels\Werewolves.StateModels.csproj", "{CB7ECA1C-3E52-42FA-A7D7-67F16199DA53}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Werewolves.Core.StateModels", "Werewolves.Core.StateModels\Werewolves.Core.StateModels.csproj", "{CB7ECA1C-3E52-42FA-A7D7-67F16199DA53}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Werewolves.GameLogic", "Werewolves.GameLogic\Werewolves.GameLogic.csproj", "{B23999CF-705C-42B4-B8F0-D21404294E03}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Werewolves.Core.GameLogic", "Werewolves.Core.GameLogic\Werewolves.Core.GameLogic.csproj", "{B23999CF-705C-42B4-B8F0-D21404294E03}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Werewolves.Tests", "Werewolves.Tests\Werewolves.Tests.csproj", "{A222C465-ED62-4248-9F43-5096CC8D9EF9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Werewolves.Core.Tests", "Werewolves.Core.Tests\Werewolves.Core.Tests.csproj", "{A222C465-ED62-4248-9F43-5096CC8D9EF9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Werewolves.GameLogic\Werewolves.GameLogic.csproj" />
-    <ProjectReference Include="..\Werewolves.StateModels\Werewolves.StateModels.csproj" />
+    <ProjectReference Include="..\Werewolves.Core.GameLogic\Werewolves.Core.GameLogic.csproj" />
+    <ProjectReference Include="..\Werewolves.Core.StateModels\Werewolves.Core.StateModels.csproj" />
   </ItemGroup>
 
 </Project>
