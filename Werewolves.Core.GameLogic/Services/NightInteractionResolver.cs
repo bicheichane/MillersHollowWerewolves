@@ -104,7 +104,7 @@ internal static class NightInteractionResolver
 		// Helper to populate the map
 		void AddActions(NightActionType type)
 		{
-			var targets = session.GetPlayersTargetedLastNight(type, NumberRangeConstraint.Optional);
+			var targets = session.GetPlayersTargetedLastNight(type, NumberRangeConstraint.SingleOptional);
 			foreach (var target in targets)
 			{
 				if (!map.ContainsKey(target.Id))

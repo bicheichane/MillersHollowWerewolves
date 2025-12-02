@@ -497,7 +497,7 @@ internal static class GameFlowManager
 
         var selectPlayerInstruction = new SelectPlayersInstruction(
             alivePlayers.ToIdSet(),
-            NumberRangeConstraint.Optional,
+            NumberRangeConstraint.SingleOptional,
             publicAnnouncement: GameStrings.VoteStartsPublicInstruction,
             privateInstruction: GameStrings.VoteStartsModeratorInstruction);
 
