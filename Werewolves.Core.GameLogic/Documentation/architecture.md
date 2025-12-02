@@ -101,7 +101,7 @@ The hermetically sealed kernel that owns the game's mutable memory. It is not vi
 A lightweight, stateless wrapper that implements `IGameSession` and delegates all operations to an internal `_gameSessionKernel` instance.
 
 *   **Constructors:**
-    *   `GameSession(Guid id, ModeratorInstruction initialInstruction, ...)`: Standard constructor for new games.
+    *   `GameSession(Guid id, ModeratorInstruction initialInstruction, GameSessionConfig config, ...)`: Standard constructor for new games.
     *   `GameSession(string json)`: Rehydration constructor that deserializes a previously saved session. *(Planned - not yet implemented)*
 
 *   **Public API (IGameSession):** Read-only projection for UI consumers.
@@ -324,7 +324,7 @@ Acts as a high-level phase controller and reactive hook dispatcher. It contains 
 Orchestrates the game flow based on moderator input and tracked state. **Delegates state machine management to `GameFlowManager` while handling high-level game logic and external interfaces.** 
 
 *   **Public Methods:** 
-    *   `StartNewGame(...)` (StartGameConfirmationInstruction): **Orchestrates atomic game initialization.** Generates a unique game ID, retrieves the initial instruction from `GameFlowManager.GetInitialInstruction`, constructs a `GameSession` with both the ID and instruction, stores the session, and returns the instruction.
+    *   `StartNewGame(GameSessionConfig config)` (StartGameConfirmationInstruction): **Orchestrates atomic game initialization.** Validates the configuration, generates a unique game ID, retrieves the initial instruction from `GameFlowManager.GetInitialInstruction`, constructs a `GameSession` with the ID, instruction, and config, stores the session, and returns the instruction.
     *   `ProcessInstruction(Guid gameId, ModeratorResponse input)` (ProcessResult): **The central entry point for processing moderator actions.** 
         *   Retrieves the current `GameSession` and delegates to `GameFlowManager.HandleInput`. 
         *   The `GameFlowManager` handles all state machine logic, validation, and transition management. 
@@ -338,6 +338,73 @@ Orchestrates the game flow based on moderator input and tracked state. **Delegat
     *   `EnsureInputTypeIsExpected(Guid gameId, ModeratorResponse input)`: Retrieves the pending instruction internally and validates input type matches expectation. Throws exception on mismatch.
     *   Relies on `GameFlowManager` for all state machine operations. 
     *   Victory condition checking is automatically handled by `GameFlowManager`.
+
+## `GameSessionConfig` Class
+
+Encapsulates and validates all configuration parameters required to start a new game session. This class enforces game configuration constraints at initialization time, preventing invalid game setups.
+
+*   **Purpose:** Consolidates game initialization parameters (player names and roles) into a single validated object. This replaces the previous approach of passing `List<string>` and `List<MainRoleType>` directly to `GameService.StartNewGame`, providing improved type safety, validation, and maintainability.
+
+*   **Properties:**
+    *   `Players` (List<string>): List of player names in clockwise seating order.
+    *   `Roles` (List<MainRoleType>): List of roles included in the game.
+
+*   **Validation & Constraints:**
+    *   **`EnforceValidity(List<string> players, List<MainRoleType> roles)` (static):** Validates configuration before construction. Throws `InvalidOperationException` if validation fails.
+    *   **`EnforceValidity()` (instance):** Validates the current instance. Called automatically during construction.
+    *   **`TryGetConfigIssues(List<string> players, List<MainRoleType> roles, out List<GameConfigValidationError> issues)` (static):** Diagnostic method that returns validation issues without throwing. Returns `true` if issues were found, `false` if configuration is valid. Returns a list of `GameConfigValidationError` objects describing each validation issue.
+
+*   **Validation Rules:**
+    *   **Player Count:** At least one player required.
+    *   **Player Names:** All player names must be unique (case-insensitive).
+    *   **Role Count:** The total number of roles must match the number of players, with adjustments for special roles:
+        *   **Thief:** Requires 2 extra roles.
+        *   **Actor:** Requires 3 extra roles.
+    *   **Per-Role Constraints:** Each role has specific count constraints defined in `RoleCountConstraints` dictionary:
+        *   Basic roles (Simple Werewolf, and Simple Villager) use `AtLeast(1)` constraints.
+        *   Special roles use `SingleOptional` constraints (e.g., Seer, Cupid, Witch).
+        *   Group roles like Two Sisters and Three Brothers have exact optional count constraints (e.g., `ExactOptional(2)` for Two Sisters).
+
+*   **Role Count Constraints Dictionary:**
+    *   Maps `MainRoleType` to `NumberRangeConstraint` for validation.
+
+*   **Validation Error Types:**
+    *   `TooFewPlayers`: Fewer than 1 player provided.
+    *   `NonUniquePlayerNames`: Duplicate player names found.
+    *   `TooFewRoles`: Insufficient roles for the player count.
+    *   `TooManyRoles`: Excessive roles for the player count.
+    *   `RoleCountMismatch`: A specific role violates its per-role constraint.
+    *   `MissingExtraActorRoles`: Insufficient extra roles for Actor role.
+    *   `MissingExtraThiefRoles`: Insufficient extra roles for Thief role.
+    *   `MissingExtraThiefActorRoles`: Insufficient extra roles for both Thief and Actor.
+
+## `NumberRangeConstraint` Structure
+
+Defines flexible constraints for number ranges, used in role count validation and player selection constraints in moderator instructions.
+
+*   **Structure:**
+    *   `Minimum` (int): The minimum value in the range.
+    *   `Maximum` (int): The maximum value in the range.
+    *   `IsOptional` (bool): When `true`, the constraint also allows a count of 0 (i.e., "either zero OR within the range"). When `false`, the constraint requires the count to be within the range (minimum to maximum inclusive).
+
+*   **Optionality Concept:** The `IsOptional` field enables modeling of scenarios where an action or selection is optional. For example:
+    *   `SingleOptional` (0 or 1): Used for vote outcomes that allow ties (0 selected) or a single winner.
+    *   `ExactOptional(2)` (0 or exactly 2): Used for roles like Two Sisters that either don't appear in the game or appear as exactly two players.
+    *   This eliminates the need for separate "Optional" and "Required" variants of constraints, providing a unified, flexible approach.
+
+*   **Factory Methods:**
+    *   `Range(int minimum, int maximum)`: Creates a non-optional range constraint.
+    *   `Exact(int count)`: Creates a constraint for an exact count (equivalent to `Range(count, count)`).
+    *   `Single`: Shorthand for `Exact(1)`.
+    *   `AtLeast(int count)`: Creates a constraint with no upper bound.
+    *   `RangeOptional(int minimum, int maximum)`: Creates an optional range constraint.
+    *   `ExactOptional(int count)`: Creates an optional exact count constraint.
+    *   `SingleOptional`: Shorthand for `ExactOptional(1)` — commonly used for vote outcomes and optional roles.
+    *   `Any`: Matches any count (0 to int.MaxValue).
+
+*   **Validation Methods:**
+    *   `Enforce<T>(ICollection<T> value)`: Validates a collection against the constraint. Throws `InvalidOperationException` if validation fails.
+    *   `IsValid<T>(ICollection<T> value)`: Diagnostic method that returns `true` if the collection satisfies the constraint, `false` otherwise.
 
 ## `ProcessResult` Structure
 
@@ -465,10 +532,10 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 # Game Loop Outline (Declarative Sub-Phase Architecture)
 
 1.  **Bootstrap (Pre-Phase):**
-    *   `GameService.StartNewGame` is called with player names and roles.
+    *   `GameService.StartNewGame` is called with a `GameSessionConfig` instance containing validated player names and roles.
     *   `GameService` generates a unique `Guid` for the game session.
     *   `GameService` calls `GameFlowManager.GetInitialInstruction(rolesInPlay, gameId)` to obtain the startup instruction.
-    *   `GameService` constructs `GameSession` with the ID and instruction, ensuring atomic validity.
+    *   `GameService` constructs `GameSession` with the ID, instruction, and config, ensuring atomic validity.
     *   The initial instruction (`StartGameConfirmationInstruction`) is returned to the caller.
     *   When the moderator confirms this instruction, the game begins directly in the Night phase.
 
