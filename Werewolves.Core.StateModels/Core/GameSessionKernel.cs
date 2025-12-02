@@ -1,3 +1,4 @@
+using Werewolves.Core.StateModels.Models;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;
@@ -44,26 +45,14 @@ namespace Werewolves.StateModels.Core
 		internal ModeratorInstruction? PendingModeratorInstruction => _pendingModeratorInstruction;
 		internal GamePhase CurrentPhase => _phaseStateCache.GetCurrentPhase();
 
-		internal GameSessionKernel(Guid id, ModeratorInstruction initialInstruction, List<string> playerNamesInOrder, List<MainRoleType> rolesInPlay,
-			List<string>? eventCardIdsInDeck = null, IStateChangeObserver? stateChangeObserver = null)
+		internal GameSessionKernel(Guid id, ModeratorInstruction initialInstruction, GameSessionConfig config, IStateChangeObserver? stateChangeObserver = null)
 		{
 			Id = id;
-			_stateChangeObserver = stateChangeObserver;
-			ArgumentNullException.ThrowIfNull(initialInstruction);
-			ArgumentNullException.ThrowIfNull(playerNamesInOrder);
-			ArgumentNullException.ThrowIfNull(rolesInPlay);
+
 			_pendingModeratorInstruction = initialInstruction;
-			if (!playerNamesInOrder.Any())
-			{
-				throw new ArgumentException(GameStrings.PlayerListCannotBeEmpty, nameof(playerNamesInOrder));
-			}
+			config.EnforceValidity();
 
-			if (!rolesInPlay.Any())
-			{
-				throw new ArgumentException(GameStrings.RoleListCannotBeEmpty, nameof(rolesInPlay));
-			}
-
-			foreach (var name in playerNamesInOrder)
+			foreach (var name in config.Players)
 			{
 				var player = new Player(name);
 				_players.Add(player.Id, player);
@@ -72,10 +61,11 @@ namespace Werewolves.StateModels.Core
 				_playerSeatingOrder.Add(player.Id);
 			}
 
-			_rolesInPlay = new List<MainRoleType>(rolesInPlay);
+			_rolesInPlay = new List<MainRoleType>(config.Roles);
 			_phaseStateCache = new GamePhaseStateCache(GamePhase.Night);
 			_turnNumber = 1;
 
+			_stateChangeObserver = stateChangeObserver;
 			_stateChangeObserver?.OnPendingInstructionChanged(initialInstruction);
 			_stateChangeObserver?.OnMainPhaseChanged(GamePhase.Night);
 			_stateChangeObserver?.OnTurnNumberChanged(1);

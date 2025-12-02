@@ -5,6 +5,7 @@
 // Add this line for resource access
 // For Debug.Fail
 using System.Collections.Concurrent;
+using Werewolves.Core.StateModels.Models;
 using Werewolves.GameLogic.Models.InternalMessages;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Core;
@@ -25,12 +26,8 @@ public class GameService
 	public GameService() {}
 
     public StartGameConfirmationInstruction StartNewGame(
-        List<string> playerNamesInOrder, 
-        List<MainRoleType> rolesInPlay, 
-        List<string>? eventCardIdsInDeck = null) => StartNewGameCore(
-            playerNamesInOrder, 
-            rolesInPlay, 
-            eventCardIdsInDeck, 
+        GameSessionConfig config) => StartNewGameCore(
+            config,
             stateChangeObserver: null);
 
     // Overload to accept state change observer for test suite diagnostics
@@ -39,9 +36,7 @@ public class GameService
         List<MainRoleType> rolesInPlay, 
         List<string>? eventCardIdsInDeck = null,
         IStateChangeObserver? stateChangeObserver = null) => StartNewGameCore(
-            playerNamesInOrder, 
-            rolesInPlay, 
-            eventCardIdsInDeck, 
+            new GameSessionConfig(playerNamesInOrder, rolesInPlay),
             stateChangeObserver);
 
     /// <summary>
@@ -65,19 +60,16 @@ public class GameService
 	/// <param name="stateChangeObserver">Optional observer for state change diagnostics.</param>
 	/// <returns>The unique ID for the newly created game session.</returns>
 	private StartGameConfirmationInstruction StartNewGameCore(
-        List<string> playerNamesInOrder, 
-        List<MainRoleType> rolesInPlay, 
-        List<string>? eventCardIdsInDeck = null,
-        IStateChangeObserver? stateChangeObserver = null)
+        GameSessionConfig config, IStateChangeObserver? stateChangeObserver)
     {
         // 1. Generate the game ID
         var gameId = Guid.NewGuid();
         
         // 2. Get the initial instruction from GameFlowManager (pure function)
-        var initialInstruction = GameFlowManager.GetInitialInstruction(rolesInPlay, gameId);
+        var initialInstruction = GameFlowManager.GetInitialInstruction(config.Roles, gameId);
         
         // 3. Create the session with both the ID and instruction
-        var session = new GameSession(gameId, initialInstruction, playerNamesInOrder, rolesInPlay, eventCardIdsInDeck, stateChangeObserver);
+        var session = new GameSession(gameId, initialInstruction, config, stateChangeObserver);
         
         // 4. Store the session
         _sessions.TryAdd(session.Id, session);
