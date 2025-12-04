@@ -1,8 +1,8 @@
 # Project
 
 Two-assembly architecture consisting of:
-* `Werewolves.StateModels` (.NET Class Library) - State representation and data models
-* `Werewolves.GameLogic` (.NET Class Library) - Game logic, rules engine, and flow management
+* `Werewolves.Core.StateModels` (.NET Class Library) - State representation and data models
+* `Werewolves.Core.GameLogic` (.NET Class Library) - Game logic, rules engine, and flow management
 
 # Goal
 
@@ -50,7 +50,7 @@ To enforce strict encapsulation and prevent arbitrary code from accessing those 
 
 *   **Canonical State Source:** The `GameSessionKernel.GameHistoryLog` is the **single, canonical source of truth** for all **state-altering** game events. This includes both **non-deterministic inputs** (moderator choices) and **deterministic consequences** (rule resolutions like infection). This append-only event store drives all persistent state mutations.
 *   **The Kernel (Core):** The `GameSessionKernel` is the **sole owner of mutable memory**. It encapsulates the `GameHistoryLog`, `GamePhaseStateCache`, `Players`, `SeatingOrder` and `RolesInPlay`. It is an internal, hermetically sealed component.
-*   **The Facade (Read-Only Projection & Mutation Gatekeeper):** The `GameSession` class acts as a **read-only projection** of the Kernel for the public API (via `IGameSession`). For the `Werewolves.GameLogic` assembly, it acts as the **Mutation Gatekeeper**, exposing methods to dispatch commands to the Kernel, protected by Keys.
+*   **The Facade (Read-Only Projection & Mutation Gatekeeper):** The `GameSession` class acts as a **read-only projection** of the Kernel for the public API (via `IGameSession`). For the `Werewolves.Core.GameLogic` assembly, it acts as the **Mutation Gatekeeper**, exposing methods to dispatch commands to the Kernel, protected by Keys.
 *   **Transactional Mutation:** Persistent state mutation follows a strict transactional flow:
     1.  **Command Dispatch:** The Facade constructs a `GameLogEntryBase` (the command) and passes it to the Kernel.
     2.  **Proxy Mutator:** The Kernel creates a temporary `SessionMutator` (a private nested class implementing `ISessionMutator`) that has privileged access to the internal mutable state.
@@ -71,8 +71,8 @@ The architecture uses a declarative hook-based system where the `GameFlowManager
 
 The architecture is split into two separate library projects to achieve compiler-enforced encapsulation: 
 
-*   **`Werewolves.StateModels`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, all `ModeratorInstruction` implementations (in `Models.Instructions`), and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state, its mutation mechanisms, and the UI communication contract (instructions). 
-*   **`Werewolves.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.StateModels`. **Crucially, `Werewolves.StateModels` grants `[InternalsVisibleTo("Werewolves.GameLogic")]`.** This allows the Rules Engine to access the `internal` concrete `GameSession` and its mutation methods, while external consumers (UI) are restricted to the `public` read-only interfaces. 
+*   **`Werewolves.Core.StateModels`:** This library contains the complete state representation of the game. This includes `GameSession`, `Player`, `PlayerState`, all `GameLogEntryBase` derived classes, all `ModeratorInstruction` implementations (in `Models.Instructions`), and all shared `enums`. This project contains no game-specific rules logic (e.g., `GameFlowManager`, roles). Its purpose is to define the state, its mutation mechanisms, and the UI communication contract (instructions). 
+*   **`Werewolves.Core.GameLogic`:** This library contains the stateless "rules engine," including the `GameFlowManager`, `GameService`, and all `IGameHookListener` implementations (roles and events). This project has a one-way reference to `Werewolves.Core.StateModels`. **Crucially, `Werewolves.Core.StateModels` grants `[InternalsVisibleTo("Werewolves.Core.GameLogic")]`.** This allows the Rules Engine to access the `internal` concrete `GameSession` and its mutation methods, while external consumers (UI) are restricted to the `public` read-only interfaces. 
 
 # Core Components
 
@@ -177,7 +177,7 @@ The chosen architecture utilizes a dedicated `PlayerState` wrapper class. This c
 
 Represents a participant and their core identity information. 
 
-*   **Interface-Based Architecture:** The system uses a `public IPlayer` interface (which extends `IEquatable<IPlayer>` for identity comparison) with a `private nested Player` implementation within `GameSessionKernel`. The `GameSession` exposes these instances as `IPlayer` to the UI (read-only). The `Werewolves.GameLogic` assembly cannot interact with `internal` members if necessary as it lacks access to the `private nested PlayerState` class.
+*   **Interface-Based Architecture:** The system uses a `public IPlayer` interface (which extends `IEquatable<IPlayer>` for identity comparison) with a `private nested Player` implementation within `GameSessionKernel`. The `GameSession` exposes these instances as `IPlayer` to the UI (read-only). The `Werewolves.Core.GameLogic` assembly cannot interact with `internal` members if necessary as it lacks access to the `private nested PlayerState` class.
 *   **Enhanced Encapsulation through Nesting:** The `Player` class is implemented as a `private class` (not sealed) nested within `GameSessionKernel`, ensuring that only `GameSessionKernel` and its `SessionMutator` can directly access and modify player instances.
 *   **`Player` Class Properties:
     *   `Id` (Guid): Unique identifier. 
@@ -478,7 +478,7 @@ Consequently, the `ModeratorResponse` structure requires the moderator to provid
 
  
 ## `ModeratorInstruction` Class Hierarchy
-Polymorphic instruction system for communication TO the moderator. **Assembly Location:** The abstract base class `ModeratorInstruction` and all concrete implementations are located in `Werewolves.StateModels.Models.Instructions`. This placement allows `GameSession` to accept instructions as constructor parameters without circular dependencies.
+Polymorphic instruction system for communication TO the moderator. **Assembly Location:** The abstract base class `ModeratorInstruction` and all concrete implementations are located in `Werewolves.Core.StateModels.Models.Instructions`. This placement allows `GameSession` to accept instructions as constructor parameters without circular dependencies.
 
 *   **Abstract Base Class:** 
     *   `PublicAnnouncement` (string?): Text to be read aloud or displayed publicly to all players. 
