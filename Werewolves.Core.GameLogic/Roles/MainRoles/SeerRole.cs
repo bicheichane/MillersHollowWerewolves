@@ -4,7 +4,7 @@ using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Resources;
+using Werewolves.Core.StateModels.Resources;
 
 namespace Werewolves.GameLogic.Roles.MainRoles;
 

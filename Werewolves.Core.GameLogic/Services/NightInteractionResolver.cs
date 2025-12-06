@@ -49,7 +49,7 @@ internal static class NightInteractionResolver
 			if (!isProtectedFromWolves)
 			{
 				// RULE: Elder with extra life resists infection or wolf attacks automatically, but loses its extra life.
-				if (player.State.MainRole == MainRoleType.Elder && player.State.HasUsedElderExtraLife == false)
+				if (player.State.MainRole == MainRoleType.Elder && !player.State.HasStatusEffect(StatusEffectTypes.ElderProtectionLost))
 				{
 					session.ApplyStatusEffect(StatusEffectTypes.ElderProtectionLost, player.Id);
 				}

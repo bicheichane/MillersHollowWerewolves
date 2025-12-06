@@ -16,18 +16,28 @@ public interface IPlayer : IEquatable<IPlayer>
 public interface IPlayerState
 {
 	public MainRoleType? MainRole { get; }
-	/// <summary>
-	/// these can be stacked on top of main role types AND represent additional abilities that are linked to specific GameHooks.
-	/// by contrast, the cursed one or the sheriff can be given to any main role type, but do not have specific game hooks associated with them, so are not added here
-	/// </summary>
-	public SecondaryRoleType SecondaryRoles { get; }
 	public PlayerHealth Health { get; }
-	public bool IsInfected { get; }
-	public bool IsSheriff { get; }
-	public bool HasUsedElderExtraLife { get; }
+	
+	/// <summary>
+	/// Returns a list of all currently active status effects for this player.
+	/// Intended for UI consumption to display status effect icons.
+	/// </summary>
+	public List<StatusEffectTypes> GetActiveStatusEffects();
+	
+	/// <summary>
+	/// Checks if this player has a specific status effect active.
+	/// This is the single method that performs bitwise flag checks.
+	/// </summary>
+	public bool HasStatusEffect(StatusEffectTypes effect);
+
+	/// <summary>
+	/// Returns true if the player is immune to lynching (e.g., Village Idiot who hasn't been voted for yet).
+	/// </summary>
     public bool IsImmuneToLynching { get; }
 
-    // Returns null if not immune, or the specific localized string if they are.
+    /// <summary>
+    /// Returns null if not immune to lynching, or the specific localized string if they are.
+    /// </summary>
     public string? LynchingImmunityAnnouncement 
     {
         get
@@ -68,6 +78,15 @@ internal partial class GameSessionKernel
 			Name = name;
 		}
 
+		/// <summary>
+		/// Constructor for deserialization - allows specifying an existing ID.
+		/// </summary>
+		internal Player(string name, Guid id)
+		{
+			Name = name;
+			Id = id;
+		}
+
 		public Guid Id { get; } = Guid.NewGuid();
 		public string Name { get; init; }
 		private PlayerState State { get; } = new();
@@ -90,19 +109,50 @@ internal partial class GameSessionKernel
 	{
 		public MainRoleType? MainRole { get; internal set; } = null;
 
-		/// <summary>
-		/// these can be stacked on top of main role types AND represent additional abilities that are linked to specific GameHooks.
-		/// by contrast, the infected one or the sheriff can be given to any main role type, but do not have specific game hooks associated with them, so are not added here
-		/// </summary>
-		public SecondaryRoleType SecondaryRoles { get; internal set; } = SecondaryRoleType.None;
-
 		public PlayerHealth Health { get; internal set; } = PlayerHealth.Alive;
 
-		public bool IsInfected { get; internal set; } = false;
-		public bool IsSheriff { get; internal set; } = false;
-		public bool HasUsedElderExtraLife { get; internal set; } = false;
-        public bool HasVillageIdiotUsedImmunity { get; internal set; } = false;
+		/// <summary>
+		/// Internal flags field for all status effects - not exposed on interface.
+		/// </summary>
+		internal StatusEffectTypes ActiveEffects { get; set; } = StatusEffectTypes.None;
 
-        public bool IsImmuneToLynching => MainRole == MainRoleType.VillageIdiot && !HasVillageIdiotUsedImmunity;
-    }
+		/// <summary>
+		/// Checks if a specific status effect is active.
+		/// For None: returns true only if the player has zero active effects.
+		/// For other effects: performs standard HasFlag check.
+		/// </summary>
+		public bool HasStatusEffect(StatusEffectTypes effect) => 
+			effect == StatusEffectTypes.None 
+				? ActiveEffects == StatusEffectTypes.None
+				: ActiveEffects.HasFlag(effect);
+
+		/// <summary>
+		/// Returns all active status effects as a list for UI consumption.
+		/// </summary>
+		public List<StatusEffectTypes> GetActiveStatusEffects()
+		{
+			var effects = new List<StatusEffectTypes>();
+			foreach (StatusEffectTypes effect in Enum.GetValues<StatusEffectTypes>())
+			{
+				if (effect != StatusEffectTypes.None && HasStatusEffect(effect))
+				{
+					effects.Add(effect);
+				}
+			}
+			return effects;
+		}
+
+		/// <summary>
+		/// Village Idiot is immune to lynching until they've used their immunity.
+		/// </summary>
+		public bool IsImmuneToLynching => 
+			MainRole == MainRoleType.VillageIdiot && !HasStatusEffect(StatusEffectTypes.LynchingImmunityUsed);
+
+		// Internal-only mutation methods (accessible only by SessionMutator)
+		internal void AddEffect(StatusEffectTypes effect) => 
+			ActiveEffects |= effect;
+
+		internal void RemoveEffect(StatusEffectTypes effect) => 
+			ActiveEffects &= ~effect;
+	}
 }

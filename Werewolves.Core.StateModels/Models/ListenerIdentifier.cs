@@ -6,18 +6,18 @@ namespace Werewolves.StateModels.Models;
 
 
 /// <summary>
-/// A unified identifier for different types of hook listeners (Roles, Events).
+/// A unified identifier for different types of hook listeners (Roles, Events, Status Effects).
 /// Used to accommodate different types of listeners in the hook system.
 /// </summary>
 public record ListenerIdentifier
 {
     /// <summary>
-    /// The type of listener (MainRole or Event).
+    /// The type of listener (MainRole, StatusEffect, or SpiritCard).
     /// </summary>
     public GameHookListenerType ListenerType { get; }
     
     /// <summary>
-    /// Stores the MainRoleType or EventCardType enum value as a string for better debugging/logging.
+    /// Stores the MainRoleType, StatusEffectTypes, or EventCardType enum value as a string for better debugging/logging.
     /// </summary>
     public string ListenerId { get; }
 
@@ -29,7 +29,7 @@ public record ListenerIdentifier
 
     public static ListenerIdentifier Listener(MainRoleType mainRoleType) => new(MainRole, mainRoleType.ToString());
 
-    public static ListenerIdentifier Listener(SecondaryRoleType secondaryRoleType) => new(SecondaryRole, secondaryRoleType.ToString());
+    public static ListenerIdentifier Listener(StatusEffectTypes statusEffect) => new(StatusEffect, statusEffect.ToString());
 
     public override int GetHashCode()
     {
@@ -61,22 +61,22 @@ public record ListenerIdentifier
         throw new InvalidCastException("ListenerIdentifier ListenerId could not be parsed to MainRoleType.");
     }
 
-    //create the implicit operators for SecondaryRoleType
-    public static implicit operator ListenerIdentifier(SecondaryRoleType secondaryRoleType)
+    //create the implicit operators for StatusEffectTypes
+    public static implicit operator ListenerIdentifier(StatusEffectTypes statusEffect)
     {
-        return Listener(secondaryRoleType);
+        return Listener(statusEffect);
 	}
-    public static implicit operator SecondaryRoleType(ListenerIdentifier listenerIdentifier)
+    public static implicit operator StatusEffectTypes(ListenerIdentifier listenerIdentifier)
     {
-        if (listenerIdentifier.ListenerType != SecondaryRole)
+        if (listenerIdentifier.ListenerType != StatusEffect)
         {
-            throw new InvalidCastException("ListenerIdentifier is not of type SecondaryRole.");
+            throw new InvalidCastException("ListenerIdentifier is not of type StatusEffect.");
         }
-        if (Enum.TryParse<SecondaryRoleType>(listenerIdentifier.ListenerId, out var roleType))
+        if (Enum.TryParse<StatusEffectTypes>(listenerIdentifier.ListenerId, out var effectType))
         {
-            return roleType;
+            return effectType;
         }
-        throw new InvalidCastException("ListenerIdentifier ListenerId could not be parsed to SecondaryRoleType.");
+        throw new InvalidCastException("ListenerIdentifier ListenerId could not be parsed to StatusEffectTypes.");
 	}
 
 	//create implicit conversion from EventCardType to ListenerIdentifier

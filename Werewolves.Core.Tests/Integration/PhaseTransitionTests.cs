@@ -25,7 +25,7 @@ public class PhaseTransitionTests : DiagnosticTestBase
     {
         // Arrange & Act
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Assert
@@ -43,24 +43,25 @@ public class PhaseTransitionTests : DiagnosticTestBase
     [Fact]
     public void NightStart_ToDawnCalculateVictims_IsValidTransition()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
-        // Get player IDs: Player 0 = Werewolf, Player 1 = Seer, Players 2-3 = Villagers
+        // Get player IDs: Player 0 = Werewolf, Player 1 = Seer, Players 2-4 = Villagers
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
+        var villager1 = players[2].Id;
+        var villager2 = players[3].Id;
 
         // Act: Complete night phase
         builder.CompleteNightPhase(
             werewolfIds: new HashSet<Guid> { werewolfId },
-            victimId: villagerIds.ElementAt(0),
+            victimId: villager1,
             seerId: seerId,
-            seerTargetId: villagerIds.ElementAt(1));
+            seerTargetId: villager2);
 
         // Assert: Should now be in Dawn phase
         var gameState = builder.GetGameState();
@@ -75,24 +76,25 @@ public class PhaseTransitionTests : DiagnosticTestBase
     [Fact]
     public void DawnFinalize_ToDayDebate_IsValidTransition()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
-        // Get player IDs: Player 0 = Werewolf, Player 1 = Seer, Players 2-3 = Villagers
+        // Get player IDs: Player 0 = Werewolf, Player 1 = Seer, Players 2-4 = Villagers
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
+        var villager1 = players[2].Id;
+        var villager2 = players[3].Id;
 
         // Complete night phase
         builder.CompleteNightPhase(
             werewolfIds: new HashSet<Guid> { werewolfId },
-            victimId: villagerIds.ElementAt(0),
+            victimId: villager1,
             seerId: seerId,
-            seerTargetId: villagerIds.ElementAt(1));
+            seerTargetId: villager2);
 
         // Act: Complete dawn phase
         builder.CompleteDawnPhase();
@@ -111,30 +113,31 @@ public class PhaseTransitionTests : DiagnosticTestBase
     [Fact]
     public void DayFinalize_ToNightStart_IsValidTransition()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
-        // Get player IDs: Player 0 = Werewolf, Player 1 = Seer, Players 2-3 = Villagers
+        // Get player IDs: Player 0 = Werewolf, Player 1 = Seer, Players 2-4 = Villagers
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
+        var villager1 = players[2].Id;
+        var villager2 = players[3].Id;
 
         // Complete night phase
         builder.CompleteNightPhase(
             werewolfIds: new HashSet<Guid> { werewolfId },
-            victimId: villagerIds.ElementAt(0),
+            victimId: villager1,
             seerId: seerId,
-            seerTargetId: villagerIds.ElementAt(1));
+            seerTargetId: villager2);
 
         // Complete dawn phase
         builder.CompleteDawnPhase();
 
         // Act: Complete day phase with a lynch (lynch a villager who is still alive)
-        builder.CompleteDayPhaseWithLynch(villagerIds.ElementAt(1));
+        builder.CompleteDayPhaseWithLynch(villager2);
 
         // Assert: Should now be in Night phase with turn number incremented
         var gameState = builder.GetGameState();
@@ -158,14 +161,15 @@ public class PhaseTransitionTests : DiagnosticTestBase
     {
         // Arrange: Simple game
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
+        var villager1 = players[2].Id;
+        var villager2 = players[3].Id;
 
         // Verify we're in Night phase with an active stage
         var session = (GameSession)builder.GetGameState()!;
@@ -174,9 +178,9 @@ public class PhaseTransitionTests : DiagnosticTestBase
         // Act: Complete night phase (transitions to Dawn)
         builder.CompleteNightPhase(
             werewolfIds: new HashSet<Guid> { werewolfId },
-            victimId: villagerIds.ElementAt(0),
+            victimId: villager1,
             seerId: seerId,
-            seerTargetId: villagerIds.ElementAt(1));
+            seerTargetId: villager2);
 
         // Assert: Verify the phase transitioned correctly
         session.GetCurrentPhase().Should().Be(GamePhase.Dawn);
@@ -203,21 +207,22 @@ public class PhaseTransitionTests : DiagnosticTestBase
     {
         // Arrange: Simple game
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new HashSet<Guid> { players[2].Id, players[3].Id };
+        var villager1 = players[2].Id;
+        var villager2 = players[3].Id;
 
         // Complete night phase to get to Dawn
         builder.CompleteNightPhase(
             werewolfIds: new HashSet<Guid> { werewolfId },
-            victimId: villagerIds.ElementAt(0),
+            victimId: villager1,
             seerId: seerId,
-            seerTargetId: villagerIds.ElementAt(1));
+            seerTargetId: villager2);
 
         var session = (GameSession)builder.GetGameState()!;
         session.GetCurrentPhase().Should().Be(GamePhase.Dawn);
@@ -262,7 +267,7 @@ public class PhaseTransitionTests : DiagnosticTestBase
     {
         // Arrange & Act
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Assert
@@ -280,7 +285,7 @@ public class PhaseTransitionTests : DiagnosticTestBase
     {
         // Arrange & Act
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Assert
@@ -298,7 +303,7 @@ public class PhaseTransitionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
 
         // Act

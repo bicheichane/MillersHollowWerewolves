@@ -2,7 +2,7 @@ using FluentAssertions;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models.Instructions;
 using Werewolves.StateModels.Log;
-using Werewolves.StateModels.Resources;
+using Werewolves.Core.StateModels.Resources;
 using Werewolves.Tests.Helpers;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,9 +25,9 @@ public class NightActionTests : DiagnosticTestBase
     [Fact]
     public void Werewolves_WakeAndSelectVictim_LogsNightAction()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -53,8 +53,8 @@ public class NightActionTests : DiagnosticTestBase
             afterIdentify,
             "Werewolf victim selection");
 
-        // Select a villager as victim (player 3 should be a villager)
-        var victimPlayer = players[3];
+        // Select a villager as victim (player 4 should be a villager)
+        var victimPlayer = players[4];
         var victimResponse = victimInstruction.CreateResponse([victimPlayer.Id]);
         builder.Process(victimResponse);
 
@@ -120,7 +120,7 @@ public class NightActionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -138,7 +138,7 @@ public class NightActionTests : DiagnosticTestBase
 
         // Step 2: Select victim
         var victimInstruction = InstructionAssert.ExpectSuccessWithType<SelectPlayersInstruction>(result1);
-        var victimResponse = victimInstruction.CreateResponse([players[3].Id]);
+        var victimResponse = victimInstruction.CreateResponse([players[4].Id]);
         var result2 = builder.Process(victimResponse);
 
         // Step 3: Confirm sleep
@@ -166,7 +166,7 @@ public class NightActionTests : DiagnosticTestBase
     {
         // Arrange - Complete werewolf actions first to get to Seer
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -177,7 +177,7 @@ public class NightActionTests : DiagnosticTestBase
         var players = gameState.GetPlayers().ToList();
         var werewolfPlayer = players[0];
         var seerPlayer = players[1]; // Seer is second in role order
-        var villagerPlayer = players[3];
+        var villagerPlayer = players[4];
 
         // Complete werewolf actions
         CompleteWerewolfNightAction(builder, [werewolfPlayer.Id], villagerPlayer.Id);
@@ -227,7 +227,7 @@ public class NightActionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -239,7 +239,7 @@ public class NightActionTests : DiagnosticTestBase
         var werewolfPlayer = players[0];
         var seerPlayer = players[1];
         var villagerToCheck = players[2]; // Check a villager
-        var victimPlayer = players[3];
+        var victimPlayer = players[4];
 
         // Complete werewolf actions
         CompleteWerewolfNightAction(builder, [werewolfPlayer.Id], victimPlayer.Id);
@@ -285,7 +285,7 @@ public class NightActionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -296,7 +296,7 @@ public class NightActionTests : DiagnosticTestBase
         var players = gameState.GetPlayers().ToList();
 
         // Complete werewolf and seer actions
-        CompleteWerewolfNightAction(builder, [players[0].Id], players[3].Id);
+        CompleteWerewolfNightAction(builder, [players[0].Id], players[4].Id);
         CompleteSeerNightAction(builder, players[1].Id, players[2].Id);
 
         // Assert
@@ -318,9 +318,9 @@ public class NightActionTests : DiagnosticTestBase
     [Fact]
     public void Seer_CannotCheckSelf()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -331,7 +331,7 @@ public class NightActionTests : DiagnosticTestBase
         var players = gameState.GetPlayers().ToList();
         var werewolfPlayer = players[0];
         var seerPlayer = players[1];
-        var villagerPlayer = players[3];
+        var villagerPlayer = players[4];
 
         // Complete werewolf actions to get to Seer's turn
         CompleteWerewolfNightAction(builder, [werewolfPlayer.Id], villagerPlayer.Id);
@@ -468,7 +468,7 @@ public class NightActionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -616,7 +616,7 @@ public class NightActionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 

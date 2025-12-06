@@ -8,7 +8,7 @@ using Werewolves.StateModels.Core;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Extensions;
 using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Resources;
+using Werewolves.Core.StateModels.Resources;
 using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
 using static Werewolves.GameLogic.Models.StateMachine.NavigationSubPhaseStage;
@@ -16,7 +16,7 @@ using static Werewolves.GameLogic.Models.StateMachine.HookSubPhaseStage;
 using static Werewolves.GameLogic.Models.StateMachine.LogicSubPhaseStage;
 using static Werewolves.StateModels.Enums.GameHook;
 using static Werewolves.StateModels.Enums.MainRoleType;
-using static Werewolves.StateModels.Enums.SecondaryRoleType;
+using static Werewolves.StateModels.Enums.StatusEffectTypes;
 using static Werewolves.StateModels.Models.ListenerIdentifier;
 
 namespace Werewolves.GameLogic.Services;

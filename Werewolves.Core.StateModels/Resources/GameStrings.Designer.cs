@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Werewolves.StateModels.Resources {
+namespace Werewolves.Core.StateModels.Resources {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Werewolves.StateModels.Resources {
         public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Werewolves.StateModels.Resources.GameStrings", typeof(GameStrings).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Werewolves.Core.StateModels.Resources.GameStrings", typeof(GameStrings).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

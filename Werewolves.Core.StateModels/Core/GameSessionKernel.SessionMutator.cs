@@ -10,9 +10,15 @@ public interface ISessionMutator
 	void SetPlayerHealth(Guid playerId, PlayerHealth health);
 	void SetPlayerRole(Guid playerId, MainRoleType role);
 	void SetCurrentPhase(GamePhase newPhase);
-	void SetElderExtraLifeUsed(Guid playerId, bool hasUsedExtraLife);
-	void SetPlayerInfected(Guid playerId, bool isInfected);
-    void SetVillageIdiotImmunityUsed(Guid playerId, bool hasUsedImmunity);
+	
+	/// <summary>
+	/// Sets or clears a status effect on a player.
+	/// </summary>
+	/// <param name="playerId">The player to modify.</param>
+	/// <param name="effect">The status effect to set or clear.</param>
+	/// <param name="isActive">True to add the effect, false to remove it.</param>
+	void SetStatusEffect(Guid playerId, StatusEffectTypes effect, bool isActive);
+	
 	void AddLogEntry<T>(T entry) where T : GameLogEntryBase;
 }
 
@@ -37,8 +43,8 @@ internal partial class GameSessionKernel
 
 		public void SetPlayerHealth(Guid playerId, PlayerHealth health) 
             => GetMutablePlayerState(playerId).Health = health;
-
         public void SetPlayerRole(Guid playerId, MainRoleType role) 
+
             => GetMutablePlayerState(playerId).MainRole = role;
 
 		public void SetCurrentPhase(GamePhase newPhase)
@@ -51,19 +57,25 @@ internal partial class GameSessionKernel
 				kernel.IncrementTurnNumber(Key);
 				kernel._stateChangeObserver?.OnTurnNumberChanged(kernel.TurnNumber);
 			}
-		}		public void SetElderExtraLifeUsed(Guid playerId, bool hasUsedExtraLife)
-			=> GetMutablePlayerState(playerId).HasUsedElderExtraLife = hasUsedExtraLife;
+		}
 
-		public void SetPlayerInfected(Guid playerId, bool isInfected)
-			=> GetMutablePlayerState(playerId).IsInfected = isInfected;
+		public void SetStatusEffect(Guid playerId, StatusEffectTypes effect, bool isActive)
+		{
+			var playerState = GetMutablePlayerState(playerId);
+			if (isActive)
+			{
+				playerState.AddEffect(effect);
+			}
+			else
+			{
+				playerState.RemoveEffect(effect);
+			}
+		}
 
 		public void AddLogEntry<T>(T entry) where T : GameLogEntryBase
 		{
 			kernel._gameHistoryLog.AddLogEntry(Key, entry);
 			kernel._stateChangeObserver?.OnLogEntryApplied(entry);
 		}
-
-        public void SetVillageIdiotImmunityUsed(Guid playerId, bool hasUsedImmunity) 
-            => GetMutablePlayerState(playerId).HasVillageIdiotUsedImmunity = hasUsedImmunity;
     }
 }

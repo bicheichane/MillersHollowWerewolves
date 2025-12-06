@@ -24,9 +24,9 @@ public class DawnResolutionTests : DiagnosticTestBase
     [Fact]
     public void WerewolfVictim_Unprotected_IsEliminated()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -121,7 +121,7 @@ public class DawnResolutionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -156,7 +156,7 @@ public class DawnResolutionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -199,7 +199,7 @@ public class DawnResolutionTests : DiagnosticTestBase
     {
         // Arrange
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 

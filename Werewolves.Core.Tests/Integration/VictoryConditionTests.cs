@@ -38,9 +38,10 @@ public class VictoryConditionTests : DiagnosticTestBase
     [Fact]
     public void WerewolfEliminated_AtDay_VillagerVictory()
     {
-        // Arrange - 4 players: 1 WW, 3 Villagers (need 3 villagers so game continues to Day after night kill)
+        // Arrange - 5 players: 1 WW, 4 Villagers
+        // Need to kill 2 villagers first so voting out WW ends with villager victory (3 villagers remain)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -50,6 +51,7 @@ public class VictoryConditionTests : DiagnosticTestBase
         // Player 0 is the werewolf (first role assigned)
         var werewolf = players[0];
         var villager1 = players[1];
+        var villager2 = players[2];
 
         // Night 1: Werewolf kills a villager
         builder.ConfirmNightStart();
@@ -107,73 +109,21 @@ public class VictoryConditionTests : DiagnosticTestBase
     #region VC-010 to VC-013: Werewolf Victory
 
     /// <summary>
-    /// VC-010: When 1 werewolf and 1 villager remain, werewolves win.
+    /// VC-010: When werewolves equal or outnumber villagers, werewolves win.
     /// </summary>
     [Fact]
     public void WerewolvesEqualVillagers_WerewolvesWin()
     {
-        // Arrange - 3 players: 1 WW, 2 Villagers
-        // After werewolf kills 1 villager, we have 1 WW vs 1 Villager = WW wins
+        // Arrange - 5 players: 2 WW, 3 Villagers
+        // After werewolves kill 1 villager, we have 2 WW vs 2 Villagers = WW wins (equal)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 3, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 2, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
         var gameState = builder.GetGameState()!;
         var players = gameState.GetPlayers().ToList();
 
-        var werewolf = players[0];
-        var villager1 = players[1];
-
-        // Night 1: Werewolf kills villager1
-        builder.ConfirmNightStart();
-        builder.CompleteWerewolfNightAction([werewolf.Id], villager1.Id);
-
-        // Confirm night end
-        var nightEndInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
-            builder.GetCurrentInstruction(),
-            "Night end confirmation");
-        builder.Process(nightEndInstruction.CreateResponse(true));
-
-        // Dawn: Process victim - after this, 1 WW vs 1 Villager
-        builder.CompleteDawnPhase(new Dictionary<Guid, MainRoleType>
-        {
-            { villager1.Id, MainRoleType.SimpleVillager }
-        });
-
-        // Assert - Should get FinishedGameConfirmationInstruction (victory detected at dawn)
-        var finalInstruction = builder.GetCurrentInstruction();
-        finalInstruction.Should().BeOfType<FinishedGameConfirmationInstruction>();
-
-        // Verify victory log entry
-        var updatedState = builder.GetGameState()!;
-        var victoryLog = updatedState.GameHistoryLog
-            .OfType<VictoryConditionMetLogEntry>()
-            .SingleOrDefault();
-
-        victoryLog.Should().NotBeNull();
-        victoryLog!.WinningTeam.Should().Be(Team.Werewolves);
-
-        //MarkTestCompleted();
-    }
-
-    /// <summary>
-    /// VC-011: When 2 werewolves and 1 villager remain, werewolves win.
-    /// </summary>
-    [Fact]
-    public void WerewolvesOutnumberVillagers_WerewolvesWin()
-    {
-        // Arrange - 4 players: 2 WW, 2 Villagers
-        // After werewolf kills 1 villager, we have 2 WW vs 1 Villager = WW wins
-        var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 2, includeSeer: false);
-        builder.StartGame();
-        builder.ConfirmGameStart();
-
-        var gameState = builder.GetGameState()!;
-        var players = gameState.GetPlayers().ToList();
-
-        // First 2 players are werewolves
         var werewolf1 = players[0];
         var werewolf2 = players[1];
         var villager1 = players[2];
@@ -188,7 +138,61 @@ public class VictoryConditionTests : DiagnosticTestBase
             "Night end confirmation");
         builder.Process(nightEndInstruction.CreateResponse(true));
 
-        // Dawn: Process victim - after this, 2 WW vs 1 Villager
+        // Dawn: Process victim (now 2 WW vs 2 Villagers = WW victory!)
+        builder.CompleteDawnPhase(new Dictionary<Guid, MainRoleType>
+        {
+            { villager1.Id, MainRoleType.SimpleVillager }
+        });
+
+        // Assert - Victory is detected at dawn when werewolves equal villagers
+        var finalInstruction = builder.GetCurrentInstruction();
+        finalInstruction.Should().BeOfType<FinishedGameConfirmationInstruction>();
+
+        // Verify victory log entry
+        var updatedState = builder.GetGameState()!;
+        var victoryLog = updatedState.GameHistoryLog
+            .OfType<VictoryConditionMetLogEntry>()
+            .SingleOrDefault();
+
+        victoryLog.Should().NotBeNull();
+        victoryLog!.WinningTeam.Should().Be(Team.Werewolves);
+
+        MarkTestCompleted();
+    }
+
+    /// <summary>
+    /// VC-011: When werewolves outnumber villagers, werewolves win.
+    /// </summary>
+    [Fact]
+    public void WerewolvesOutnumberVillagers_WerewolvesWin()
+    {
+        // Arrange - 5 players: 3 WW, 2 Villagers
+        // After werewolf kills 1 villager, we have 3 WW vs 1 Villager = WW wins
+        var builder = CreateBuilder()
+            .WithSimpleGame(playerCount: 5, werewolfCount: 3, includeSeer: false);
+        builder.StartGame();
+        builder.ConfirmGameStart();
+
+        var gameState = builder.GetGameState()!;
+        var players = gameState.GetPlayers().ToList();
+
+        // First 3 players are werewolves
+        var werewolf1 = players[0];
+        var werewolf2 = players[1];
+        var werewolf3 = players[2];
+        var villager1 = players[3];
+
+        // Night 1: Werewolves kill villager1
+        builder.ConfirmNightStart();
+        builder.CompleteWerewolfNightAction([werewolf1.Id, werewolf2.Id, werewolf3.Id], villager1.Id);
+
+        // Confirm night end
+        var nightEndInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Night end confirmation");
+        builder.Process(nightEndInstruction.CreateResponse(true));
+
+        // Dawn: Process victim - after this, 3 WW vs 1 Villager
         builder.CompleteDawnPhase(new Dictionary<Guid, MainRoleType>
         {
             { villager1.Id, MainRoleType.SimpleVillager }
@@ -211,15 +215,18 @@ public class VictoryConditionTests : DiagnosticTestBase
     }
 
     /// <summary>
-    /// VC-012: 1 werewolf, 2 villagers; werewolf kills 1 villager at dawn → werewolf victory.
-    /// This is the same as VC-010 but explicitly named per tests.md.
+    /// VC-012: Werewolves equal villagers at dawn → werewolf victory.
+    /// This tests victory detection at dawn after werewolf night attack brings the count to equality.
     /// </summary>
     [Fact]
     public void VillagerKilled_AtDawn_WerewolfVictory()
     {
-        // Arrange - 3 players: 1 WW, 2 Villagers
+        // Arrange - 5 players: 1 WW, 4 Villagers
+        // Night 1: WW kill 1 villager -> 1 WW vs 3 Villagers (no victory)
+        // Day 1: Village votes out 1 villager -> 1 WW vs 2 Villagers (no victory)
+        // Night 2: WW kills 1 villager -> 1 WW vs 1 Villager = WW victory at dawn
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 3, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -228,8 +235,10 @@ public class VictoryConditionTests : DiagnosticTestBase
 
         var werewolf = players[0];
         var villager1 = players[1];
+        var villager2 = players[2];
+        var villager3 = players[3];
 
-        // Night 1: Werewolf kills villager1
+        // Night 1: Werewolf kills villager1 (now 1 WW vs 3 Villagers)
         builder.ConfirmNightStart();
         builder.CompleteWerewolfNightAction([werewolf.Id], villager1.Id);
 
@@ -239,10 +248,58 @@ public class VictoryConditionTests : DiagnosticTestBase
             "Night end confirmation");
         builder.Process(nightEndInstruction.CreateResponse(true));
 
-        // Dawn: Process victim - victory should be detected after elimination
+        // Dawn: Process victim
         builder.CompleteDawnPhase(new Dictionary<Guid, MainRoleType>
         {
             { villager1.Id, MainRoleType.SimpleVillager }
+        });
+
+        // Game continues (1 WW vs 3 Villagers - no victory yet)
+        builder.GetGameState()!.GetCurrentPhase().Should().Be(GamePhase.Day);
+
+        // Day: Vote out villager2 (now 1 WW vs 2 Villagers)
+        var debateInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Debate confirmation");
+        builder.Process(debateInstruction.CreateResponse(true));
+
+        var voteInstruction = InstructionAssert.ExpectType<SelectPlayersInstruction>(
+            builder.GetCurrentInstruction(),
+            "Vote selection");
+        builder.Process(voteInstruction.CreateResponse([villager2.Id]));
+
+        // Assign villager role
+        var roleInstruction = InstructionAssert.ExpectType<AssignRolesInstruction>(
+            builder.GetCurrentInstruction(),
+            "Villager role assignment");
+        builder.Process(roleInstruction.CreateResponse(new Dictionary<Guid, MainRoleType>
+        {
+            { villager2.Id, MainRoleType.SimpleVillager }
+        }));
+
+        // Confirm death
+        var deathConfirmation = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Death confirmation");
+        builder.Process(deathConfirmation.CreateResponse(true));
+
+        // Game continues to Night 2 (1 WW vs 2 Villagers)
+        builder.GetGameState()!.GetCurrentPhase().Should().Be(GamePhase.Night);
+
+        // Night 2: Werewolf kills villager3 (now 1 WW vs 1 Villager = WW victory)
+        builder.ConfirmNightStart();
+        builder.CompleteWerewolfNightActionSubsequentNight(villager3.Id);
+
+        // Confirm night end
+        var nightEndInstruction2 = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Night end confirmation");
+        builder.Process(nightEndInstruction2.CreateResponse(true));
+
+        // Dawn: Process victim - victory should be detected after elimination
+        builder.CompleteDawnPhase(new Dictionary<Guid, MainRoleType>
+        {
+            { villager3.Id, MainRoleType.SimpleVillager }
         });
 
         // Assert - Victory detected at dawn, game ends
@@ -261,14 +318,17 @@ public class VictoryConditionTests : DiagnosticTestBase
     }
 
     /// <summary>
-    /// VC-013: 1 werewolf, 3 villagers; werewolf kills 1 at night, 1 is voted out at day → werewolf victory.
+    /// VC-013: 1 werewolf, 4 villagers; werewolf kills 1 at night, 2 are voted out at day → werewolf victory.
     /// </summary>
     [Fact]
     public void VillagerKilled_AtDay_WerewolfVictory()
     {
-        // Arrange - 4 players: 1 WW, 3 Villagers
+        // Arrange - 5 players: 1 WW, 4 Villagers
+        // Night 1: WW kills villager1 (1 WW vs 3 Villagers)
+        // Day 1: Vote out villager2 (1 WW vs 2 Villagers)
+        // Night 2: WW kills villager3 (1 WW vs 1 Villager = WW wins at dawn)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -279,8 +339,9 @@ public class VictoryConditionTests : DiagnosticTestBase
         var villager1 = players[1];
         var villager2 = players[2];
         var villager3 = players[3];
+        var villager4 = players[4];
 
-        // Night 1: Werewolf kills villager1 (now 1 WW vs 2 Villagers)
+        // Night 1: Werewolf kills villager1 (now 1 WW vs 3 Villagers)
         builder.ConfirmNightStart();
         builder.CompleteWerewolfNightAction([werewolf.Id], villager1.Id);
 
@@ -296,11 +357,11 @@ public class VictoryConditionTests : DiagnosticTestBase
             { villager1.Id, MainRoleType.SimpleVillager }
         });
 
-        // Game continues (1 WW vs 2 Villagers)
+        // Game continues (1 WW vs 3 Villagers)
         var gamePhase = builder.GetGameState()!.GetCurrentPhase();
         gamePhase.Should().Be(GamePhase.Day);
 
-        // Day: Vote out villager2 (now 1 WW vs 1 Villager = WW wins)
+        // Day: Vote out villager2 (now 1 WW vs 2 Villagers)
         // Confirm debate
         var debateInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
             builder.GetCurrentInstruction(),
@@ -328,7 +389,27 @@ public class VictoryConditionTests : DiagnosticTestBase
             "Death announcement confirmation");
         builder.Process(deathAnnouncementInstruction.CreateResponse(true));
 
-        // Assert - Victory detected at Day.Finalize
+        // Game should continue to Night 2 (1 WW vs 2 Villagers)
+        builder.GetGameState()!.GetCurrentPhase().Should().Be(GamePhase.Night);
+
+        // Night 2: Werewolf kills villager3 (now 1 WW vs 1 Villager = WW wins)
+        // Use CompleteWerewolfNightActionSubsequentNight for Night 2+ (no identification needed)
+        builder.ConfirmNightStart();
+        builder.CompleteWerewolfNightActionSubsequentNight(villager3.Id);
+
+        // Confirm night end
+        var nightEndInstruction2 = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            builder.GetCurrentInstruction(),
+            "Night end confirmation");
+        builder.Process(nightEndInstruction2.CreateResponse(true));
+
+        // Dawn 2: Process victim
+        builder.CompleteDawnPhase(new Dictionary<Guid, MainRoleType>
+        {
+            { villager3.Id, MainRoleType.SimpleVillager }
+        });
+
+        // Assert - Victory detected at dawn after night 2
         var finalInstruction = builder.GetCurrentInstruction();
         finalInstruction.Should().BeOfType<FinishedGameConfirmationInstruction>();
 
@@ -353,22 +434,24 @@ public class VictoryConditionTests : DiagnosticTestBase
     [Fact]
     public void VictoryCondition_CheckedAtDawn()
     {
-        // Arrange - 3 players: 1 WW, 2 Villagers
-        // After night kill, 1 WW vs 1 Villager = victory at dawn, never reaches Day
+        // Arrange - 5 players: 3 WW, 2 Villagers
+        // After night kill, 3 WW vs 1 Villager = victory at dawn, never reaches Day
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 3, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 3, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
         var gameState = builder.GetGameState()!;
         var players = gameState.GetPlayers().ToList();
 
-        var werewolf = players[0];
-        var villager1 = players[1];
+        var werewolf1 = players[0];
+        var werewolf2 = players[1];
+        var werewolf3 = players[2];
+        var villager1 = players[3];
 
-        // Night 1: Werewolf kills villager1
+        // Night 1: Werewolves kill villager1
         builder.ConfirmNightStart();
-        builder.CompleteWerewolfNightAction([werewolf.Id], villager1.Id);
+        builder.CompleteWerewolfNightAction([werewolf1.Id, werewolf2.Id, werewolf3.Id], villager1.Id);
 
         // Confirm night end
         var nightEndInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
@@ -403,11 +486,11 @@ public class VictoryConditionTests : DiagnosticTestBase
     [Fact]
     public void VictoryCondition_CheckedAfterVote()
     {
-        // Arrange - 4 players: 1 WW, 3 Villagers
-        // Night: WW kills 1 (now 1 WW vs 2 Villagers)
+        // Arrange - 5 players: 1 WW, 4 Villagers
+        // Night: WW kills 1 (now 1 WW vs 3 Villagers)
         // Day: Vote out WW → Villager victory at Day.Finalize
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: false);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: false);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -433,7 +516,7 @@ public class VictoryConditionTests : DiagnosticTestBase
             { villager1.Id, MainRoleType.SimpleVillager }
         });
 
-        // Game continues to Day (1 WW vs 2 Villagers)
+        // Game continues to Day (1 WW vs 3 Villagers)
         builder.GetGameState()!.GetCurrentPhase().Should().Be(GamePhase.Day);
 
         // Day: Vote out the werewolf

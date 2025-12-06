@@ -17,7 +17,7 @@ public enum GameHookListenerType
     SpiritCard,
 
     /// <summary>
-    /// A secondary role-based listener. Can stack on top of main roles (i.e. sheriff, lovers, etc.)
+    /// A status effect-based listener. Can stack on top of main roles (e.g., Sheriff, Lovers, Charmed).
     /// </summary>
-    SecondaryRole
+    StatusEffect
 }

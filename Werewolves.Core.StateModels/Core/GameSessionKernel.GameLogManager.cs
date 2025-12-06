@@ -15,6 +15,15 @@ internal sealed partial class GameSessionKernel
 			_logEntries.Add(entry);
 		}
 
+		/// <summary>
+		/// Restores a log entry from deserialization without requiring a mutator key.
+		/// This is only used during deserialization when rebuilding the log history.
+		/// </summary>
+		internal void RestoreLogEntry(GameLogEntryBase entry)
+		{
+			_logEntries.Add(entry);
+		}
+
 		internal IReadOnlyList<GameLogEntryBase> GetAllLogEntries() => _logEntries.AsReadOnly();
 
 		/// <summary>

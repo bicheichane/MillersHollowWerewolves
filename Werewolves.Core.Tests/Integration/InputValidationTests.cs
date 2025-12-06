@@ -27,9 +27,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void ProcessInstruction_WrongResponseType_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -77,9 +77,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void ProcessInstruction_NullResponse_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -118,9 +118,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void SelectPlayers_EmptySelection_WhenSingleRequired_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -154,9 +154,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void SelectPlayers_TooManyPlayers_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -193,9 +193,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void SelectPlayers_InvalidPlayerId_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -215,7 +215,7 @@ public class InputValidationTests : DiagnosticTestBase
 
         // Assert - Should throw an exception for invalid player ID
         act.Should().Throw<ArgumentException>()
-            .WithMessage($"*{invalidPlayerId}*not in the list of selectable players*");
+            .WithMessage("*Selected player IDs are not valid*");
 
         MarkTestCompleted();
     }
@@ -229,9 +229,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void SelectPlayers_NonSelectablePlayer_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -263,7 +263,7 @@ public class InputValidationTests : DiagnosticTestBase
 
         // Assert - Should throw an exception for non-selectable player
         act.Should().Throw<ArgumentException>()
-            .WithMessage($"*{werewolfPlayer.Id}*not in the list of selectable players*");
+            .WithMessage("*Selected player IDs are not valid*");
 
         MarkTestCompleted();
     }
@@ -297,9 +297,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void AssignRole_InvalidRole_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers (no Witch in play)
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers (no Witch in play)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -347,9 +347,9 @@ public class InputValidationTests : DiagnosticTestBase
     [Fact]
     public void AssignRole_WrongPlayer_ReturnsFailure()
     {
-        // Arrange - 4 players: 1 WW, 1 Seer, 2 Villagers
+        // Arrange - 5 players: 1 WW, 1 Seer, 3 Villagers
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 

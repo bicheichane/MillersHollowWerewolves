@@ -270,6 +270,37 @@ public class GameTestBuilder
     }
 
     /// <summary>
+    /// Completes the werewolf night action sequence for Night 2+: wakeup → select victim → confirm sleep.
+    /// Unlike CompleteWerewolfNightAction, this does not expect identification (already done on Night 1).
+    /// </summary>
+    /// <param name="victimId">The ID of the player to select as the victim.</param>
+    /// <returns>The result of the final sleep confirmation.</returns>
+    public ProcessResult CompleteWerewolfNightActionSubsequentNight(Guid victimId)
+    {
+        EnsureGameStarted();
+
+        // Confirm wake up (no identification needed after Night 1)
+        var wakeupInstruction = InstructionAssert.ExpectType<ConfirmationInstruction>(
+            GetCurrentInstruction(),
+            "Werewolf wake up confirmation");
+        var afterWakeup = Process(wakeupInstruction.CreateResponse(true));
+
+        // Select victim
+        var victimInstruction = InstructionAssert.ExpectSuccessWithType<SelectPlayersInstruction>(
+            afterWakeup,
+            "Werewolf victim selection");
+        var victimResponse = victimInstruction.CreateResponse([victimId]);
+        var afterVictim = Process(victimResponse);
+
+        // Confirm sleep
+        var sleepInstruction = InstructionAssert.ExpectSuccessWithType<ConfirmationInstruction>(
+            afterVictim,
+            "Werewolf sleep confirmation");
+        var sleepResponse = sleepInstruction.CreateResponse(true);
+        return Process(sleepResponse);
+    }
+
+    /// <summary>
     /// Completes the Seer night action sequence: identify → select target → confirm sleep.
     /// </summary>
     /// <param name="seerId">The ID of the Seer player to identify.</param>

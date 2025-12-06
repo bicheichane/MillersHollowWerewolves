@@ -185,7 +185,7 @@ internal class GameSession : IGameSession
     /// <returns></returns>
     public string Serialize()
     {
-	    throw new NotImplementedException();
+	    return _gameSessionKernel.Serialize();
     }
 
     #endregion

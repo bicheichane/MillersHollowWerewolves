@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Werewolves.Core.StateModels.Enums;
 
 namespace Werewolves.StateModels.Models;
@@ -36,14 +37,17 @@ public abstract record ModeratorInstruction
     /// Initializes a new instance of ModeratorInstruction.
     /// Validates that at least one text field is provided.
     /// </summary>
+    [JsonConstructor]
     protected ModeratorInstruction(
         string? publicAnnouncement = null,
         string? privateInstruction = null,
-        IReadOnlyList<Guid>? affectedPlayerIds = null)
+        IReadOnlyList<Guid>? affectedPlayerIds = null,
+        List<SoundEffectsEnum>? soundEffects = null)
     {
         PublicAnnouncement = publicAnnouncement;
         PrivateInstruction = privateInstruction;
         AffectedPlayerIds = affectedPlayerIds;
+        SoundEffects = soundEffects ?? new List<SoundEffectsEnum>();
 
         // Validate that at least one text field is provided
         if (string.IsNullOrWhiteSpace(publicAnnouncement) && string.IsNullOrWhiteSpace(privateInstruction))

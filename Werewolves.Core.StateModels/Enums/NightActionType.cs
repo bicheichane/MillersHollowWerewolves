@@ -37,19 +37,3 @@ public enum DayPowerType
     DevotedServantSwap,     // Devoted Servant's ability to swap roles with another player
     TownCrierCardReveal,    // Town Crier's ability to reveal an event card
 }
-
-/// <summary>
-/// Specifies the types of status effects that can be applied to a player or entity.
-/// These are deterministic in nature (can be rebuilt from logs),
-/// and represent persistent conditions affecting gameplay.
-/// </summary>
-/// <remarks>Use this enumeration to identify and handle different status effects within the game logic. Each
-/// value represents a distinct effect that may alter gameplay or player state.</remarks>
-public enum StatusEffectTypes
-{
-    None = 0,
-    ElderProtectionLost, // Elder's extra life has been used
-    LycanthropyInfection, // Player has been infected by the wolf father
-    WildChildChanged, // Wild Child has changed their role
-    LynchingImmunityUsed // Village Idiot has used their immunity
-}

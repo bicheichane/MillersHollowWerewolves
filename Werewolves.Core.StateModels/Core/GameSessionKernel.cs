@@ -1,8 +1,11 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Werewolves.Core.StateModels.Models;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Log;
 using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Resources;
+using Werewolves.Core.StateModels.Resources;
+using Werewolves.StateModels.Serialization;
 
 namespace Werewolves.StateModels.Core
 {
@@ -128,9 +131,85 @@ namespace Werewolves.StateModels.Core
 			_stateChangeObserver?.OnPendingInstructionChanged(instruction);
 		}
 
+		#region Serialization
+
+		private static readonly JsonSerializerOptions SerializationOptions = new()
+		{
+			Converters =
+			{
+				new GameLogEntryConverter(),
+				new ModeratorInstructionConverter(),
+				new JsonStringEnumConverter()
+			},
+			WriteIndented = false
+		};
+
+		internal string Serialize()
+		{
+			var dto = new GameSessionDto
+			{
+				Id = Id,
+				TurnNumber = _turnNumber,
+				SeatingOrder = _playerSeatingOrder.ToList(),
+				RolesInPlay = _rolesInPlay.ToList(),
+				PendingInstruction = _pendingModeratorInstruction,
+				GameHistoryLog = _gameHistoryLog.GetAllLogEntries().ToList(),
+				PhaseStateCache = _phaseStateCache.ToDto(),
+				Players = GetIPlayers().Select(p => new PlayerDto
+				{
+					Id = p.Id,
+					Name = p.Name,
+					MainRole = p.State.MainRole,
+					ActiveEffects = ((PlayerState)p.State).ActiveEffects,
+					Health = p.State.Health
+				}).ToList()
+			};
+
+			return JsonSerializer.Serialize(dto, SerializationOptions);
+		}
+
 		public static GameSessionKernel Deserialize(string json)
 		{
-			throw new NotImplementedException();
+			var dto = JsonSerializer.Deserialize<GameSessionDto>(json, SerializationOptions)
+				?? throw new InvalidOperationException("Failed to deserialize game session");
+
+			return new GameSessionKernel(dto);
 		}
+
+		/// <summary>
+		/// Private constructor for deserialization
+		/// </summary>
+		private GameSessionKernel(GameSessionDto dto)
+		{
+			Id = dto.Id;
+			_turnNumber = dto.TurnNumber;
+			_playerSeatingOrder = dto.SeatingOrder;
+			_rolesInPlay = dto.RolesInPlay;
+			_pendingModeratorInstruction = dto.PendingInstruction;
+			_phaseStateCache = GamePhaseStateCache.FromDto(dto.PhaseStateCache);
+
+			foreach (var playerDto in dto.Players)
+			{
+				var player = new Player(playerDto.Name, playerDto.Id);
+				var mutableState = player.GetMutableState(new DeserializationKey());
+				mutableState.MainRole = playerDto.MainRole;
+				mutableState.ActiveEffects = playerDto.ActiveEffects;
+				mutableState.Health = playerDto.Health;
+				_players.Add(player.Id, player);
+			}
+
+			// Restore log entries (already deserialized, just store them)
+			foreach (var entry in dto.GameHistoryLog)
+			{
+				_gameHistoryLog.RestoreLogEntry(entry);
+			}
+		}
+
+		/// <summary>
+		/// Special key used only during deserialization to access mutable state
+		/// </summary>
+		private class DeserializationKey : SessionMutator.IStateMutatorKey { }
+
+		#endregion
 	}
 }

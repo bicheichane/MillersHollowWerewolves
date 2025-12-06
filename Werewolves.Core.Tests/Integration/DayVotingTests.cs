@@ -25,23 +25,24 @@ public class DayVotingTests : DiagnosticTestBase
     [Fact]
     public void DebatePhase_TransitionsToVoting()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
         var players = builder.GetGameState()!.GetPlayers().ToList();
         var werewolfId = players[0].Id;
         var seerId = players[1].Id;
-        var villagerIds = new List<Guid> { players[2].Id, players[3].Id };
+        var villager1 = players[2].Id;
+        var villager2 = players[3].Id;
 
         // Complete night phase (werewolf kills a villager)
         builder.CompleteNightPhase(
             werewolfIds: [werewolfId],
-            victimId: villagerIds[0],
+            victimId: villager1,
             seerId: seerId,
-            seerTargetId: villagerIds[1]);
+            seerTargetId: villager2);
 
         // Complete dawn phase
         builder.CompleteDawnPhase();
@@ -64,8 +65,10 @@ public class DayVotingTests : DiagnosticTestBase
             "Voting selection instruction");
 
         // Verify it's a voting instruction with appropriate constraints
+        // Uses SingleOptional which has Minimum=1, Maximum=1, IsOptional=true
+        // The IsOptional flag allows 0 selections for tie votes
         votingInstruction.CountConstraint.Should().NotBeNull();
-        votingInstruction.CountConstraint!.Minimum.Should().Be(0, "Tie votes (0 players) should be allowed");
+        votingInstruction.CountConstraint!.IsOptional.Should().BeTrue("Tie votes (0 players) should be allowed");
         votingInstruction.CountConstraint!.Maximum.Should().Be(1, "Only one player can be lynched");
 
         MarkTestCompleted();
@@ -82,9 +85,9 @@ public class DayVotingTests : DiagnosticTestBase
     [Fact]
     public void VoteOutcome_SinglePlayer_RequestsRoleReveal()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -133,9 +136,9 @@ public class DayVotingTests : DiagnosticTestBase
     [Fact]
     public void VoteElimination_CreatesVoteOutcomeLogEntry()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -186,9 +189,9 @@ public class DayVotingTests : DiagnosticTestBase
     [Fact]
     public void VoteElimination_PlayerHealthSetToDead()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -235,9 +238,9 @@ public class DayVotingTests : DiagnosticTestBase
     [Fact]
     public void TieVote_NoPlayerSelected_NoElimination()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 
@@ -300,9 +303,9 @@ public class DayVotingTests : DiagnosticTestBase
     [Fact]
     public void TieVote_LogsCorrectOutcome()
     {
-        // Arrange: Simple game (4 players: 1 WW, 1 Seer, 2 Villagers)
+        // Arrange: Simple game (5 players: 1 WW, 1 Seer, 3 Villagers)
         var builder = CreateBuilder()
-            .WithSimpleGame(playerCount: 4, werewolfCount: 1, includeSeer: true);
+            .WithSimpleGame(playerCount: 5, werewolfCount: 1, includeSeer: true);
         builder.StartGame();
         builder.ConfirmGameStart();
 

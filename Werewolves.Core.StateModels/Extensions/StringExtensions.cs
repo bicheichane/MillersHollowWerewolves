@@ -32,6 +32,18 @@ namespace Werewolves.StateModels.Extensions
 
 		public static HashSet<Guid> ToIdSet(this IEnumerable<IPlayer> players) =>
 			players.Select(p => p.Id).ToHashSet();
+
+		/// <summary>
+		/// Filters players by those who have a specific status effect.
+		/// </summary>
+		public static IEnumerable<IPlayer> WithStatusEffect(this IEnumerable<IPlayer> players, StatusEffectTypes effect) =>
+			players.Where(p => p.State.HasStatusEffect(effect));
+
+		/// <summary>
+		/// Filters players by those who do NOT have a specific status effect.
+		/// </summary>
+		public static IEnumerable<IPlayer> WithoutStatusEffect(this IEnumerable<IPlayer> players, StatusEffectTypes effect) =>
+			players.Where(p => !p.State.HasStatusEffect(effect));
 	}
 
 	internal static class PlayerExtensionHelpers
@@ -42,10 +54,13 @@ namespace Werewolves.StateModels.Extensions
 		internal static IEnumerable<T> WithoutRole<T>(this IEnumerable<T> players, MainRoleType? roleType) where T : IPlayer =>
 			players.Where(p => p.State.MainRole != roleType);
 
-		internal static IEnumerable<T> WithSecondaryRole<T>(this IEnumerable<T> players, SecondaryRoleType? roleType)
+		internal static IEnumerable<T> WithStatusEffect<T>(this IEnumerable<T> players, StatusEffectTypes effect)
 			where T : IPlayer =>
-			players.Where(p =>
-				(p.State.SecondaryRoles & roleType) == roleType);
+			players.Where(p => p.State.HasStatusEffect(effect));
+
+		internal static IEnumerable<T> WithoutStatusEffect<T>(this IEnumerable<T> players, StatusEffectTypes effect)
+			where T : IPlayer =>
+			players.Where(p => !p.State.HasStatusEffect(effect));
 
 		internal static IEnumerable<T> WithHealth<T>(this IEnumerable<T> players, PlayerHealth health) where T : IPlayer =>
 			players.Where(p => p.State.Health == health);

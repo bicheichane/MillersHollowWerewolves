@@ -62,7 +62,7 @@ public readonly record struct NumberRangeConstraint(int Minimum, int Maximum, bo
 			Enforce(value);
 			return true;
 	    }
-	    catch (Exception e)
+	    catch (Exception)
 	    {
 		    return false;
 	    }

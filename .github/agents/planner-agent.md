@@ -32,9 +32,12 @@ Analyze the user's request against `Documentation/architecture.md`. Determine if
 3.  **Integrate Feedback:** Use the user's responses (received via `ask_user`) to integrate their decisions into your mental context.
 
 ### 3. Drafting the Plan
-Once the approach is clear (either immediately or after the Q&A loop), write the full plan to `Documentation/implementation-plan.md`.
+Once the approach is clear (either immediately or after the Q&A loop):
+- Check if `Documentation/implementation-plan.md` exists already. If it does, delete it entirely to avoid confusion.
+- Then write the full plan to `Documentation/implementation-plan.md`. 
+- Then based on the plan, create specialized sub-plans for the Coder, QA, and Docs agents:
 
-**Required Plan Structure:**
+**Required Plan Structure (`implementation-plan.md`):**
 1.  **Abstract:** A high-level summary of the change.
 2.  **Motivation:** Context from the user request.
 3.  **Proposed Changes:**
@@ -47,10 +50,26 @@ Once the approach is clear (either immediately or after the Q&A loop), write the
     - **Benefits:** What do we gain?
     - **Considerations & Mitigations:** Document any approved architectural deviations here clearly.
 
+**Coder Plan Structure (`implementation-plan-coder.md`):**
+1.  **Context:** Brief summary of the overall task.
+2.  **Code Changes:** Specific files to create/modify in `GameLogic/` and `StateModels/`.
+3.  **Architectural Considerations:** Patterns, interfaces, state model changes relevant to implementation.
+
+**Tests Plan Structure (`implementation-plan-tests.md`):**
+1.  **Context:** Brief summary of the overall task.
+2.  **Test Changes:** New tests, test file organization, updates to `tests.md`.
+3.  **Test Helpers:** Any new helper classes or infrastructure needed.
+
+**Docs Plan Structure (`implementation-plan-docs.md`):**
+1.  **Context:** Brief summary of the overall task.
+2.  **Documentation Changes:** Updates to `architecture.md`, `game-rules.md`, agent files, etc.
+3.  **Cross-References:** Which coder/test plan sections to verify against.
+
 ### 4. Final Review
 After writing the plan, use `ask_user` to ask the user to review `Documentation/implementation-plan.md`. If everything is satisfactory, finish execution and hand off to the parent agent.
 
 ## Boundaries
 - ✅ **Always do:** Use `ask_user` to ask questions if the path isn't clear or violates rules. Only write to `Documentation/AgentFeedback/Planner/questions.md` if the user explicitly requests saving to disk.
 - ✅ **Always do:** Overwrite `Documentation/implementation-plan.md` with the final plan.
+- ⛔ **Never do:** Ask questions in plain response text. ALL questions MUST use the `ask_user` tool.
 - 🚫 **Never do:** Modify source code or other documentation files directly. Your output is the *plan* only.

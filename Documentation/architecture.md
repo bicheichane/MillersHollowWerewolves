@@ -231,19 +231,20 @@ Wrapper class holding all dynamic state information for a `Player`. **Implemente
 *   **Enhanced Encapsulation through Nesting:** The `PlayerState` class is implemented as a `private nested class` within `GameSessionKernel`, ensuring that only `SessionMutator` can directly access and modify player state instances.
 *   **StateMutator Pattern Integration:** All state mutations are controlled exclusively through the `ISessionMutator` interface and its `private SessionMutator` implementation. This ensures that only log entries (through their `Apply` methods) can modify player state, maintaining architectural integrity.
 *   **Restricted access to PlayerState**: The Player class exposes an IPlayerState property publicly but the PlayerState mutable property is only accessible through a `GetMutableState(IStateMutatorKey)`, ensuring that only `SessionMutator` can access it and its internal setters.
-*   **Core Identity & Role Properties:**
+*   **Core Properties:**
     *   `MainRole` (MainRoleType?): The player's main character role type.
-    *   `SecondaryRoles` (SecondaryRoleType): Flags enum indicating secondary roles (e.g., Sheriff, Lover).
     *   `Health` (PlayerHealth): Current health status (Alive, Dead, etc.).
-    *   `IsInfected` (bool): True if the player is infected by the Father of Wolves.
-    *   `IsSheriff` (bool): Indicates if the player currently holds the Sheriff title.
-    *   `HasUsedElderExtraLife` (bool): True if the Elder has already used their extra life.
+*   **Unified Status Effects API:**
+    *   `HasStatusEffect(StatusEffectTypes effect)` (bool): Checks if a specific status effect is currently active. For standard effects, performs a bitwise `HasFlag` check on the internal `ActiveEffects` field. **Special case for `None`:** When called with `StatusEffectTypes.None`, returns `true` if the player has **zero** active effects (i.e., `ActiveEffects == StatusEffectTypes.None`), and `false` if the player has **any** active effect. This semantic allows querying "does this player have no status effects?" directly.
+    *   `GetActiveStatusEffects()` (List<StatusEffectTypes>): Returns all currently active status effects as a list (excluding `None`). Intended for UI consumption to display status effect icons.
+*   **Internal Status Effect Storage:**
+    *   `ActiveEffects` (StatusEffectTypes, internal): Internal flags field storing all active status effects. Not exposed on the `IPlayerState` interface. Mutations are performed via `AddEffect()`/`RemoveEffect()` internal methods, accessible only through `SessionMutator.SetStatusEffect()`.
 *   **Computed Capability Properties (Logic Decoupling):**
-    *   `IsImmuneToLynching` (bool): Derived from role/events (e.g., Village Idiot).
+    *   `IsImmuneToLynching` (bool): Derived from role and status effects (e.g., Village Idiot who hasn't used immunity yet).
     *   `LynchingImmunityAnnouncement` (string?): The text to announce if immunity triggers.
-    *   `Team` (Team): The player's current allegiance, derived from MainRole and status effects. 
+    *   `Team` (Team): The player's current allegiance, derived from MainRole and status effects.
 
-*Note on Devoted Servant:* When the Devoted Servant swaps roles, the responsible hook listener must explicitly reset any role-specific usage flags or counters (marked with *(Reset if...)* above) on the Servant's `PlayerState` to their default values.* 
+*Note on Devoted Servant:* When the Devoted Servant swaps roles, the responsible hook listener must explicitly reset any role-specific status effects on the Servant's `PlayerState` to their default values. 
 
 ## `EventCard` Abstract Class (NOT YET IMPLEMENTED)
 
@@ -352,10 +353,12 @@ Encapsulates and validates all configuration parameters required to start a new 
 *   **Validation & Constraints:**
     *   **`EnforceValidity(List<string> players, List<MainRoleType> roles)` (static):** Validates configuration before construction. Throws `InvalidOperationException` if validation fails.
     *   **`EnforceValidity()` (instance):** Validates the current instance. Called automatically during construction.
-    *   **`TryGetConfigIssues(List<string> players, List<MainRoleType> roles, out List<GameConfigValidationError> issues)` (static):** Diagnostic method that returns validation issues without throwing. Returns `true` if issues were found, `false` if configuration is valid. Returns a list of `GameConfigValidationError` objects describing each validation issue.
+    *   **`TryGetConfigIssues(List<string> players, List<MainRoleType> roles, out List<GameConfigValidationError> issues)` (static):** Diagnostic method that returns validation issues without throwing. Returns `true` if issues were found, `false` if configuration is valid. Returns a list of `GameConfigValidationError` objects describing each validation issue. Internally delegates to `TryGetPlayerConfigIssues` for player validation.
+    *   **`TryGetPlayerConfigIssues(List<string> players, out List<GameConfigValidationError> issues)` (static):** Public helper for validating player-related configuration independently of roles. Checks for non-unique names (case-insensitive) and minimum player count (5). Useful for early UI validation before role selection.
+    *   **`GetExpectedRoleCount(int playerCount, List<MainRoleType> roles)` (static):** Public helper for UI to display expected vs. actual role count. Returns the expected total role count accounting for special roles: Thief adds +2, Actor adds +3.
 
 *   **Validation Rules:**
-    *   **Player Count:** At least one player required.
+    *   **Player Count:** At least 5 players required.
     *   **Player Names:** All player names must be unique (case-insensitive).
     *   **Role Count:** The total number of roles must match the number of players, with adjustments for special roles:
         *   **Thief:** Requires 2 extra roles.
@@ -440,10 +443,14 @@ A hierarchy of records represents the outcome of a `SubPhaseStage`'s execution, 
     ```csharp 
     public record ListenerIdentifier 
     { 
-        public GameHookListenerType ListenerType { get; } // Enum: MainRole, Event, SecondaryRole 
-        public string ListenerId { get; } // Stores the MainRoleType, SecondaryRoleType, or EventCardType enum value as string for better debugging/logging 
+        public GameHookListenerType ListenerType { get; } // Enum: MainRole, SpiritCard, StatusEffect 
+        public string ListenerId { get; } // Stores the MainRoleType, StatusEffectTypes, or EventCardType enum value as string for better debugging/logging 
     } 
-    ``` 
+    ```
+    *   **Factory Methods:**
+        *   `Listener(MainRoleType)`: Creates identifier for main role listeners.
+        *   `Listener(StatusEffectTypes)`: Creates identifier for status effect listeners (e.g., Sheriff, Lovers).
+    *   **Implicit Conversions:** Supports implicit conversion from `MainRoleType` and `StatusEffectTypes` for convenience. 
 
 *   **`HookListenerActionResult` Class:** Standardized return type for `IGameHookListener.Execute`: 
     *   `NeedInput(instruction)`: Listener requires input, processing pauses.
@@ -480,6 +487,7 @@ Consequently, the `ModeratorResponse` structure requires the moderator to provid
 ## `ModeratorInstruction` Class Hierarchy
 Polymorphic instruction system for communication TO the moderator. **Assembly Location:** The abstract base class `ModeratorInstruction` and all concrete implementations are located in `Werewolves.Core.StateModels.Models.Instructions`. This placement allows `GameSession` to accept instructions as constructor parameters without circular dependencies.
 
+*   **Encapsulation & Serialization:** Instruction constructors are marked `internal` (or `protected` for the base class) to prevent UI clients from injecting arbitrary instructions—only the trusted `GameFlowManager` should create instruction instances. To support JSON deserialization while preserving this encapsulation, all instruction types use the `[JsonConstructor]` attribute on their internal constructors. Since the custom `ModeratorInstructionConverter` resides in the same assembly (`Werewolves.Core.StateModels`), it can access internal constructors during deserialization.
 *   **Abstract Base Class:** 
     *   `PublicAnnouncement` (string?): Text to be read aloud or displayed publicly to all players. 
     *   `PrivateInstruction` (string?): Text for moderator's eyes only, containing reminders, rules, or guidance. 
@@ -505,18 +513,21 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 
 ### Role Enums
 *   `MainRoleType`: Comprehensive list of all roles (Werewolves, Villagers, Ambiguous, Loners, New Moon).
-*   `SecondaryRoleType` (Flags enum): `None`, `Lovers`, `Charmed`, `TownCrier`, `Executioner`, `Sheriff`. Stackable roles on top of main roles that are linked to specific GameHooks.
+*   `RoleGroup`: `Werewolves`, `Villagers`, `Ambiguous`, `Loners`, `NewMoon`. Logical groupings for categorizing roles. Used by `MainRoleTypeExtensions.GetRoleGroup()`.
 
 ### Night Action & Day Action Enums
 *   `NightActionType`: `Unknown`, `WerewolfVictimSelection`, `BigBadWolfVictimSelection`, `WhiteWerewolfVictimSelection`, `AccursedWolfFatherInfection`, `SeerCheck`, `FoxCheck`, `WitchSave`, `WitchKill`, `DefenderProtect`, `PiperCharm`, `RustySword`, `ThiefSwap`, `ActorEmulate`, `WildChildModel`, `CupidLink`, `WolfHoundChoice`.
 *   `DayPowerType`: `Unknown`, `JudgeExtraVote`, `DevotedServantSwap`, `TownCrierCardReveal`.
-*   `StatusEffectTypes`: `None`, `ElderProtectionLost`, `LycanthropyInfection`, `WildChildChanged`, `LynchingImmunityUsed`.
+*   `StatusEffectTypes` (Flags enum): Unified enum for all persistent status effects that can be applied to a player. Combines what was previously split between status effects and secondary roles.
+    *   **Persistent conditions:** `None`, `ElderProtectionLost`, `LycanthropyInfection`, `WildChildChanged`, `LynchingImmunityUsed`.
+    *   **Hookable status effects:** `Sheriff`, `Lovers`, `Charmed`, `TownCrier`, `Executioner`.
+    *   **Note:** This is a `[Flags]` enum to allow multiple status effects to be active simultaneously (e.g., Sheriff + Infected + Charmed).
 
 ### Elimination Enum
 *   `EliminationReason`: `Unknown`, `WerewolfAttack`, `WitchKill`, `HunterShot`, `LoversHeartbreak`, `RustySword`, `ScapegoatSacrifice`, `EventElimination`, `DayVote`.
 
 ### Hook Listener Enums
-*   `GameHookListenerType`: `MainRole`, `SpiritCard`, `SecondaryRole`. Used to distinguish between different categories of listeners.
+*   `GameHookListenerType`: `MainRole`, `SpiritCard`, `StatusEffect`. Used to distinguish between different categories of listeners.
 *   `HookListenerOutcome`: `Skip`, `NeedInput`, `Complete`. Communicates listener state machine result back to GameFlowManager.
 
 ### Role State Machine Enums
@@ -528,6 +539,19 @@ Polymorphic instruction system for communication TO the moderator. **Assembly Lo
 *   `DawnSubPhases`: `CalculateVictims`, `AnnounceVictims`, `ProcessRoleReveals`, `Finalize`.
 *   `DaySubPhases`: `Debate`, `DetermineVoteType`, `NormalVoting`, `AccusationVoting`, `FriendVoting`, `HandleNonTieVote`, `ProcessVoteOutcome`, `ProcessVoteDeathLoop`, `Finalize`.
 *   `VictorySubPhases`: `Complete`.
+
+## Extensions
+
+### `MainRoleTypeExtensions` Class
+Located in `Werewolves.Core.StateModels/Extensions/MainRoleTypeExtensions.cs`. Provides extension methods for the `MainRoleType` enum.
+
+*   **`GetRoleGroup(this MainRoleType role)` (RoleGroup):** Returns the logical group that the specified role belongs to. Categorizes all 28 roles:
+    *   **Werewolves:** SimpleWerewolf, BigBadWolf, AccursedWolfFather, WhiteWerewolf
+    *   **Villagers:** SimpleVillager, VillagerVillager, Seer, Cupid, Witch, Hunter, LittleGirl, Defender, Elder, Scapegoat, VillageIdiot, TwoSisters, ThreeBrothers, Fox, BearTamer, StutteringJudge, KnightWithRustySword
+    *   **Ambiguous:** Thief, DevotedServant, Actor, WildChild, WolfHound (roles that can change sides or have flexible allegiance)
+    *   **Loners:** Angel, Piper, PrejudicedManipulator (roles with independent win conditions)
+    *   **NewMoon:** Gypsy (expansion roles)
+*   **Usage:** Useful for UI grouping, role selection screens, and validation logic that needs to categorize roles by faction.
 
 # Game Loop Outline (Declarative Sub-Phase Architecture)
 
@@ -650,23 +674,29 @@ public class MyTests : DiagnosticTestBase
 }
 ```
 
-# Session Persistence (Planned Feature)
+# Session Persistence
 
-*Status: **Not yet implemented** - stubs exist but throw `NotImplementedException`.*
+*Status: **Implemented** — Full serialization/deserialization support via `System.Text.Json`.*
 
-The architecture includes planned support for session persistence, enabling games to be saved and restored across application restarts or device changes.
+The architecture supports session persistence, enabling games to be saved and restored across application restarts or device changes.
 
 ## Design
 
-*   **Serialization:** `IGameSession.Serialize()` returns a JSON representation of the game session.
-*   **Deserialization:** `GameSession(string json)` constructor and `GameSessionKernel.Deserialize(string json)` restore session state from JSON.
-*   **Rehydration:** `string GameService.RehydrateSession(string serializedSession)` restores a session and adds it to the active session collection. Returns the session's guid.
+*   **Serialization:** `GameSession.Serialize()` returns a JSON representation of the game session by delegating to `GameSessionKernel.Serialize()`.
+*   **Deserialization:** `GameSessionKernel.Deserialize(string json)` restores session state from JSON.
+*   **Rehydration:** `GameService.RehydrateSession(string serializedSession)` restores a session and adds it to the active session collection. Returns the session's GUID.
 
-## Implementation Notes
+## Implementation Details
 
-*   The `GameHistoryLog` (event source) is the primary data to serialize, as persistent state can be reconstructed by replaying log entries.
-*   Transient execution state (`_phaseStateCache`) should be serialized as well, alongside the currently pending moderator instruction.
-*   Player identity data (`Id`, `Name`), seating order, `RolesInPlay` and any other GameSession initial configuration values must also be persisted.
+*   **Polymorphic Converters:** Custom `JsonConverter` implementations handle polymorphic types:
+    *   `GameLogEntryConverter`: Serializes/deserializes all `GameLogEntryBase` derived types using a `$type` discriminator.
+    *   `ModeratorInstructionConverter`: Serializes/deserializes all `ModeratorInstruction` derived types using a `$type` discriminator.
+*   **DTOs:** Internal DTO classes (`GameSessionDto`, `PlayerDto`, `GamePhaseStateCacheDto`) provide a clean serialization boundary.
+*   **Serialized State:**
+    *   `GameHistoryLog` (event source): The primary data, as persistent state can be reconstructed by replaying log entries.
+    *   `GamePhaseStateCache` (transient execution state): Serialized alongside the currently pending moderator instruction.
+    *   Player identity data (`Id`, `Name`), seating order, `RolesInPlay`, and all `PlayerState` fields including `ActiveEffects`.
+*   **Deserialization Key:** A private `DeserializationKey` class implements `IStateMutatorKey` to allow direct state restoration during deserialization without going through log entry application.
 
 # Sound Effects
 

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Werewolves.StateModels.Enums;
 using Werewolves.StateModels.Models;
+using Werewolves.StateModels.Serialization;
 
 namespace Werewolves.StateModels.Core;
 
@@ -197,6 +198,7 @@ internal partial class GameSessionKernel
 		/// <summary>
 		/// Marks the current hook as completed and clears it.
 		/// </summary>
+
 		private void ClearSubPhaseStage()
 		{
 			_currentSubPhaseStage = null;
@@ -212,6 +214,60 @@ internal partial class GameSessionKernel
 			_currentSubPhase = null;
 			_previousSubPhaseStages = [];
 			ClearSubPhaseStage();
+		}
+
+		#endregion
+
+		#region Serialization
+
+		/// <summary>
+		/// Creates a DTO representation of this cache for serialization.
+		/// </summary>
+		internal GamePhaseStateCacheDto ToDto()
+		{
+			return new GamePhaseStateCacheDto
+			{
+				CurrentPhase = _currentPhase,
+				SubPhase = _currentSubPhase,
+				ActiveSubPhaseStage = _currentSubPhaseStage,
+				CompletedSubPhaseStages = _previousSubPhaseStages.ToList(),
+				CurrentListenerId = _currentListener?.ListenerId,
+				CurrentListenerType = _currentListener?.ListenerType.ToString(),
+				CurrentListenerState = _currentListenerState
+			};
+		}
+
+		/// <summary>
+		/// Restores a GamePhaseStateCache from a DTO.
+		/// </summary>
+		internal static GamePhaseStateCache FromDto(GamePhaseStateCacheDto dto)
+		{
+			ListenerIdentifier? listener = null;
+			if (dto.CurrentListenerId != null && dto.CurrentListenerType != null)
+			{
+				if (Enum.TryParse<GameHookListenerType>(dto.CurrentListenerType, out var listenerType))
+				{
+					// Recreate the listener identifier based on type
+					listener = listenerType switch
+					{
+						GameHookListenerType.MainRole when Enum.TryParse<MainRoleType>(dto.CurrentListenerId, out var role) 
+							=> ListenerIdentifier.Listener(role),
+						GameHookListenerType.StatusEffect when Enum.TryParse<StatusEffectTypes>(dto.CurrentListenerId, out var effect) 
+							=> ListenerIdentifier.Listener(effect),
+						_ => null
+					};
+				}
+			}
+
+			return new GamePhaseStateCache
+			{
+				_currentPhase = dto.CurrentPhase,
+				_currentSubPhase = dto.SubPhase,
+				_currentSubPhaseStage = dto.ActiveSubPhaseStage,
+				_previousSubPhaseStages = dto.CompletedSubPhaseStages.ToList(),
+				_currentListener = listener,
+				_currentListenerState = dto.CurrentListenerState
+			};
 		}
 
 		#endregion
