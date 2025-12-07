@@ -1,8 +1,8 @@
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Log;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.StateModels.Serialization;
+namespace Werewolves.Core.StateModels.Serialization;
 
 /// <summary>
 /// Data Transfer Object for serializing a complete GameSession.

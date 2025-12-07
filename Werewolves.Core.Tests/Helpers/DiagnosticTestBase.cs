@@ -1,6 +1,6 @@
 using Xunit.Abstractions;
 
-namespace Werewolves.Tests.Helpers;
+namespace Werewolves.Core.Tests.Helpers;
 
 /// <summary>
 /// Base class for tests that automatically dumps diagnostic state changes on failure.

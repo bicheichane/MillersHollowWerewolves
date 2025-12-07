@@ -1,4 +1,4 @@
-namespace Werewolves.StateModels.Enums;
+namespace Werewolves.Core.StateModels.Enums;
 
 /// <summary>
 /// Defines the reason a player was eliminated from the game.

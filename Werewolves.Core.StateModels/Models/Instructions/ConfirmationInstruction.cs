@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Extensions;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Extensions;
 using Werewolves.Core.StateModels.Resources;
 
-namespace Werewolves.StateModels.Models.Instructions;
+namespace Werewolves.Core.StateModels.Models.Instructions;
 
 /// <summary>
 /// Instruction that requires a simple yes/no confirmation from the moderator.

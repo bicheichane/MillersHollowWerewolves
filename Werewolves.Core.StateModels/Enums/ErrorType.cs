@@ -1,4 +1,4 @@
-namespace Werewolves.StateModels.Enums;
+namespace Werewolves.Core.StateModels.Enums;
 
 /// <summary>
 /// Defines high-level categories of game errors.

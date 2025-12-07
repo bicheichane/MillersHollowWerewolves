@@ -1,8 +1,8 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.StateMachine;
+namespace Werewolves.Core.GameLogic.Models.StateMachine;
 
 /// <summary>
 /// Interface for phase definitions that can handle different sub-phase enum types.

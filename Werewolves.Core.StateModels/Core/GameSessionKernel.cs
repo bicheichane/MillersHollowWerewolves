@@ -1,13 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
 using Werewolves.Core.StateModels.Models;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Log;
-using Werewolves.StateModels.Models;
-using Werewolves.Core.StateModels.Resources;
-using Werewolves.StateModels.Serialization;
+using Werewolves.Core.StateModels.Serialization;
 
-namespace Werewolves.StateModels.Core
+namespace Werewolves.Core.StateModels.Core
 {
 	internal sealed partial class GameSessionKernel
 	{

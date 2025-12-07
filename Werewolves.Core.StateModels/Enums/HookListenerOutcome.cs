@@ -1,4 +1,4 @@
-namespace Werewolves.StateModels.Enums;
+namespace Werewolves.Core.StateModels.Enums;
 
 /// <summary>
 /// Represents the outcome of a listener's state machine advancement.

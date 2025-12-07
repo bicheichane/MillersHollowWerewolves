@@ -1,4 +1,4 @@
-namespace Werewolves.StateModels.Enums;
+namespace Werewolves.Core.StateModels.Enums;
 
 /// <summary>
 /// Specifies all persistent status effects that can be applied to a player.

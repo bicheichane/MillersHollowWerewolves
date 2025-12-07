@@ -1,7 +1,7 @@
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.StateModels.Log;
+namespace Werewolves.Core.StateModels.Log;
 
 /// <summary>
 /// Represents a generic power used by a player/role that's not constrained to be used at night.

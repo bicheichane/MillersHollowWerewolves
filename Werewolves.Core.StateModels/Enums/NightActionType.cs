@@ -1,4 +1,4 @@
-namespace Werewolves.StateModels.Enums;
+namespace Werewolves.Core.StateModels.Enums;
 
 /// <summary>
 /// Defines the specific types of actions that can occur during the night phase.

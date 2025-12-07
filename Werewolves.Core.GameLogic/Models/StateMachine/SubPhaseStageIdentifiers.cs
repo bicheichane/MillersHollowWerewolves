@@ -1,4 +1,4 @@
-namespace Werewolves.GameLogic.Models.StateMachine;
+namespace Werewolves.Core.GameLogic.Models.StateMachine;
 
 internal enum NightSubPhaseStage
 {

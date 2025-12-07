@@ -1,11 +1,11 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Log;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.Tests.Helpers;
+namespace Werewolves.Core.Tests.Helpers;
 
 /// <summary>
 /// Captures state changes for diagnostic output in tests.

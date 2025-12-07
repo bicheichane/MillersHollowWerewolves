@@ -1,6 +1,6 @@
-﻿using Werewolves.StateModels.Enums;
+﻿using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.StateModels.Core;
+namespace Werewolves.Core.StateModels.Core;
 
 public interface IPlayer : IEquatable<IPlayer>
 {

@@ -1,6 +1,6 @@
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.StateModels.Extensions;
+namespace Werewolves.Core.StateModels.Extensions;
 
 /// <summary>
 /// Defines the logical groupings for roles in the game.

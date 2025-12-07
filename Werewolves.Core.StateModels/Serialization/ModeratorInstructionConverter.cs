@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Models.Instructions;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Models.Instructions;
 
-namespace Werewolves.StateModels.Serialization;
+namespace Werewolves.Core.StateModels.Serialization;
 
 /// <summary>
 /// Polymorphic JSON converter for ModeratorInstruction and its derived types.

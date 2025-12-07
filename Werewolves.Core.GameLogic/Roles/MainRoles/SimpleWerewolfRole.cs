@@ -1,11 +1,11 @@
-using Werewolves.GameLogic.Models.GameHookListeners;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Models.Instructions;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.GameHookListeners;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Models.Instructions;
 using Werewolves.Core.StateModels.Resources;
 
-namespace Werewolves.GameLogic.Roles.MainRoles;
+namespace Werewolves.Core.GameLogic.Roles.MainRoles;
 
 /// <summary>
 /// Simple Werewolf role implementation using the polymorphic hook listener pattern.

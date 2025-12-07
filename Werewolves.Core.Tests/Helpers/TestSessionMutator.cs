@@ -1,8 +1,8 @@
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Log;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
 
-namespace Werewolves.Tests.Helpers;
+namespace Werewolves.Core.Tests.Helpers;
 
 /// <summary>
 /// Test implementation of ISessionMutator for log replay comparison.

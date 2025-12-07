@@ -1,8 +1,8 @@
-using Werewolves.StateModels.Models;
+using Werewolves.Core.StateModels.Models;
 
 // Log namespace might contain ModeratorInstruction
 
-namespace Werewolves.GameLogic.Models.InternalMessages;
+namespace Werewolves.Core.GameLogic.Models.InternalMessages;
 
 /// <summary>
 /// Represents the final outcome of processing moderator input,

@@ -1,8 +1,8 @@
-namespace Werewolves.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
+using Werewolves.Core.StateModels.Models;
 
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Log;
-using Werewolves.StateModels.Models;
+namespace Werewolves.Core.StateModels.Core;
 
 /// <summary>
 /// Optional observer for state change diagnostics.

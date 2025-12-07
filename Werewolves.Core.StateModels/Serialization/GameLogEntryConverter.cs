@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Werewolves.StateModels.Log;
+using Werewolves.Core.StateModels.Log;
 
-namespace Werewolves.StateModels.Serialization;
+namespace Werewolves.Core.StateModels.Serialization;
 
 /// <summary>
 /// Polymorphic JSON converter for GameLogEntryBase and its derived types.

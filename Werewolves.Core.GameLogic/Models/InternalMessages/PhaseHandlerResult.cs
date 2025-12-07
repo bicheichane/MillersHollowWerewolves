@@ -1,7 +1,7 @@
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.InternalMessages;
+namespace Werewolves.Core.GameLogic.Models.InternalMessages;
 
 /// <summary>
 /// Abstract base record representing the outcome of a phase handler's execution.

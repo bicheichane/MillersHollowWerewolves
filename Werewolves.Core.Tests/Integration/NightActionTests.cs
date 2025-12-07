@@ -1,13 +1,13 @@
 using FluentAssertions;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models.Instructions;
-using Werewolves.StateModels.Log;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
+using Werewolves.Core.StateModels.Models.Instructions;
 using Werewolves.Core.StateModels.Resources;
-using Werewolves.Tests.Helpers;
+using Werewolves.Core.Tests.Helpers;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Werewolves.Tests.Integration;
+namespace Werewolves.Core.Tests.Integration;
 
 /// <summary>
 /// Tests for night phase actions: werewolf attacks, seer investigations, action logging.

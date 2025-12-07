@@ -1,8 +1,8 @@
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
 using Werewolves.Core.StateModels.Resources;
 
-namespace Werewolves.StateModels.Log;
+namespace Werewolves.Core.StateModels.Log;
 
 /// <summary>
 /// Logs when a victory condition is met.

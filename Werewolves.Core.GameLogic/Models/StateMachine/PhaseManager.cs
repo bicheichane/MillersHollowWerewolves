@@ -1,10 +1,10 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.GameLogic.Services;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.GameLogic.Services;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.StateMachine;
+namespace Werewolves.Core.GameLogic.Models.StateMachine;
 
 /// <summary>
 /// Generic phase definition that manages a declarative map of sub-phase stages.

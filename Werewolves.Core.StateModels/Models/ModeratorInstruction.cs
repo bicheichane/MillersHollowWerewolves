@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.StateModels.Models;
+namespace Werewolves.Core.StateModels.Models;
 
 /// <summary>
 /// Abstract base class for all moderator instructions.

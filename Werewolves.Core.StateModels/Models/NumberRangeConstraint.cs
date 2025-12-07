@@ -1,4 +1,4 @@
-namespace Werewolves.StateModels.Models;
+namespace Werewolves.Core.StateModels.Models;
 
 /// <summary>
 /// Defines the constraints for number range constraints,

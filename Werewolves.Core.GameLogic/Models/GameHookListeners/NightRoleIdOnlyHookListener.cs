@@ -1,10 +1,10 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
-using static Werewolves.GameLogic.Models.InternalMessages.HookListenerActionResult;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
+using static Werewolves.Core.GameLogic.Models.InternalMessages.HookListenerActionResult;
 
-namespace Werewolves.GameLogic.Models.GameHookListeners;
+namespace Werewolves.Core.GameLogic.Models.GameHookListeners;
 
 internal enum NightRoleIdOnlyState
 {

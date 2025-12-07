@@ -1,9 +1,9 @@
 using FluentAssertions;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Extensions;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Extensions;
 using Xunit;
 
-namespace Werewolves.Tests.Integration;
+namespace Werewolves.Core.Tests.Integration;
 
 /// <summary>
 /// Tests for extension methods: role grouping, player filtering.

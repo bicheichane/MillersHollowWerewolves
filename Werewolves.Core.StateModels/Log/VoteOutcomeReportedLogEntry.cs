@@ -1,6 +1,6 @@
-using Werewolves.StateModels.Core;
+using Werewolves.Core.StateModels.Core;
 
-namespace Werewolves.StateModels.Log;
+namespace Werewolves.Core.StateModels.Log;
 
 /// <summary>
 /// Logs the raw outcome of a vote as reported by the moderator.

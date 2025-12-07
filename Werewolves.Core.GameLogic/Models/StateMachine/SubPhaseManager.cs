@@ -1,8 +1,8 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.StateMachine;
+namespace Werewolves.Core.GameLogic.Models.StateMachine;
 
 /// <summary>
 /// Defines a single, validated sub phase within a main game phase's state machine.

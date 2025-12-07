@@ -1,11 +1,11 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.GameLogic.Services;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
-using static Werewolves.GameLogic.Models.InternalMessages.StayInSubPhaseHandlerResult;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.GameLogic.Services;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
+using static Werewolves.Core.GameLogic.Models.InternalMessages.StayInSubPhaseHandlerResult;
 
-namespace Werewolves.GameLogic.Models.StateMachine;
+namespace Werewolves.Core.GameLogic.Models.StateMachine;
 
 /// <summary>
 /// A SubPhaseStage represents a single stage within a game's phase state machine,

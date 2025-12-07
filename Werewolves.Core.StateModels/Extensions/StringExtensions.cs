@@ -1,8 +1,7 @@
-﻿using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
+﻿using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
 
-
-namespace Werewolves.StateModels.Extensions
+namespace Werewolves.Core.StateModels.Extensions
 {
 	public static class StringExtensions
 	{

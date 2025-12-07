@@ -1,14 +1,13 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.GameLogic.Services;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Models.Instructions;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.GameLogic.Services;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Models.Instructions;
 using Xunit.Abstractions;
-using static Werewolves.StateModels.Enums.GameHook;
-using static Werewolves.StateModels.Models.ListenerIdentifier;
+using static Werewolves.Core.StateModels.Enums.GameHook;
 
-namespace Werewolves.Tests.Helpers;
+namespace Werewolves.Core.Tests.Helpers;
 
 /// <summary>
 /// Holds the inputs needed for night phase actions.

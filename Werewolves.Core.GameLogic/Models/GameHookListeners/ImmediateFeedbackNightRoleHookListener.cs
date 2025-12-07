@@ -1,9 +1,9 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.GameLogic.Models.GameHookListeners;
+namespace Werewolves.Core.GameLogic.Models.GameHookListeners;
 
 
 /// <summary>

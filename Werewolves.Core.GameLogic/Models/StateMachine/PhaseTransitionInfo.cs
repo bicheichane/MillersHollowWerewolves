@@ -1,6 +1,6 @@
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.GameLogic.Models.StateMachine;
+namespace Werewolves.Core.GameLogic.Models.StateMachine;
 
 /// <summary>
 /// Documents and defines a potential transition out of a game phase,

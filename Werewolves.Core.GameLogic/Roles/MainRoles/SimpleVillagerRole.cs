@@ -1,11 +1,11 @@
-using Werewolves.GameLogic.Models.GameHookListeners;
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.GameHookListeners;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
 using Werewolves.Core.StateModels.Resources;
 
-namespace Werewolves.GameLogic.Roles.MainRoles;
+namespace Werewolves.Core.GameLogic.Roles.MainRoles;
 
 /// <summary>
 /// Simple Villager role implementation using polymorphic hook listener pattern.

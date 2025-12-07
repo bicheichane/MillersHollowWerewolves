@@ -1,7 +1,7 @@
-﻿using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Log;
+﻿using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Log;
 
-namespace Werewolves.StateModels.Core;
+namespace Werewolves.Core.StateModels.Core;
 
 //todo: move this to its own file once this is finalized.
 public interface ISessionMutator

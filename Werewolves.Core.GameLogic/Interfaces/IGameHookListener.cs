@@ -1,9 +1,8 @@
-using Werewolves.GameLogic.Models.InternalMessages;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Models;
 
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Models;
-
-namespace Werewolves.GameLogic.Interfaces;
+namespace Werewolves.Core.GameLogic.Interfaces;
 
 /// <summary>
 /// Defines the contract for hook listeners that can respond to game events.

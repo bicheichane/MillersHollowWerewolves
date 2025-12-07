@@ -1,8 +1,7 @@
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Enums;
+using static Werewolves.Core.StateModels.Enums.GameHookListenerType;
 
-using static Werewolves.StateModels.Enums.GameHookListenerType;
-
-namespace Werewolves.StateModels.Models;
+namespace Werewolves.Core.StateModels.Models;
 
 
 /// <summary>

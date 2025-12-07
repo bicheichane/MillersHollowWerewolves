@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.StateModels.Models;
+namespace Werewolves.Core.StateModels.Models;
 
 /// <summary>
 /// Data structure for communication FROM the moderator.

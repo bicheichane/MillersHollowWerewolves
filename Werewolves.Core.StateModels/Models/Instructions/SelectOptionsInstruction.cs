@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Werewolves.StateModels.Enums;
+using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.StateModels.Models.Instructions;
+namespace Werewolves.Core.StateModels.Models.Instructions;
 
 /// <summary>
 /// Instruction that requires the moderator to select from a list of text options.

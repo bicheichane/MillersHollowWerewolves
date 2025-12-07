@@ -1,9 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
-using Werewolves.StateModels.Serialization;
+﻿using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Serialization;
 
-namespace Werewolves.StateModels.Core;
+namespace Werewolves.Core.StateModels.Core;
 
 //todo: move this to its own file once this is finalized.
 internal interface IGamePhaseStateCache

@@ -1,25 +1,25 @@
 using System.Collections.Immutable;
-using Werewolves.GameLogic.Interfaces;
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Models.Instructions;
-using Werewolves.GameLogic.Models.StateMachine;
-using Werewolves.GameLogic.Roles.MainRoles;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Extensions;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Interfaces;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.GameLogic.Models.StateMachine;
+using Werewolves.Core.GameLogic.Roles.MainRoles;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Extensions;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Models.Instructions;
 using Werewolves.Core.StateModels.Resources;
-using static Werewolves.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
-using static Werewolves.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
-using static Werewolves.GameLogic.Models.StateMachine.NavigationSubPhaseStage;
-using static Werewolves.GameLogic.Models.StateMachine.HookSubPhaseStage;
-using static Werewolves.GameLogic.Models.StateMachine.LogicSubPhaseStage;
-using static Werewolves.StateModels.Enums.GameHook;
-using static Werewolves.StateModels.Enums.MainRoleType;
-using static Werewolves.StateModels.Enums.StatusEffectTypes;
-using static Werewolves.StateModels.Models.ListenerIdentifier;
+using static Werewolves.Core.GameLogic.Models.InternalMessages.MainPhaseHandlerResult;
+using static Werewolves.Core.GameLogic.Models.InternalMessages.SubPhaseHandlerResult;
+using static Werewolves.Core.GameLogic.Models.StateMachine.NavigationSubPhaseStage;
+using static Werewolves.Core.GameLogic.Models.StateMachine.HookSubPhaseStage;
+using static Werewolves.Core.GameLogic.Models.StateMachine.LogicSubPhaseStage;
+using static Werewolves.Core.StateModels.Enums.GameHook;
+using static Werewolves.Core.StateModels.Enums.MainRoleType;
+using static Werewolves.Core.StateModels.Enums.StatusEffectTypes;
+using static Werewolves.Core.StateModels.Models.ListenerIdentifier;
 
-namespace Werewolves.GameLogic.Services;
+namespace Werewolves.Core.GameLogic.Services;
 
 /// <summary>
 /// Holds the state machine configuration and provides access to phase definitions.

@@ -1,13 +1,12 @@
-using Werewolves.GameLogic.Interfaces;
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Extensions;
+using Werewolves.Core.GameLogic.Interfaces;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Extensions;
+using Werewolves.Core.StateModels.Models;
+using static Werewolves.Core.StateModels.Enums.PlayerHealth;
 
-using Werewolves.StateModels.Models;
-using static Werewolves.StateModels.Enums.PlayerHealth;
-
-namespace Werewolves.GameLogic.Models.GameHookListeners;
+namespace Werewolves.Core.GameLogic.Models.GameHookListeners;
 
 /// <summary>
 /// The universal base for all role listeners.

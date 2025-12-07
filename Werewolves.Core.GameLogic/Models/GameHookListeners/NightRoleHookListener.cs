@@ -1,12 +1,12 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Models.Instructions;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Extensions;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Extensions;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Models.Instructions;
 using Werewolves.Core.StateModels.Resources;
 
-namespace Werewolves.GameLogic.Models.GameHookListeners;
+namespace Werewolves.Core.GameLogic.Models.GameHookListeners;
 
 internal abstract class NightRoleHookListener<T> : RoleHookListener<T> where T : struct, Enum
 {

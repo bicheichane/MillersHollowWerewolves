@@ -4,16 +4,16 @@
 // Needed for Any()
 // Add this line for resource access
 // For Debug.Fail
-using System.Collections.Concurrent;
-using Werewolves.Core.StateModels.Models;
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Models.Instructions;
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
-using static Werewolves.StateModels.Enums.ExpectedInputType;
 
-namespace Werewolves.GameLogic.Services;
+using System.Collections.Concurrent;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
+using Werewolves.Core.StateModels.Models.Instructions;
+using static Werewolves.Core.StateModels.Enums.ExpectedInputType;
+
+namespace Werewolves.Core.GameLogic.Services;
 
 /// <summary>
 /// Orchestrates the game flow based on moderator input and tracked state using a state machine.

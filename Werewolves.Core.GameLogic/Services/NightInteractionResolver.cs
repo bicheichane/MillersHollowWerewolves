@@ -1,8 +1,8 @@
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.GameLogic.Services;
+namespace Werewolves.Core.GameLogic.Services;
 
 internal static class NightInteractionResolver
 {

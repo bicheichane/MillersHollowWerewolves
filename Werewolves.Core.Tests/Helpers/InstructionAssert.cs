@@ -1,7 +1,7 @@
-using Werewolves.GameLogic.Models.InternalMessages;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.GameLogic.Models.InternalMessages;
+using Werewolves.Core.StateModels.Models;
 
-namespace Werewolves.Tests.Helpers;
+namespace Werewolves.Core.Tests.Helpers;
 
 /// <summary>
 /// Helper methods for asserting and casting ModeratorInstruction types in tests.

@@ -1,8 +1,8 @@
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using static Werewolves.StateModels.Enums.NightActionType;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
+using static Werewolves.Core.StateModels.Enums.NightActionType;
 
-namespace Werewolves.StateModels.Log;
+namespace Werewolves.Core.StateModels.Log;
 
 /// <summary>
 /// Represents a generic night action taken by a player/role.

@@ -1,8 +1,7 @@
-using Werewolves.StateModels.Core;
-using Werewolves.StateModels.Enums;
-using Werewolves.StateModels.Models;
+using Werewolves.Core.StateModels.Core;
+using Werewolves.Core.StateModels.Enums;
 
-namespace Werewolves.Tests.Helpers;
+namespace Werewolves.Core.Tests.Helpers;
 
 /// <summary>
 /// Factory methods for creating ModeratorResponse instances in tests.
